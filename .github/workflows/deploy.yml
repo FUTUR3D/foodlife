@@ -1,4 +1,4 @@
-name: Build FoodLife App
+name: Build and Deploy FoodLife
 
 on:
   push:
@@ -6,27 +6,31 @@ on:
       - main
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
-      - name: Install packages
-        run: npm install
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Build project
+      - name: Build app
         run: npm run build
 
-      - name: Upload dist artifact
-        uses: actions/upload-artifact@v4
+      - name: Deploy dist to FTP server
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          name: foodlife-dist
-          path: dist
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./dist/
+          server-dir: /foodlife/
