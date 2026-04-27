@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   foods: 'foodlife_foods',
   entries: 'foodlife_entries',
   dayInfo: 'foodlife_day_info',
+  reactions: 'foodlife_reactions',
 }
 
 const MEAL_SECTIONS = [
@@ -47,6 +48,28 @@ const DEFAULT_DAY_INFO = {
   dayNote: '',
   drinks: '',
 }
+
+const REACTION_TYPES = [
+  'Nadýmání',
+  'Bolest břicha',
+  'Reflux / pálení žáhy',
+  'Nevolnost',
+  'Únava',
+  'Brain fog',
+  'Bolest hlavy',
+  'Svědění / vyrážka',
+  'Flush / zčervenání',
+  'Bušení srdce',
+  'Jiné',
+]
+
+const ONSET_SPEEDS = [
+  'Okamžitě po jídle',
+  'Do 2 hodin',
+  'Večer',
+  'Druhý den',
+  'Nevím',
+]
 
 function createId() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
@@ -267,6 +290,135 @@ function MealSection({
   )
 }
 
+function ReactionsPanel({ reactions, onAddReaction, onDeleteReaction }) {
+  const [type, setType] = useState(REACTION_TYPES[0])
+  const [intensity, setIntensity] = useState('5')
+  const [onsetTime, setOnsetTime] = useState('')
+  const [onsetSpeed, setOnsetSpeed] = useState(ONSET_SPEEDS[0])
+  const [note, setNote] = useState('')
+
+  function handleSubmit(e) {
+    e.preventDefault()
+
+    onAddReaction({
+      type,
+      intensity: Number(intensity),
+      onsetTime,
+      onsetSpeed,
+      note: note.trim(),
+    })
+
+    setType(REACTION_TYPES[0])
+    setIntensity('5')
+    setOnsetTime('')
+    setOnsetSpeed(ONSET_SPEEDS[0])
+    setNote('')
+  }
+
+  return (
+    <>
+      <form className="card" onSubmit={handleSubmit}>
+        <h3 className="card-title">Zadat symptom</h3>
+
+        <div className="form-group">
+          <label className="label">Typ reakce</label>
+          <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
+            {REACTION_TYPES.map((reactionType) => (
+              <option key={reactionType}>{reactionType}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="label">Intenzita: {intensity}/10</label>
+          <input
+            className="input"
+            type="range"
+            min="0"
+            max="10"
+            value={intensity}
+            onChange={(e) => setIntensity(e.target.value)}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="label">Čas vzniku</label>
+          <input
+            className="input"
+            type="datetime-local"
+            value={onsetTime}
+            onChange={(e) => setOnsetTime(e.target.value)}
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="label">Rychlost nástupu</label>
+          <select
+            className="input"
+            value={onsetSpeed}
+            onChange={(e) => setOnsetSpeed(e.target.value)}
+          >
+            {ONSET_SPEEDS.map((speed) => (
+              <option key={speed}>{speed}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="label">Poznámka</label>
+          <textarea
+            className="textarea"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Co přesně cítíš, kde, jak dlouho, po čem se to zhoršilo..."
+          />
+        </div>
+
+        <button className="button button-full" type="submit">
+          Uložit reakci
+        </button>
+      </form>
+
+      {reactions.length > 0 ? (
+        <div className="card">
+          <h4 className="card-title">Možná souvislost</h4>
+          <div className="empty-box">
+            Později zde bude analýza jídel za posledních 2–48 hodin. Reakce nemusí být
+            způsobena jen posledním jídlem, ale i kumulací potravin během dne nebo předchozích
+            dnů.
+          </div>
+        </div>
+      ) : null}
+
+      <div className="card">
+        <h4 className="card-title">Dnešní reakce</h4>
+
+        {reactions.length === 0 ? (
+          <div className="empty-box">Zatím tu není žádná reakce.</div>
+        ) : (
+          <div className="list">
+            {reactions.map((reaction) => (
+              <div key={reaction.id} className="list-item">
+                <div>
+                  <div className="list-title">{reaction.type}</div>
+                  <div className="list-subtitle">
+                    Intenzita: {reaction.intensity}/10 • Nástup: {reaction.onsetSpeed}
+                    {reaction.onsetTime ? ` • Čas: ${reaction.onsetTime}` : ''}
+                    {reaction.note ? ` • ${reaction.note}` : ''}
+                  </div>
+                </div>
+                <button className="delete-button" onClick={() => onDeleteReaction(reaction.id)}>
+                  Smazat
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
 export default function App() {
   const [isHydrated, setIsHydrated] = useState(false)
   const [auth, setAuth] = useState({ loggedIn: false, email: '' })
@@ -276,12 +428,17 @@ export default function App() {
   const [foods, setFoods] = useState(DEFAULT_FOODS)
   const [entries, setEntries] = useState({})
   const [dayInfo, setDayInfo] = useState({})
+  const [reactions, setReactions] = useState({})
   const [openMain, setOpenMain] = useState(null)
   const [openMeal, setOpenMeal] = useState(null)
+  const [openMenu, setOpenMenu] = useState(false)
+  const [openCalendar, setOpenCalendar] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(formatToday())
 
-  const today = formatToday()
+  const today = selectedDate
   const todayEntries = entries[today] || {}
   const todayInfo = dayInfo[today] || DEFAULT_DAY_INFO
+  const todayReactions = reactions[today] || []
 
   useEffect(() => {
     const savedAuth = readStorage(STORAGE_KEYS.auth, { loggedIn: false, email: '' })
@@ -289,6 +446,7 @@ export default function App() {
     const savedFoods = readStorage(STORAGE_KEYS.foods, DEFAULT_FOODS)
     const savedEntries = readStorage(STORAGE_KEYS.entries, {})
     const savedDayInfo = readStorage(STORAGE_KEYS.dayInfo, {})
+    const savedReactions = readStorage(STORAGE_KEYS.reactions, {})
 
     setAuth(savedAuth)
     setLoginEmail(savedAuth.email || '')
@@ -296,8 +454,14 @@ export default function App() {
     setFoods(savedFoods?.length ? savedFoods : DEFAULT_FOODS)
     setEntries(savedEntries || {})
     setDayInfo(savedDayInfo || {})
+    setReactions(savedReactions || {})
     setIsHydrated(true)
   }, [])
+
+  useEffect(() => {
+    // when selectedDate changes we can close calendar
+    if (openCalendar) setOpenCalendar(false)
+  }, [selectedDate])
 
   useEffect(() => {
     if (!isHydrated) return
@@ -323,6 +487,11 @@ export default function App() {
     if (!isHydrated) return
     writeStorage(STORAGE_KEYS.dayInfo, dayInfo)
   }, [dayInfo, isHydrated])
+
+  useEffect(() => {
+    if (!isHydrated) return
+    writeStorage(STORAGE_KEYS.reactions, reactions)
+  }, [reactions, isHydrated])
 
   function handleLogin(e) {
     e.preventDefault()
@@ -380,6 +549,27 @@ export default function App() {
     }))
   }
 
+  function addReaction(reaction) {
+    setReactions((prev) => ({
+      ...prev,
+      [today]: [
+        ...((prev[today] || [])),
+        {
+          id: createId(),
+          ...reaction,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    }))
+  }
+
+  function deleteReaction(reactionId) {
+    setReactions((prev) => ({
+      ...prev,
+      [today]: ((prev[today] || []).filter((reaction) => reaction.id !== reactionId)),
+    }))
+  }
+
   const totalItemsToday = MEAL_SECTIONS.reduce((sum, section) => {
     return sum + (todayEntries[section.key]?.length || 0)
   }, 0)
@@ -407,6 +597,22 @@ export default function App() {
 
   const bmiValue = getBMI(profile.height, profile.weight || profile.startWeight)
   const bmiCategory = bmiValue ? getBMICategory(bmiValue) : ''
+
+  function prevDay() {
+    const d = new Date(today)
+    d.setDate(d.getDate() - 1)
+    setSelectedDate(d.toISOString().slice(0, 10))
+  }
+
+  function nextDay() {
+    const d = new Date(today)
+    d.setDate(d.getDate() + 1)
+    setSelectedDate(d.toISOString().slice(0, 10))
+  }
+
+  function handleDateChange(val) {
+    setSelectedDate(val)
+  }
 
   if (!isHydrated) {
     return <div className="loading-screen">Načítám…</div>
@@ -460,25 +666,19 @@ export default function App() {
     <div className="page app-page">
       <div className="app-container">
         <div className="topbar">
-          <div>
-            <div className="topbar-small">Dnes</div>
-            <h1 className="topbar-title">Můj den</h1>
-            <div className="topbar-text">
-              Přihlášen: {auth.email} • Dnešní záznamy: {totalItemsToday}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="calendar-button" onClick={() => setOpenCalendar(true)} aria-label="Otevřít kalendář">📅</button>
+            <div>
+              <div className="topbar-small">{today === formatToday() ? 'Dnes' : ''}</div>
+              <h1 className="topbar-title">Můj den</h1>
+              <div className="topbar-text">{selectedDate} • Záznamy: {totalItemsToday}</div>
             </div>
           </div>
 
           <div className="topbar-actions">
-            <button
-              className="button button-light"
-              onClick={() => setOpenMain(openMain === 'profile' ? null : 'profile')}
-            >
-              Profil
-            </button>
-
-            <button className="button button-light" onClick={handleLogout}>
-              Odhlásit
-            </button>
+            <button className="button button-light" onClick={() => setOpenMain(openMain === 'profile' ? null : 'profile')}>Profil</button>
+            <button className="button button-light" onClick={handleLogout}>Odhlásit</button>
+            <button className="menu-button" onClick={() => setOpenMenu((v) => !v)} aria-label="Otevřít menu">☰</button>
           </div>
         </div>
 
@@ -583,6 +783,20 @@ export default function App() {
                 </select>
               </div>
             </div>
+          </AccordionSection>
+
+          <AccordionSection
+            title="Reakce těla"
+            subtitle="Symptomy, intolerance a čas nástupu"
+            colorClass="panel-indigo"
+            isOpen={openMain === 'reactions'}
+            onToggle={() => setOpenMain(openMain === 'reactions' ? null : 'reactions')}
+          >
+            <ReactionsPanel
+              reactions={todayReactions}
+              onAddReaction={addReaction}
+              onDeleteReaction={deleteReaction}
+            />
           </AccordionSection>
 
           <AccordionSection
@@ -731,6 +945,38 @@ export default function App() {
           <FoodLibrary foods={foods} onAddFood={addFood} />
         </div>
       </div>
+
+      {/* Side sliding menu */}
+      <div className={`side-menu ${openMenu ? 'open' : ''}`}>
+        <div className="side-menu-header">
+          <div className="side-menu-title">Menu</div>
+          <button className="button" onClick={() => setOpenMenu(false)}>Zavřít</button>
+        </div>
+
+        <div className="side-menu-list">
+          <button className="side-item" onClick={() => { setOpenMain('profile'); setOpenMenu(false) }}>Profil</button>
+          <button className="side-item" onClick={() => { setOpenMain('history'); setOpenMenu(false) }}>Historie</button>
+          <button className="side-item" onClick={() => { setOpenMain('settings'); setOpenMenu(false) }}>Nastavení</button>
+          <button className="side-item" onClick={() => { handleLogout(); setOpenMenu(false) }}>Odhlásit</button>
+        </div>
+      </div>
+
+      {/* Calendar modal */}
+      {openCalendar ? (
+        <div className="overlay" onClick={() => setOpenCalendar(false)}>
+          <div className="calendar-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, textAlign: 'center' }}>Vyber datum</h3>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 12 }}>
+              <button className="button" onClick={prevDay}>◀</button>
+              <input type="date" value={selectedDate} onChange={(e) => handleDateChange(e.target.value)} />
+              <button className="button" onClick={nextDay}>▶</button>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <button className="button button-full" onClick={() => setOpenCalendar(false)}>Hotovo</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

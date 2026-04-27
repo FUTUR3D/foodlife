@@ -108,6 +108,87 @@ textarea {
   flex-wrap: wrap;
 }
 
+.menu-button {
+  background: transparent;
+  border: 0;
+  font-size: 22px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.calendar-button {
+  background: transparent;
+  border: 0;
+  font-size: 20px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.side-menu {
+  position: fixed;
+  top: 0;
+  right: -320px;
+  width: 320px;
+  height: 100vh;
+  background: #1f2937;
+  color: white;
+  box-shadow: -10px 0 30px rgba(2,6,23,0.4);
+  transition: right 0.25s ease;
+  z-index: 60;
+  padding: 20px;
+}
+
+.side-menu.open {
+  right: 0;
+}
+
+.side-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.side-menu-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.side-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.side-item {
+  background: transparent;
+  color: white;
+  border: 0;
+  text-align: left;
+  padding: 12px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 70;
+}
+
+.calendar-modal {
+  background: white;
+  color: #0f172a;
+  border-radius: 12px;
+  padding: 18px;
+  width: 320px;
+  box-shadow: 0 10px 30px rgba(2,6,23,0.25);
+}
+
 .accordion-stack {
   display: flex;
   flex-direction: column;
