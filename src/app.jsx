@@ -31,7 +31,10 @@ const DEFAULT_FOODS = [
 const DEFAULT_PROFILE = {
   name: '',
   email: '',
+  gender: '',
+  age: '',
   height: '',
+  weight: '',
   startWeight: '',
 }
 
@@ -381,6 +384,30 @@ export default function App() {
     return sum + (todayEntries[section.key]?.length || 0)
   }, 0)
 
+  function parseNumber(v) {
+    const n = parseFloat(String(v).replace(',', '.'))
+    return Number.isFinite(n) ? n : null
+  }
+
+  function getBMI(heightCm, weightKg) {
+    const h = parseNumber(heightCm)
+    const w = parseNumber(weightKg)
+    if (!h || !w) return null
+    const hm = h / 100
+    const bmi = w / (hm * hm)
+    return Math.round(bmi * 10) / 10
+  }
+
+  function getBMICategory(bmi) {
+    if (bmi < 18.5) return 'Podváha'
+    if (bmi < 25) return 'Normální'
+    if (bmi < 30) return 'Nadváha'
+    return 'Obezita'
+  }
+
+  const bmiValue = getBMI(profile.height, profile.weight || profile.startWeight)
+  const bmiCategory = bmiValue ? getBMICategory(bmiValue) : ''
+
   if (!isHydrated) {
     return <div className="loading-screen">Načítám…</div>
   }
@@ -444,20 +471,7 @@ export default function App() {
           <div className="topbar-actions">
             <button
               className="button button-light"
-              onClick={() => {
-                const name = prompt('Jméno', profile.name || '')
-                const height = prompt('Výška v cm', profile.height || '')
-                const startWeight = prompt('Počáteční váha v kg', profile.startWeight || '')
-
-                if (name !== null || height !== null || startWeight !== null) {
-                  setProfile((prev) => ({
-                    ...prev,
-                    name: name ?? prev.name,
-                    height: height ?? prev.height,
-                    startWeight: startWeight ?? prev.startWeight,
-                  }))
-                }
-              }}
+              onClick={() => setOpenMain(openMain === 'profile' ? null : 'profile')}
             >
               Profil
             </button>
@@ -625,6 +639,91 @@ export default function App() {
                   onChange={(e) => updateTodayInfo('dayNote', e.target.value)}
                   placeholder="Jaký byl den, stres, spánek, poznámky..."
                 />
+              </div>
+            </div>
+          </AccordionSection>
+
+          <AccordionSection
+            title="Profil"
+            subtitle="Osobní informace"
+            colorClass="panel-violet"
+            isOpen={openMain === 'profile'}
+            onToggle={() => setOpenMain(openMain === 'profile' ? null : 'profile')}
+          >
+            <div className="card">
+              <h3 className="card-title">Profil</h3>
+
+              <div className="form-group">
+                <label className="label">Jméno</label>
+                <input
+                  className="input"
+                  value={profile.name || ''}
+                  onChange={(e) => setProfile((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Jméno"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label">E-mail</label>
+                <input
+                  className="input"
+                  type="email"
+                  value={profile.email || ''}
+                  onChange={(e) => setProfile((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="E-mail"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label">Pohlaví</label>
+                <select
+                  className="input"
+                  value={profile.gender || ''}
+                  onChange={(e) => setProfile((prev) => ({ ...prev, gender: e.target.value }))}
+                >
+                  <option value="">--</option>
+                  <option value="Muž">Muž</option>
+                  <option value="Žena">Žena</option>
+                  <option value="Jiné">Jiné</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="label">Věk</label>
+                <input
+                  className="input"
+                  type="number"
+                  value={profile.age || ''}
+                  onChange={(e) => setProfile((prev) => ({ ...prev, age: e.target.value }))}
+                  placeholder="Věk"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label">Výška (cm)</label>
+                <input
+                  className="input"
+                  value={profile.height || ''}
+                  onChange={(e) => setProfile((prev) => ({ ...prev, height: e.target.value }))}
+                  placeholder="Výška v cm"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label">Váha (kg)</label>
+                <input
+                  className="input"
+                  value={profile.weight || ''}
+                  onChange={(e) => setProfile((prev) => ({ ...prev, weight: e.target.value }))}
+                  placeholder="Váha v kg"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label">BMI</label>
+                <div className="input">
+                  {bmiValue ? `${bmiValue} (${bmiCategory})` : 'Vyplň výšku a váhu'}
+                </div>
               </div>
             </div>
           </AccordionSection>
