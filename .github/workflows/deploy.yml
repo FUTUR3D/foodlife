@@ -26,6 +26,8 @@ jobs:
         run: npm run build
 
       - name: Prepare deploy package
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           mkdir deploy
           cp -R dist/. deploy/
@@ -40,6 +42,67 @@ jobs:
           cp resend-verification.php deploy/
           cp reset-password.php deploy/
           cp verify-email.php deploy/
+          if [ -z "$DB_PASSWORD" ]; then
+            echo "::error::Missing DB_PASSWORD secret"
+            exit 1
+          fi
+          node - <<'NODE'
+          const fs = require('fs')
+          const dbPassword = JSON.stringify(process.env.DB_PASSWORD || '')
+          fs.writeFileSync('deploy/config.php', `<?php
+          // FoodLife database connection and shared helpers.
+
+          $DB_HOST = 'md422.wedos.net';
+          $DB_NAME = 'd374970_food';
+          $DB_USER = 'a374970_food';
+          $DB_PASS = ${dbPassword};
+
+          try {
+              $pdo = new PDO(
+                  "mysql:host=$DB_HOST;dbname=$DB_NAME;charset=utf8mb4",
+                  $DB_USER,
+                  $DB_PASS,
+                  [
+                      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                  ]
+              );
+          } catch (PDOException $e) {
+              http_response_code(500);
+              die('Chyba pripojeni k databazi.');
+          }
+
+          if (session_status() === PHP_SESSION_NONE) {
+              session_start();
+          }
+
+          if (!function_exists('log_error')) {
+              function log_error(string $msg): void
+              {
+                  $dir = __DIR__ . DIRECTORY_SEPARATOR . 'logs';
+                  if (!is_dir($dir)) {
+                      @mkdir($dir, 0755, true);
+                  }
+
+                  $file = $dir . DIRECTORY_SEPARATOR . 'app-errors.log';
+                  $entry = '[' . date('Y-m-d H:i:s') . '] ' . $msg . PHP_EOL;
+                  @file_put_contents($file, $entry, FILE_APPEND | LOCK_EX);
+              }
+          }
+
+          if (!function_exists('app_base_url')) {
+              function app_base_url(): string
+              {
+                  $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+                  $scheme = $https ? 'https' : 'http';
+                  $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                  $dir = rtrim(str_replace('\\\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/');
+
+                  return $scheme . '://' . $host . ($dir === '' ? '' : $dir);
+              }
+          }
+          `)
+          NODE
 
       - name: Deploy app files to FTP server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
