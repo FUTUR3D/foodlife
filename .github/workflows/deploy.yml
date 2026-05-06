@@ -31,13 +31,18 @@ jobs:
         run: |
           mkdir deploy
           cp -R dist/. deploy/
+          cp api-helpers.php deploy/
           cp app.css deploy/
           cp auth-status.php deploy/
+          cp foods-search.php deploy/
           cp footer.php deploy/
           cp forgot-password.php deploy/
           cp header.php deploy/
           cp login.php deploy/
           cp logout.php deploy/
+          cp meal-delete.php deploy/
+          cp meal-save.php deploy/
+          cp meals-day.php deploy/
           cp register.php deploy/
           cp resend-verification.php deploy/
           cp reset-password.php deploy/

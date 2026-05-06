@@ -384,6 +384,120 @@ textarea {
   cursor: pointer;
 }
 
+.food-search-wrap {
+  position: relative;
+}
+
+.food-search-results {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% - 4px);
+  z-index: 20;
+  max-height: 260px;
+  overflow: auto;
+  background: white;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.14);
+}
+
+.food-search-results button {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #edf2f7;
+  background: white;
+  color: #0f172a;
+  padding: 11px 12px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.food-search-results button:last-child {
+  border-bottom: 0;
+}
+
+.food-search-results button:hover {
+  background: #f8fafc;
+}
+
+.food-search-results small,
+.form-hint {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.meal-input-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 10px;
+}
+
+.inline-error {
+  margin-bottom: 12px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 14px;
+}
+
+.meal-totals {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.meal-totals div {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 10px;
+  min-width: 0;
+}
+
+.meal-totals strong,
+.meal-totals span {
+  display: block;
+}
+
+.meal-totals strong {
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.meal-totals span {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.saved-meal {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.saved-meal-head {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.meal-item-lines {
+  margin-top: 10px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .food-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -433,6 +547,11 @@ textarea {
   }
 
   .food-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .meal-input-grid,
+  .meal-totals {
     grid-template-columns: 1fr;
   }
 }

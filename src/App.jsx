@@ -15,6 +15,7 @@ const MEAL_SECTIONS = [
   { key: 'obed', title: 'Oběd', colorClass: 'panel-sky' },
   { key: 'svacina2', title: 'Svačina 2', colorClass: 'panel-blue' },
   { key: 'vecere', title: 'Večeře', colorClass: 'panel-indigo' },
+  { key: 'piti', title: 'Pití', colorClass: 'panel-cyan' },
   { key: 'ostatni', title: 'Ostatní', colorClass: 'panel-violet' },
 ]
 
@@ -115,174 +116,327 @@ function AccordionSection({
   )
 }
 
-function FoodLibrary({ foods, onAddFood }) {
-  const [newFood, setNewFood] = useState('')
+function parseAmount(value) {
+  const number = parseFloat(String(value).replace(',', '.'))
+  return Number.isFinite(number) && number > 0 ? number : null
+}
 
-  function handleAdd() {
-    const name = newFood.trim()
-    if (!name) return
-    onAddFood(name)
-    setNewFood('')
-  }
+function gramsFromAmount(amount, unit) {
+  const value = parseAmount(amount)
+  if (!value) return null
+  if (unit === 'g' || unit === 'ml') return value
+  return null
+}
+
+function emptyTotals() {
+  return { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, knownItems: 0 }
+}
+
+function getMealTotals(items) {
+  return items.reduce((totals, item) => {
+    const grams = item.grams ?? gramsFromAmount(item.amount, item.unit)
+    if (!grams || item.kcal_100g === null || item.kcal_100g === undefined) return totals
+
+    const ratio = grams / 100
+    return {
+      kcal: totals.kcal + Number(item.kcal_100g || 0) * ratio,
+      protein: totals.protein + Number(item.protein_100g || 0) * ratio,
+      carbs: totals.carbs + Number(item.carbs_100g || 0) * ratio,
+      fat: totals.fat + Number(item.fat_100g || 0) * ratio,
+      fiber: totals.fiber + Number(item.fiber_100g || 0) * ratio,
+      knownItems: totals.knownItems + 1,
+    }
+  }, emptyTotals())
+}
+
+function formatMacro(value, suffix = 'g') {
+  if (!Number.isFinite(value)) return '-'
+  return `${Math.round(value * 10) / 10} ${suffix}`
+}
+
+function MealTotals({ items }) {
+  const totals = getMealTotals(items)
 
   return (
-    <div className="card">
-      <h3 className="card-title">Databáze jídel</h3>
-
-      <div className="form-row">
-        <input
-          className="input"
-          value={newFood}
-          onChange={(e) => setNewFood(e.target.value)}
-          placeholder="Přidat nové jídlo"
-        />
-        <button className="button" onClick={handleAdd}>
-          Přidat
-        </button>
-      </div>
-
-      <div className="food-grid">
-        {foods.map((food) => (
-          <div key={food.id} className="food-chip">
-            {food.name}
-          </div>
-        ))}
-      </div>
+    <div className="meal-totals">
+      <div><strong>{Math.round(totals.kcal)}</strong><span>kcal</span></div>
+      <div><strong>{formatMacro(totals.protein)}</strong><span>bílkoviny</span></div>
+      <div><strong>{formatMacro(totals.carbs)}</strong><span>sacharidy</span></div>
+      <div><strong>{formatMacro(totals.fat)}</strong><span>tuky</span></div>
+      <div><strong>{formatMacro(totals.fiber)}</strong><span>vláknina</span></div>
     </div>
   )
 }
 
 function MealSection({
   section,
-  items,
-  foods,
+  savedMeals,
   isOpen,
   onToggle,
-  onAddItem,
-  onDeleteItem,
+  onSaveMeal,
+  onDeleteMeal,
 }) {
   const [query, setQuery] = useState('')
-  const [selectedFoodId, setSelectedFoodId] = useState(foods[0]?.id || '')
+  const [results, setResults] = useState([])
+  const [selectedFood, setSelectedFood] = useState(null)
   const [amount, setAmount] = useState('')
+  const [unit, setUnit] = useState(section.key === 'piti' ? 'ml' : 'g')
   const [note, setNote] = useState('')
+  const [draftItems, setDraftItems] = useState([])
+  const [mealNote, setMealNote] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!foods.find((f) => f.id === selectedFoodId)) {
-      setSelectedFoodId(foods[0]?.id || '')
+    const q = query.trim()
+    setError('')
+
+    if (selectedFood?.name_cs === q) {
+      setResults([])
+      setIsSearching(false)
+      return undefined
     }
-  }, [foods, selectedFoodId])
 
-  const filteredFoods = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return foods
-    return foods.filter((food) => food.name.toLowerCase().includes(q))
-  }, [foods, query])
+    if (q.length < 2) {
+      setResults([])
+      setIsSearching(false)
+      return undefined
+    }
 
-  function handleAdd() {
-    if (!selectedFoodId) return
+    const controller = new AbortController()
+    const timeout = window.setTimeout(async () => {
+      setIsSearching(true)
+      try {
+        const response = await fetch(`foods-search.php?q=${encodeURIComponent(q)}`, {
+          credentials: 'same-origin',
+          signal: controller.signal,
+        })
+        if (!response.ok) throw new Error('search_failed')
+        const data = await response.json()
+        setResults(data.foods || [])
+      } catch (err) {
+        if (err.name !== 'AbortError') setError('Potraviny se nepodařilo načíst.')
+      } finally {
+        setIsSearching(false)
+      }
+    }, 250)
 
-    onAddItem(section.key, {
-      id: createId(),
-      foodId: selectedFoodId,
-      amount,
-      note,
-      createdAt: new Date().toISOString(),
-    })
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [query, selectedFood])
 
+  function handleSelectFood(food) {
+    setSelectedFood(food)
+    setQuery(food.name_cs)
+    setResults([])
+  }
+
+  function handleAddItem() {
+    const parsedAmount = parseAmount(amount)
+    const name = selectedFood?.name_cs || query.trim()
+
+    if (!name || !parsedAmount) {
+      setError('Vyber potravinu a doplň množství.')
+      return
+    }
+
+    const grams = gramsFromAmount(parsedAmount, unit)
+    setDraftItems((prev) => [
+      ...prev,
+      {
+        id: createId(),
+        food_id: selectedFood?.id || null,
+        name,
+        custom_name: selectedFood ? null : name,
+        amount: parsedAmount,
+        unit,
+        grams,
+        note: note.trim(),
+        kcal_100g: selectedFood?.kcal_100g ?? null,
+        protein_100g: selectedFood?.protein_100g ?? null,
+        carbs_100g: selectedFood?.carbs_100g ?? null,
+        fat_100g: selectedFood?.fat_100g ?? null,
+        fiber_100g: selectedFood?.fiber_100g ?? null,
+      },
+    ])
+
+    setQuery('')
+    setSelectedFood(null)
+    setResults([])
     setAmount('')
     setNote('')
-    setQuery('')
+    setError('')
   }
+
+  async function handleSaveMeal() {
+    if (draftItems.length === 0 || isSaving) return
+
+    setIsSaving(true)
+    setError('')
+    try {
+      await onSaveMeal(section, draftItems, mealNote)
+      setDraftItems([])
+      setMealNote('')
+    } catch {
+      setError('Jídlo se nepodařilo uložit.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const savedCount = savedMeals.reduce((sum, meal) => sum + meal.items.length, 0)
 
   return (
     <AccordionSection
       title={section.title}
-      subtitle={`${items.length} položek dnes`}
+      subtitle={`${savedMeals.length} uložených jídel • ${savedCount} položek`}
       colorClass={section.colorClass}
       isOpen={isOpen}
       onToggle={onToggle}
     >
       <div className="card">
-        <h4 className="card-title">Přidat jídlo</h4>
+        <h4 className="card-title">Skládání {section.title.toLowerCase()}</h4>
 
-        <div className="form-group">
-          <label className="label">Hledat v seznamu</label>
+        <div className="form-group food-search-wrap">
+          <label className="label">Potravina nebo nápoj</label>
           <input
             className="input"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Např. banán, rýže..."
+            onChange={(e) => {
+              setSelectedFood(null)
+              setQuery(e.target.value)
+            }}
+            placeholder={section.key === 'piti' ? 'Např. voda, káva, džus...' : 'Např. banán, rýže, jogurt...'}
           />
+          {results.length > 0 ? (
+            <div className="food-search-results">
+              {results.map((food) => (
+                <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
+                  <span>{food.name_cs}</span>
+                  <small>{Math.round(Number(food.kcal_100g || 0))} kcal / 100 g</small>
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {isSearching ? <div className="form-hint">Hledám...</div> : null}
+        </div>
+
+        <div className="meal-input-grid">
+          <div className="form-group">
+            <label className="label">Množství</label>
+            <input
+              className="input"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={section.key === 'piti' ? '250' : '150'}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="label">Jednotka</label>
+            <select className="input" value={unit} onChange={(e) => setUnit(e.target.value)}>
+              <option value="g">g</option>
+              <option value="ml">ml</option>
+              <option value="ks">ks</option>
+              <option value="porce">porce</option>
+              <option value="lžička">lžička</option>
+              <option value="lžíce">lžíce</option>
+            </select>
+          </div>
         </div>
 
         <div className="form-group">
-          <label className="label">Vyber jídlo</label>
-          <select
-            className="input"
-            value={selectedFoodId}
-            onChange={(e) => setSelectedFoodId(e.target.value)}
-          >
-            {filteredFoods.length === 0 ? (
-              <option value="">Nic nenalezeno</option>
-            ) : (
-              filteredFoods.map((food) => (
-                <option key={food.id} value={food.id}>
-                  {food.name}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="label">Množství</label>
-          <input
-            className="input"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="Např. 150 g"
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="label">Poznámka</label>
+          <label className="label">Poznámka k položce</label>
           <input
             className="input"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Např. bez cukru"
+            placeholder="Např. vařená rýže, bez cukru, po tréninku"
           />
         </div>
 
-        <button className="button button-full" onClick={handleAdd}>
-          Přidat do sekce
+        {error ? <div className="inline-error">{error}</div> : null}
+
+        <button className="button button-full" onClick={handleAddItem}>
+          Přidat položku
         </button>
       </div>
 
       <div className="card">
-        <h4 className="card-title">Dnešní položky</h4>
-
-        {items.length === 0 ? (
-          <div className="empty-box">Zatím tu nic není.</div>
+        <h4 className="card-title">Rozpracováno</h4>
+        {draftItems.length === 0 ? (
+          <div className="empty-box">Přidej první položku a potom celé jídlo ulož.</div>
         ) : (
-          <div className="list">
-            {items.map((item) => {
-              const food = foods.find((f) => f.id === item.foodId)
-              return (
+          <>
+            <div className="list">
+              {draftItems.map((item) => (
                 <div key={item.id} className="list-item">
                   <div>
-                    <div className="list-title">{food?.name || 'Neznámé jídlo'}</div>
+                    <div className="list-title">{item.name}</div>
                     <div className="list-subtitle">
-                      {item.amount || 'Bez množství'}
+                      {item.amount} {item.unit}
                       {item.note ? ` • ${item.note}` : ''}
                     </div>
                   </div>
-                  <button className="delete-button" onClick={() => onDeleteItem(section.key, item.id)}>
+                  <button
+                    className="delete-button"
+                    onClick={() => setDraftItems((prev) => prev.filter((draft) => draft.id !== item.id))}
+                  >
                     Smazat
                   </button>
                 </div>
-              )
-            })}
+              ))}
+            </div>
+
+            <MealTotals items={draftItems} />
+
+            <div className="form-group">
+              <label className="label">Poznámka k celému jídlu</label>
+              <input
+                className="input"
+                value={mealNote}
+                onChange={(e) => setMealNote(e.target.value)}
+                placeholder="Např. rychlá snídaně, větší porce, po běhu"
+              />
+            </div>
+
+            <button className="button button-full" onClick={handleSaveMeal} disabled={isSaving}>
+              {isSaving ? 'Ukládám...' : `Ukončit a uložit ${section.title.toLowerCase()}`}
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="card">
+        <h4 className="card-title">Dnešní přehled</h4>
+        {savedMeals.length === 0 ? (
+          <div className="empty-box">Zatím není uložený žádný záznam.</div>
+        ) : (
+          <div className="list">
+            {savedMeals.map((meal) => (
+              <div key={meal.id} className="saved-meal">
+                <div className="saved-meal-head">
+                  <div>
+                    <div className="list-title">{meal.title || section.title}</div>
+                    <div className="list-subtitle">{meal.meal_time?.slice(11, 16)}</div>
+                  </div>
+                  <button className="delete-button" onClick={() => onDeleteMeal(meal.id)}>
+                    Smazat
+                  </button>
+                </div>
+                <div className="meal-item-lines">
+                  {meal.items.map((item) => (
+                    <div key={item.id}>
+                      {item.name || item.custom_name} • {item.amount || ''} {item.unit || ''}
+                    </div>
+                  ))}
+                </div>
+                <MealTotals items={meal.items} />
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -428,6 +582,8 @@ export default function App() {
   const [foods, setFoods] = useState(DEFAULT_FOODS)
   const [entries, setEntries] = useState({})
   const [dayInfo, setDayInfo] = useState({})
+  const [dayMeals, setDayMeals] = useState([])
+  const [isMealsLoading, setIsMealsLoading] = useState(false)
   const [reactions, setReactions] = useState({})
   const [openMain, setOpenMain] = useState(null)
   const [openMeal, setOpenMeal] = useState(null)
@@ -439,6 +595,15 @@ export default function App() {
   const todayEntries = entries[today] || {}
   const todayInfo = dayInfo[today] || DEFAULT_DAY_INFO
   const todayReactions = reactions[today] || []
+  const mealsByType = useMemo(() => {
+    return dayMeals.reduce((groups, meal) => {
+      const key = meal.meal_type || 'ostatni'
+      return {
+        ...groups,
+        [key]: [...(groups[key] || []), meal],
+      }
+    }, {})
+  }, [dayMeals])
 
   useEffect(() => {
     const savedProfile = readStorage(STORAGE_KEYS.profile, DEFAULT_PROFILE)
@@ -520,6 +685,11 @@ export default function App() {
     window.location.replace('login.php')
   }, [auth.loggedIn, isHydrated])
 
+  useEffect(() => {
+    if (!isHydrated || !auth.loggedIn) return
+    loadDayMeals(today)
+  }, [auth.loggedIn, isHydrated, today])
+
   function handleLogin(e) {
     e.preventDefault()
     if (!loginEmail.trim() || !loginPassword.trim()) return
@@ -537,6 +707,60 @@ export default function App() {
 
   function handleLogout() {
     window.location.href = 'logout.php'
+  }
+
+  async function loadDayMeals(date) {
+    setIsMealsLoading(true)
+    try {
+      const response = await fetch(`meals-day.php?date=${encodeURIComponent(date)}`, {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('meals_load_failed')
+      const data = await response.json()
+      setDayMeals(data.meals || [])
+    } catch {
+      setDayMeals([])
+    } finally {
+      setIsMealsLoading(false)
+    }
+  }
+
+  async function saveMeal(section, items, note) {
+    const response = await fetch('meal-save.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        date: today,
+        meal_type: section.key,
+        title: section.title,
+        note,
+        items,
+      }),
+    })
+
+    if (!response.ok) throw new Error('meal_save_failed')
+    await loadDayMeals(today)
+  }
+
+  async function deleteSavedMeal(mealId) {
+    const response = await fetch('meal-delete.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ meal_id: mealId }),
+    })
+
+    if (response.ok) {
+      await loadDayMeals(today)
+    }
   }
 
   function addFood(name) {
@@ -598,7 +822,7 @@ export default function App() {
   }
 
   const totalItemsToday = MEAL_SECTIONS.reduce((sum, section) => {
-    return sum + (todayEntries[section.key]?.length || 0)
+    return sum + (mealsByType[section.key] || []).reduce((mealSum, meal) => mealSum + meal.items.length, 0)
   }, 0)
 
   function parseNumber(v) {
@@ -678,39 +902,20 @@ export default function App() {
             onToggle={() => setOpenMain(openMain === 'food' ? null : 'food')}
           >
             <div className="accordion-stack">
+              {isMealsLoading ? <div className="empty-box">Načítám dnešní jídla...</div> : null}
+
               {MEAL_SECTIONS.map((section) => (
                 <MealSection
                   key={section.key}
                   section={section}
-                  foods={foods}
-                  items={todayEntries[section.key] || []}
+                  savedMeals={mealsByType[section.key] || []}
                   isOpen={openMeal === section.key}
                   onToggle={() => setOpenMeal(openMeal === section.key ? null : section.key)}
-                  onAddItem={addMealItem}
-                  onDeleteItem={deleteMealItem}
+                  onSaveMeal={saveMeal}
+                  onDeleteMeal={deleteSavedMeal}
                 />
               ))}
 
-              <AccordionSection
-                title="Pití"
-                subtitle="Kolik jsi dnes vypil"
-                colorClass="panel-cyan"
-                isOpen={openMeal === 'drinks'}
-                onToggle={() => setOpenMeal(openMeal === 'drinks' ? null : 'drinks')}
-              >
-                <div className="card">
-                  <h4 className="card-title">Pitný režim</h4>
-                  <div className="form-group">
-                    <label className="label">Co a kolik jsi vypil</label>
-                    <input
-                      className="input"
-                      value={todayInfo.drinks || ''}
-                      onChange={(e) => updateTodayInfo('drinks', e.target.value)}
-                      placeholder="Např. voda 1,5 l, káva 2x, čaj"
-                    />
-                  </div>
-                </div>
-              </AccordionSection>
             </div>
           </AccordionSection>
 
@@ -929,7 +1134,6 @@ export default function App() {
             </div>
           </AccordionSection>
 
-          <FoodLibrary foods={foods} onAddFood={addFood} />
         </div>
       </div>
 
