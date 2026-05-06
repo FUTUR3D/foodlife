@@ -15,6 +15,8 @@ $stmt = $pdo->prepare('
         id,
         name_cs,
         name_en,
+        default_unit,
+        serving_grams,
         kcal_100g,
         protein_100g,
         carbs_100g,

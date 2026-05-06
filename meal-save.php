@@ -67,6 +67,11 @@ try {
         $unit = trim($item['unit'] ?? '') ?: null;
         $grams = isset($item['grams']) && $item['grams'] !== '' ? (float) $item['grams'] : null;
         $itemNote = trim($item['note'] ?? '') ?: null;
+        $servingGrams = isset($item['serving_grams']) && $item['serving_grams'] !== '' ? (float) $item['serving_grams'] : null;
+
+        if ($grams === null && $amount !== null && $servingGrams !== null && !in_array($unit, ['g', 'ml'], true)) {
+            $grams = $amount * $servingGrams;
+        }
 
         if (!$foodId && $customName === '') {
             continue;

@@ -121,10 +121,12 @@ function parseAmount(value) {
   return Number.isFinite(number) && number > 0 ? number : null
 }
 
-function gramsFromAmount(amount, unit) {
+function gramsFromAmount(amount, unit, servingGrams = null) {
   const value = parseAmount(amount)
   if (!value) return null
   if (unit === 'g' || unit === 'ml') return value
+  const serving = parseAmount(servingGrams)
+  if (serving) return value * serving
   return null
 }
 
@@ -134,7 +136,7 @@ function emptyTotals() {
 
 function getMealTotals(items) {
   return items.reduce((totals, item) => {
-    const grams = item.grams ?? gramsFromAmount(item.amount, item.unit)
+    const grams = item.grams ?? gramsFromAmount(item.amount, item.unit, item.serving_grams)
     if (!grams || item.kcal_100g === null || item.kcal_100g === undefined) return totals
 
     const ratio = grams / 100
@@ -231,6 +233,8 @@ function MealSection({
   function handleSelectFood(food) {
     setSelectedFood(food)
     setQuery(food.name_cs)
+    setUnit(food.default_unit || (section.key === 'piti' ? 'ml' : 'g'))
+    setAmount(food.serving_grams ? '1' : '')
     setResults([])
   }
 
@@ -243,7 +247,7 @@ function MealSection({
       return
     }
 
-    const grams = gramsFromAmount(parsedAmount, unit)
+    const grams = gramsFromAmount(parsedAmount, unit, selectedFood?.serving_grams)
     setDraftItems((prev) => [
       ...prev,
       {
@@ -254,6 +258,7 @@ function MealSection({
         amount: parsedAmount,
         unit,
         grams,
+        serving_grams: selectedFood?.serving_grams ?? null,
         note: note.trim(),
         kcal_100g: selectedFood?.kcal_100g ?? null,
         protein_100g: selectedFood?.protein_100g ?? null,
@@ -316,7 +321,10 @@ function MealSection({
               {results.map((food) => (
                 <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
                   <span>{food.name_cs}</span>
-                  <small>{Math.round(Number(food.kcal_100g || 0))} kcal / 100 g</small>
+                  <small>
+                    {food.serving_grams ? `1 ${food.default_unit} ≈ ${Math.round(Number(food.serving_grams))} g • ` : ''}
+                    {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
+                  </small>
                 </button>
               ))}
             </div>
@@ -341,6 +349,7 @@ function MealSection({
               <option value="g">g</option>
               <option value="ml">ml</option>
               <option value="ks">ks</option>
+              <option value="plátek">plátek</option>
               <option value="porce">porce</option>
               <option value="lžička">lžička</option>
               <option value="lžíce">lžíce</option>
