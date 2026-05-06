@@ -515,6 +515,11 @@ export default function App() {
     writeStorage(STORAGE_KEYS.reactions, reactions)
   }, [reactions, isHydrated])
 
+  useEffect(() => {
+    if (!isHydrated || auth.loggedIn) return
+    window.location.replace('login.php')
+  }, [auth.loggedIn, isHydrated])
+
   function handleLogin(e) {
     e.preventDefault()
     if (!loginEmail.trim() || !loginPassword.trim()) return
@@ -641,47 +646,7 @@ export default function App() {
   }
 
   if (!auth.loggedIn) {
-    return (
-      <div className="page login-page">
-        <div className="login-box">
-          <div className="badge">FoodLife App</div>
-          <h1 className="main-title">Sledování jídla a životního stylu</h1>
-          <p className="main-text">
-            První verze webové aplikace. Přihlášení je zatím lokální a uloží se do prohlížeče.
-          </p>
-
-          <form className="card" onSubmit={handleLogin}>
-            <h2 className="card-title">Přihlášení</h2>
-
-            <div className="form-group">
-              <label className="label">E-mail</label>
-              <input
-                className="input"
-                type="email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="jmeno@email.cz"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="label">Heslo</label>
-              <input
-                className="input"
-                type="password"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="••••••••"
-              />
-            </div>
-
-            <button className="button button-full" type="submit">
-              Přihlásit se
-            </button>
-          </form>
-        </div>
-      </div>
-    )
+    return <div className="loading-screen">Přesměrovávám…</div>
   }
 
   return (

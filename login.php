@@ -5,6 +5,11 @@ $language = $_SESSION['ui_language'] ?? 'cz';
 $error = null;
 $show_resend = false;
 
+if (!empty($_SESSION['user_id']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: index.html');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_login'])) {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
