@@ -9,6 +9,7 @@ $mealType = trim($data['meal_type'] ?? '');
 $title = trim($data['title'] ?? '');
 $note = trim($data['note'] ?? '');
 $items = $data['items'] ?? [];
+$mealId = isset($data['meal_id']) && $data['meal_id'] !== '' ? (int) $data['meal_id'] : 0;
 
 if ($mealType === '') {
     json_error('missing_meal_type');
@@ -41,20 +42,48 @@ try {
         }
     }
 
-    $stmt = $pdo->prepare('
-        INSERT INTO meals (user_id, meal_time, meal_type, title, ingredients, note)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ');
-    $stmt->execute([
-        $userId,
-        $mealTime,
-        $mealType,
-        $title,
-        implode("\n", $ingredients),
-        $note === '' ? null : $note,
-    ]);
+    if ($mealId > 0) {
+        $stmt = $pdo->prepare('
+            UPDATE meals
+            SET meal_time = ?, meal_type = ?, title = ?, ingredients = ?, note = ?
+            WHERE id = ? AND user_id = ?
+        ');
+        $stmt->execute([
+            $mealTime,
+            $mealType,
+            $title,
+            implode("\n", $ingredients),
+            $note === '' ? null : $note,
+            $mealId,
+            $userId,
+        ]);
 
-    $mealId = (int) $pdo->lastInsertId();
+        if ($stmt->rowCount() === 0) {
+            $checkStmt = $pdo->prepare('SELECT id FROM meals WHERE id = ? AND user_id = ?');
+            $checkStmt->execute([$mealId, $userId]);
+            if (!$checkStmt->fetch()) {
+                json_error('meal_not_found', 404);
+            }
+        }
+
+        $deleteStmt = $pdo->prepare('DELETE FROM meal_items WHERE meal_id = ?');
+        $deleteStmt->execute([$mealId]);
+    } else {
+        $stmt = $pdo->prepare('
+            INSERT INTO meals (user_id, meal_time, meal_type, title, ingredients, note)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ');
+        $stmt->execute([
+            $userId,
+            $mealTime,
+            $mealType,
+            $title,
+            implode("\n", $ingredients),
+            $note === '' ? null : $note,
+        ]);
+
+        $mealId = (int) $pdo->lastInsertId();
+    }
     $itemStmt = $pdo->prepare('
         INSERT INTO meal_items (meal_id, food_id, recipe_id, custom_name, amount, unit, grams, note)
         VALUES (?, ?, NULL, ?, ?, ?, ?, ?)

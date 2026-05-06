@@ -151,9 +151,67 @@ function getMealTotals(items) {
   }, emptyTotals())
 }
 
+function getItemTotals(item) {
+  const grams = item.grams ?? gramsFromAmount(item.amount, item.unit, item.serving_grams)
+  if (!grams || item.kcal_100g === null || item.kcal_100g === undefined) {
+    return { ...emptyTotals(), grams: grams || null }
+  }
+
+  const ratio = grams / 100
+  return {
+    kcal: Number(item.kcal_100g || 0) * ratio,
+    protein: Number(item.protein_100g || 0) * ratio,
+    carbs: Number(item.carbs_100g || 0) * ratio,
+    fat: Number(item.fat_100g || 0) * ratio,
+    fiber: Number(item.fiber_100g || 0) * ratio,
+    knownItems: 1,
+    grams,
+  }
+}
+
 function formatMacro(value, suffix = 'g') {
   if (!Number.isFinite(value)) return '-'
   return `${Math.round(value * 10) / 10} ${suffix}`
+}
+
+function FoodValueDetails({ item }) {
+  const totals = getItemTotals(item)
+  const hasValues = totals.knownItems > 0
+
+  return (
+    <div className="food-value-details">
+      <div>
+        <span>Přepočet</span>
+        <strong>{totals.grams ? formatMacro(totals.grams) : 'Bez gramáže'}</strong>
+      </div>
+      <div>
+        <span>Energie</span>
+        <strong>{hasValues ? `${Math.round(totals.kcal)} kcal` : '-'}</strong>
+      </div>
+      <div>
+        <span>Bílkoviny</span>
+        <strong>{hasValues ? formatMacro(totals.protein) : '-'}</strong>
+      </div>
+      <div>
+        <span>Sacharidy</span>
+        <strong>{hasValues ? formatMacro(totals.carbs) : '-'}</strong>
+      </div>
+      <div>
+        <span>Tuky</span>
+        <strong>{hasValues ? formatMacro(totals.fat) : '-'}</strong>
+      </div>
+      <div>
+        <span>Vláknina</span>
+        <strong>{hasValues ? formatMacro(totals.fiber) : '-'}</strong>
+      </div>
+      {item.serving_grams ? (
+        <div>
+          <span>Porce</span>
+          <strong>1 {item.unit} ≈ {Math.round(Number(item.serving_grams))} g</strong>
+        </div>
+      ) : null}
+    </div>
+  )
 }
 
 function MealTotals({ items }) {
@@ -186,6 +244,9 @@ function MealSection({
   const [note, setNote] = useState('')
   const [draftItems, setDraftItems] = useState([])
   const [mealNote, setMealNote] = useState('')
+  const [editingMealId, setEditingMealId] = useState(null)
+  const [expandedDraftItems, setExpandedDraftItems] = useState({})
+  const [expandedSavedItems, setExpandedSavedItems] = useState({})
   const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
@@ -276,15 +337,68 @@ function MealSection({
     setError('')
   }
 
+  function updateDraftItem(itemId, patch) {
+    setDraftItems((prev) => prev.map((item) => {
+      if (item.id !== itemId) return item
+
+      const next = { ...item, ...patch }
+      next.grams = gramsFromAmount(next.amount, next.unit, next.serving_grams)
+      return next
+    }))
+  }
+
+  function toggleDraftItem(itemId) {
+    setExpandedDraftItems((prev) => ({ ...prev, [itemId]: !prev[itemId] }))
+  }
+
+  function toggleSavedItem(itemId) {
+    setExpandedSavedItems((prev) => ({ ...prev, [itemId]: !prev[itemId] }))
+  }
+
+  function handleEditMeal(meal) {
+    setEditingMealId(meal.id)
+    setDraftItems(meal.items.map((item) => ({
+      id: createId(),
+      original_item_id: item.id,
+      food_id: item.food_id,
+      recipe_id: item.recipe_id,
+      name: item.name || item.custom_name,
+      custom_name: item.custom_name,
+      amount: item.amount || '',
+      unit: item.unit || item.default_unit || 'g',
+      grams: item.grams ?? gramsFromAmount(item.amount, item.unit || item.default_unit || 'g', item.serving_grams),
+      serving_grams: item.serving_grams ?? null,
+      note: item.note || '',
+      kcal_100g: item.kcal_100g,
+      protein_100g: item.protein_100g,
+      carbs_100g: item.carbs_100g,
+      fat_100g: item.fat_100g,
+      fiber_100g: item.fiber_100g,
+    })))
+    setMealNote(meal.note || '')
+    setError('')
+    setExpandedDraftItems({})
+  }
+
+  function cancelEditMeal() {
+    setEditingMealId(null)
+    setDraftItems([])
+    setMealNote('')
+    setExpandedDraftItems({})
+    setError('')
+  }
+
   async function handleSaveMeal() {
     if (draftItems.length === 0 || isSaving) return
 
     setIsSaving(true)
     setError('')
     try {
-      await onSaveMeal(section, draftItems, mealNote)
+      await onSaveMeal(section, draftItems, mealNote, editingMealId)
       setDraftItems([])
       setMealNote('')
+      setEditingMealId(null)
+      setExpandedDraftItems({})
     } catch {
       setError('Jídlo se nepodařilo uložit.')
     } finally {
@@ -375,27 +489,68 @@ function MealSection({
       </div>
 
       <div className="card">
-        <h4 className="card-title">Rozpracováno</h4>
+        <div className="card-title-row">
+          <h4 className="card-title">{editingMealId ? `Úprava ${section.title.toLowerCase()}` : 'Rozpracováno'}</h4>
+          {editingMealId ? (
+            <button className="button button-light button-small" onClick={cancelEditMeal}>
+              Zrušit úpravy
+            </button>
+          ) : null}
+        </div>
         {draftItems.length === 0 ? (
           <div className="empty-box">Přidej první položku a potom celé jídlo ulož.</div>
         ) : (
           <>
             <div className="list">
               {draftItems.map((item) => (
-                <div key={item.id} className="list-item">
-                  <div>
-                    <div className="list-title">{item.name}</div>
-                    <div className="list-subtitle">
-                      {item.amount} {item.unit}
-                      {item.note ? ` • ${item.note}` : ''}
+                <div key={item.id} className="editable-meal-item">
+                  <button className="meal-item-toggle" onClick={() => toggleDraftItem(item.id)}>
+                    <div>
+                      <div className="list-title">{item.name}</div>
+                      <div className="list-subtitle">
+                        {item.amount} {item.unit}
+                        {item.note ? ` • ${item.note}` : ''}
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    className="delete-button"
-                    onClick={() => setDraftItems((prev) => prev.filter((draft) => draft.id !== item.id))}
-                  >
-                    Smazat
                   </button>
+
+                  {expandedDraftItems[item.id] ? <FoodValueDetails item={item} /> : null}
+
+                  <div className="draft-edit-grid">
+                    <input
+                      className="input"
+                      value={item.amount}
+                      onChange={(e) => updateDraftItem(item.id, { amount: e.target.value })}
+                      aria-label="Množství"
+                    />
+                    <select
+                      className="input"
+                      value={item.unit || 'g'}
+                      onChange={(e) => updateDraftItem(item.id, { unit: e.target.value })}
+                      aria-label="Jednotka"
+                    >
+                      <option value="g">g</option>
+                      <option value="ml">ml</option>
+                      <option value="ks">ks</option>
+                      <option value="plátek">plátek</option>
+                      <option value="porce">porce</option>
+                      <option value="lžička">lžička</option>
+                      <option value="lžíce">lžíce</option>
+                    </select>
+                    <input
+                      className="input"
+                      value={item.note || ''}
+                      onChange={(e) => updateDraftItem(item.id, { note: e.target.value })}
+                      placeholder="Poznámka"
+                      aria-label="Poznámka"
+                    />
+                    <button
+                      className="delete-button"
+                      onClick={() => setDraftItems((prev) => prev.filter((draft) => draft.id !== item.id))}
+                    >
+                      Smazat
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -413,7 +568,11 @@ function MealSection({
             </div>
 
             <button className="button button-full" onClick={handleSaveMeal} disabled={isSaving}>
-              {isSaving ? 'Ukládám...' : `Ukončit a uložit ${section.title.toLowerCase()}`}
+              {isSaving
+                ? 'Ukládám...'
+                : editingMealId
+                  ? `Uložit úpravy ${section.title.toLowerCase()}`
+                  : `Ukončit a uložit ${section.title.toLowerCase()}`}
             </button>
           </>
         )}
@@ -432,14 +591,23 @@ function MealSection({
                     <div className="list-title">{meal.title || section.title}</div>
                     <div className="list-subtitle">{meal.meal_time?.slice(11, 16)}</div>
                   </div>
-                  <button className="delete-button" onClick={() => onDeleteMeal(meal.id)}>
-                    Smazat
-                  </button>
+                  <div className="saved-meal-actions">
+                    <button className="button button-light button-small" onClick={() => handleEditMeal(meal)}>
+                      Upravit
+                    </button>
+                    <button className="delete-button" onClick={() => onDeleteMeal(meal.id)}>
+                      Smazat
+                    </button>
+                  </div>
                 </div>
                 <div className="meal-item-lines">
                   {meal.items.map((item) => (
-                    <div key={item.id}>
-                      {item.name || item.custom_name} • {item.amount || ''} {item.unit || ''}
+                    <div key={item.id} className="saved-meal-item">
+                      <button className="meal-item-toggle" onClick={() => toggleSavedItem(item.id)}>
+                        <span>{item.name || item.custom_name}</span>
+                        <span>{item.amount || ''} {item.unit || ''}</span>
+                      </button>
+                      {expandedSavedItems[item.id] ? <FoodValueDetails item={item} /> : null}
                     </div>
                   ))}
                 </div>
@@ -735,7 +903,7 @@ export default function App() {
     }
   }
 
-  async function saveMeal(section, items, note) {
+  async function saveMeal(section, items, note, mealId = null) {
     const response = await fetch('meal-save.php', {
       method: 'POST',
       credentials: 'same-origin',
@@ -745,6 +913,7 @@ export default function App() {
       },
       body: JSON.stringify({
         date: today,
+        meal_id: mealId,
         meal_type: section.key,
         title: section.title,
         note,
