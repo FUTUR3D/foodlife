@@ -450,6 +450,28 @@ textarea {
   font-size: 12px;
 }
 
+.food-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 7px;
+  margin-right: 5px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.food-edit-notice {
+  margin-bottom: 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 14px;
+}
+
 .meal-input-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 150px;

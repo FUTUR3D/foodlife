@@ -5,6 +5,7 @@ $userId = require_json_user();
 $data = read_json_body();
 
 $foodId = isset($data['id']) && $data['id'] !== '' ? (int) $data['id'] : 0;
+$baseFoodId = isset($data['base_food_id']) && $data['base_food_id'] !== '' ? (int) $data['base_food_id'] : 0;
 $name = trim($data['name_cs'] ?? '');
 $nameEn = trim($data['name_en'] ?? '');
 $category = trim($data['category'] ?? '');
@@ -87,10 +88,78 @@ try {
             json_error('food_not_found', 404);
         }
     } else {
+        $externalSource = null;
+        $externalCode = null;
+
+        if ($baseFoodId > 0) {
+            $baseStmt = $pdo->prepare('SELECT id FROM foods WHERE id = ? AND (user_id IS NULL OR user_id = ?)');
+            $baseStmt->execute([$baseFoodId, $userId]);
+            if (!$baseStmt->fetch()) {
+                json_error('base_food_not_found', 404);
+            }
+
+            $externalSource = 'FoodLife-user-edit';
+            $externalCode = $userId . ':' . $baseFoodId;
+
+            $existingStmt = $pdo->prepare('
+                SELECT id FROM foods
+                WHERE user_id = ? AND source = "user" AND external_source = ? AND external_code = ?
+            ');
+            $existingStmt->execute([$userId, $externalSource, $externalCode]);
+            $existing = $existingStmt->fetch();
+            if ($existing) {
+                $foodId = (int) $existing['id'];
+                $data['id'] = $foodId;
+
+                $stmt = $pdo->prepare('
+                    UPDATE foods
+                    SET
+                        name_cs = ?,
+                        name_en = ?,
+                        category = ?,
+                        default_unit = ?,
+                        serving_grams = ?,
+                        kcal_100g = ?,
+                        protein_100g = ?,
+                        carbs_100g = ?,
+                        total_carbs_100g = ?,
+                        fat_100g = ?,
+                        fiber_100g = ?,
+                        sugar_100g = ?,
+                        sodium_mg_100g = ?,
+                        note = ?
+                    WHERE id = ? AND user_id = ? AND source = "user"
+                ');
+                $stmt->execute([
+                    $name,
+                    $nameEn === '' ? null : $nameEn,
+                    $category === '' ? null : $category,
+                    $unit,
+                    $servingGrams,
+                    $kcal,
+                    $protein,
+                    $carbs,
+                    $carbs,
+                    $fat,
+                    $fiber,
+                    $sugar,
+                    $sodium,
+                    $note === '' ? null : $note,
+                    $foodId,
+                    $userId,
+                ]);
+
+                echo json_encode(['ok' => true, 'food_id' => $foodId]);
+                exit;
+            }
+        }
+
         $stmt = $pdo->prepare('
             INSERT INTO foods (
                 user_id,
                 source,
+                external_source,
+                external_code,
                 name_cs,
                 name_en,
                 category,
@@ -106,10 +175,12 @@ try {
                 sodium_mg_100g,
                 note
             )
-            VALUES (?, "user", ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, "user", ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ');
         $stmt->execute([
             $userId,
+            $externalSource,
+            $externalCode,
             $name,
             $nameEn === '' ? null : $nameEn,
             $category === '' ? null : $category,

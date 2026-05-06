@@ -6,6 +6,8 @@ $userId = require_json_user();
 $stmt = $pdo->prepare('
     SELECT
         id,
+        external_source,
+        external_code,
         name_cs,
         name_en,
         category,
@@ -27,4 +29,11 @@ $stmt = $pdo->prepare('
 ');
 $stmt->execute([$userId]);
 
-echo json_encode(['foods' => $stmt->fetchAll()]);
+$foods = array_map(static function (array $food): array {
+    $food['food_kind'] = $food['external_source'] === 'FoodLife-user-edit'
+        ? 'edited'
+        : 'custom';
+    return $food;
+}, $stmt->fetchAll());
+
+echo json_encode(['foods' => $foods]);

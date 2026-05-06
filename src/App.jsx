@@ -174,6 +174,31 @@ function formatMacro(value, suffix = 'g') {
   return `${Math.round(value * 10) / 10} ${suffix}`
 }
 
+function hasServingSize(unit, servingGrams) {
+  return servingGrams && !['g', 'ml'].includes(unit)
+}
+
+function formatUnitWithServing(unit, servingGrams) {
+  if (!hasServingSize(unit, servingGrams)) return unit
+  return `${unit} (${Math.round(Number(servingGrams))} g)`
+}
+
+function formatItemAmount(item) {
+  const amount = item.amount || ''
+  const unit = item.unit || ''
+  const grams = item.grams ?? gramsFromAmount(item.amount, item.unit, item.serving_grams)
+  if (hasServingSize(unit, item.serving_grams) && grams) {
+    return `${amount} ${unit} (${Math.round(Number(grams))} g)`
+  }
+  return `${amount} ${unit}`.trim()
+}
+
+function getFoodKindLabel(food) {
+  if (food.food_kind === 'edited' || food.external_source === 'FoodLife-user-edit') return 'Upraveno'
+  if (food.food_kind === 'custom' || food.source === 'user') return 'Vlastní potravina'
+  return 'Editovatelné'
+}
+
 function FoodValueDetails({ item }) {
   const totals = getItemTotals(item)
   const hasValues = totals.knownItems > 0
@@ -204,10 +229,10 @@ function FoodValueDetails({ item }) {
         <span>Vláknina</span>
         <strong>{hasValues ? formatMacro(totals.fiber) : '-'}</strong>
       </div>
-      {item.serving_grams && !['g', 'ml'].includes(item.unit) ? (
+      {hasServingSize(item.unit, item.serving_grams) ? (
         <div>
           <span>Porce</span>
-          <strong>1 {item.unit} ≈ {Math.round(Number(item.serving_grams))} g</strong>
+          <strong>1 {formatUnitWithServing(item.unit, item.serving_grams)}</strong>
         </div>
       ) : null}
     </div>
@@ -230,6 +255,7 @@ function MealTotals({ items }) {
 
 const EMPTY_CUSTOM_FOOD = {
   id: null,
+  base_food_id: null,
   name_cs: '',
   name_en: '',
   category: '',
@@ -254,8 +280,43 @@ function CustomFoodsManager({
   onDeleteFood,
 }) {
   const [form, setForm] = useState(EMPTY_CUSTOM_FOOD)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    const q = searchQuery.trim()
+    if (q.length < 2) {
+      setSearchResults([])
+      setIsSearching(false)
+      return undefined
+    }
+
+    const controller = new AbortController()
+    const timeout = window.setTimeout(async () => {
+      setIsSearching(true)
+      try {
+        const response = await fetch(`foods-search.php?q=${encodeURIComponent(q)}`, {
+          credentials: 'same-origin',
+          signal: controller.signal,
+        })
+        if (!response.ok) throw new Error('food_search_failed')
+        const data = await response.json()
+        setSearchResults(data.foods || [])
+      } catch (err) {
+        if (err.name !== 'AbortError') setError('Potraviny se nepodařilo načíst.')
+      } finally {
+        setIsSearching(false)
+      }
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [searchQuery])
 
   function updateField(field, value) {
     setForm((prev) => ({
@@ -265,9 +326,13 @@ function CustomFoodsManager({
     }))
   }
 
-  function editFood(food) {
-    setForm({
-      id: food.id,
+  function formFromFood(food, { asEditableCopy = false } = {}) {
+    return {
+      id: asEditableCopy || food.source !== 'user' ? null : food.id,
+      base_food_id: asEditableCopy || food.source !== 'user' ? food.id : null,
+      food_kind: asEditableCopy || food.source !== 'user' ? 'edited' : food.food_kind,
+      source: food.source,
+      external_source: food.external_source,
       name_cs: food.name_cs || '',
       name_en: food.name_en || '',
       category: food.category || '',
@@ -281,7 +346,23 @@ function CustomFoodsManager({
       sugar_100g: food.sugar_100g ?? '',
       sodium_mg_100g: food.sodium_mg_100g ?? '',
       note: food.note || '',
-    })
+    }
+  }
+
+  function editFood(food) {
+    setForm(formFromFood(food))
+    setError('')
+  }
+
+  function editSearchFood(food) {
+    setForm(formFromFood(food, { asEditableCopy: food.source !== 'user' }))
+    setSearchQuery('')
+    setSearchResults([])
+    setError('')
+  }
+
+  function resetForm() {
+    setForm(EMPTY_CUSTOM_FOOD)
     setError('')
   }
 
@@ -323,13 +404,47 @@ function CustomFoodsManager({
     >
       <div className="card">
         <div className="card-title-row">
-          <h4 className="card-title">{form.id ? 'Upravit potravinu' : 'Nová potravina'}</h4>
-          {form.id ? (
-            <button className="button button-light button-small" onClick={() => setForm(EMPTY_CUSTOM_FOOD)}>
+          <h4 className="card-title">
+            {form.base_food_id ? 'Upravit databázovou potravinu' : form.id ? 'Upravit potravinu' : 'Nová potravina'}
+          </h4>
+          {form.id || form.base_food_id ? (
+            <button className="button button-light button-small" onClick={resetForm}>
               Nová
             </button>
           ) : null}
         </div>
+
+        <div className="form-group food-search-wrap">
+          <label className="label">Najít potravinu z databáze k úpravě</label>
+          <input
+            className="input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Např. jogurt, banán, tvaroh..."
+          />
+          {searchResults.length > 0 ? (
+            <div className="food-search-results">
+              {searchResults.map((food) => (
+                <button type="button" key={food.id} onClick={() => editSearchFood(food)}>
+                  <span>{food.name_cs}</span>
+                  <small>
+                    <span className="food-badge">{getFoodKindLabel(food)}</span>
+                    {hasServingSize(food.default_unit, food.serving_grams)
+                      ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) •`
+                      : ''}
+                    {' '}
+                    {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
+                  </small>
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {isSearching ? <div className="form-hint">Hledám...</div> : null}
+        </div>
+
+        {form.base_food_id ? (
+          <div className="food-edit-notice">Uloží se jako tvoje upravená kopie. Původní databázová položka zůstane beze změny.</div>
+        ) : null}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -405,7 +520,13 @@ function CustomFoodsManager({
           {error ? <div className="inline-error">{error}</div> : null}
 
           <button className="button button-full" type="submit" disabled={isSaving}>
-            {isSaving ? 'Ukládám...' : form.id ? 'Uložit změny potraviny' : 'Vytvořit potravinu'}
+            {isSaving
+              ? 'Ukládám...'
+              : form.id
+                ? 'Uložit změny potraviny'
+                : form.base_food_id
+                  ? 'Uložit jako upravenou potravinu'
+                  : 'Vytvořit potravinu'}
           </button>
         </form>
       </div>
@@ -423,8 +544,10 @@ function CustomFoodsManager({
                 <div>
                   <div className="list-title">{food.name_cs}</div>
                   <div className="list-subtitle">
+                    <span className="food-badge">{getFoodKindLabel(food)}</span>
+                    {' '}
                     {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
-                    {food.serving_grams && !['g', 'ml'].includes(food.default_unit) ? ` • 1 ${food.default_unit} ≈ ${Math.round(Number(food.serving_grams))} g` : ''}
+                    {hasServingSize(food.default_unit, food.serving_grams) ? ` • 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g)` : ''}
                   </div>
                 </div>
                 <div className="saved-meal-actions">
@@ -652,7 +775,8 @@ function MealSection({
                 <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
                   <span>{food.name_cs}</span>
                   <small>
-                    {food.serving_grams && !['g', 'ml'].includes(food.default_unit) ? `1 ${food.default_unit} ≈ ${Math.round(Number(food.serving_grams))} g • ` : ''}
+                    <span className="food-badge">{getFoodKindLabel(food)}</span>
+                    {hasServingSize(food.default_unit, food.serving_grams) ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) • ` : ' '}
                     {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
                   </small>
                 </button>
@@ -684,6 +808,9 @@ function MealSection({
               <option value="lžička">lžička</option>
               <option value="lžíce">lžíce</option>
             </select>
+            {hasServingSize(unit, selectedFood?.serving_grams) ? (
+              <div className="form-hint">1 {unit} ({Math.round(Number(selectedFood.serving_grams))} g)</div>
+            ) : null}
           </div>
         </div>
 
@@ -724,7 +851,7 @@ function MealSection({
                     <div>
                       <div className="list-title">{item.name}</div>
                       <div className="list-subtitle">
-                        {item.amount} {item.unit}
+                        {formatItemAmount(item)}
                         {item.note ? ` • ${item.note}` : ''}
                       </div>
                     </div>
@@ -821,7 +948,7 @@ function MealSection({
                     <div key={item.id} className="saved-meal-item">
                       <button className="meal-item-toggle" onClick={() => toggleSavedItem(item.id)}>
                         <span>{item.name || item.custom_name}</span>
-                        <span>{item.amount || ''} {item.unit || ''}</span>
+                        <span>{formatItemAmount(item)}</span>
                       </button>
                       {expandedSavedItems[item.id] ? <FoodValueDetails item={item} /> : null}
                     </div>

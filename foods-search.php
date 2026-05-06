@@ -13,8 +13,11 @@ $like = '%' . $query . '%';
 $stmt = $pdo->prepare('
     SELECT
         id,
+        source,
+        external_source,
         name_cs,
         name_en,
+        category,
         default_unit,
         serving_grams,
         kcal_100g,
@@ -24,6 +27,7 @@ $stmt = $pdo->prepare('
         fiber_100g,
         sugar_100g,
         sodium_mg_100g,
+        note,
         fodmap_level,
         histamine_level
     FROM foods
