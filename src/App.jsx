@@ -194,9 +194,22 @@ function formatItemAmount(item) {
 }
 
 function getFoodKindLabel(food) {
-  if (food.food_kind === 'edited' || food.external_source === 'FoodLife-user-edit') return 'Upraveno'
-  if (food.food_kind === 'custom' || food.source === 'user') return 'Vlastní potravina'
-  return 'Editovatelné'
+  if (
+    food.food_kind === 'edited' ||
+    food.food_kind === 'custom' ||
+    food.source === 'user' ||
+    food.external_source === 'FoodLife-user-edit'
+  ) {
+    return 'Moje jídlo'
+  }
+  return ''
+}
+
+function FoodKindBadge({ food }) {
+  const label = getFoodKindLabel(food)
+  if (!label) return null
+
+  return <span className="food-badge">{label}</span>
 }
 
 function FoodValueDetails({ item }) {
@@ -428,7 +441,7 @@ function CustomFoodsManager({
                 <button type="button" key={food.id} onClick={() => editSearchFood(food)}>
                   <span>{food.name_cs}</span>
                   <small>
-                    <span className="food-badge">{getFoodKindLabel(food)}</span>
+                    <FoodKindBadge food={food} />
                     {hasServingSize(food.default_unit, food.serving_grams)
                       ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) •`
                       : ''}
@@ -544,7 +557,7 @@ function CustomFoodsManager({
                 <div>
                   <div className="list-title">{food.name_cs}</div>
                   <div className="list-subtitle">
-                    <span className="food-badge">{getFoodKindLabel(food)}</span>
+                    <FoodKindBadge food={food} />
                     {' '}
                     {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
                     {hasServingSize(food.default_unit, food.serving_grams) ? ` • 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g)` : ''}
@@ -775,7 +788,7 @@ function MealSection({
                 <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
                   <span>{food.name_cs}</span>
                   <small>
-                    <span className="food-badge">{getFoodKindLabel(food)}</span>
+                    <FoodKindBadge food={food} />
                     {hasServingSize(food.default_unit, food.serving_grams) ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) • ` : ' '}
                     {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
                   </small>
