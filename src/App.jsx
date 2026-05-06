@@ -441,21 +441,43 @@ export default function App() {
   const todayReactions = reactions[today] || []
 
   useEffect(() => {
-    const savedAuth = readStorage(STORAGE_KEYS.auth, { loggedIn: false, email: '' })
     const savedProfile = readStorage(STORAGE_KEYS.profile, DEFAULT_PROFILE)
     const savedFoods = readStorage(STORAGE_KEYS.foods, DEFAULT_FOODS)
     const savedEntries = readStorage(STORAGE_KEYS.entries, {})
     const savedDayInfo = readStorage(STORAGE_KEYS.dayInfo, {})
     const savedReactions = readStorage(STORAGE_KEYS.reactions, {})
 
-    setAuth(savedAuth)
-    setLoginEmail(savedAuth.email || '')
-    setProfile(savedProfile)
-    setFoods(savedFoods?.length ? savedFoods : DEFAULT_FOODS)
-    setEntries(savedEntries || {})
-    setDayInfo(savedDayInfo || {})
-    setReactions(savedReactions || {})
-    setIsHydrated(true)
+    async function hydrate() {
+      let serverAuth = { loggedIn: false, email: '' }
+
+      try {
+        const response = await fetch('auth-status.php', {
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json' },
+        })
+
+        if (response.ok) {
+          serverAuth = await response.json()
+        }
+      } catch {
+        serverAuth = { loggedIn: false, email: '' }
+      }
+
+      setAuth(serverAuth)
+      setLoginEmail(serverAuth.email || savedProfile.email || '')
+      setProfile((prev) => ({
+        ...prev,
+        ...savedProfile,
+        email: serverAuth.email || savedProfile.email || prev.email,
+      }))
+      setFoods(savedFoods?.length ? savedFoods : DEFAULT_FOODS)
+      setEntries(savedEntries || {})
+      setDayInfo(savedDayInfo || {})
+      setReactions(savedReactions || {})
+      setIsHydrated(true)
+    }
+
+    hydrate()
   }, [])
 
   useEffect(() => {
@@ -509,7 +531,7 @@ export default function App() {
   }
 
   function handleLogout() {
-    setAuth({ loggedIn: false, email: '' })
+    window.location.href = 'logout.php'
   }
 
   function addFood(name) {

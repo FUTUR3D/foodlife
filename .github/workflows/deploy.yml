@@ -25,12 +25,28 @@ jobs:
       - name: Build app
         run: npm run build
 
-      - name: Deploy dist to FTP server
+      - name: Prepare deploy package
+        run: |
+          mkdir deploy
+          cp -R dist/. deploy/
+          cp app.css deploy/
+          cp auth-status.php deploy/
+          cp footer.php deploy/
+          cp forgot-password.php deploy/
+          cp header.php deploy/
+          cp login.php deploy/
+          cp logout.php deploy/
+          cp register.php deploy/
+          cp resend-verification.php deploy/
+          cp reset-password.php deploy/
+          cp verify-email.php deploy/
+
+      - name: Deploy app files to FTP server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
-          local-dir: ./dist/
+          local-dir: ./deploy/
           server-dir: /www/subdom/foodlife/
