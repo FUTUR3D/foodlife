@@ -456,6 +456,12 @@ textarea {
   gap: 10px;
 }
 
+.custom-food-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .inline-error {
   margin-bottom: 12px;
   border: 1px solid #fecaca;
@@ -643,6 +649,7 @@ textarea {
   }
 
   .meal-input-grid,
+  .custom-food-grid,
   .meal-totals {
     grid-template-columns: 1fr;
   }

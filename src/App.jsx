@@ -228,6 +228,216 @@ function MealTotals({ items }) {
   )
 }
 
+const EMPTY_CUSTOM_FOOD = {
+  id: null,
+  name_cs: '',
+  name_en: '',
+  category: '',
+  default_unit: 'g',
+  serving_grams: '',
+  kcal_100g: '',
+  protein_100g: '',
+  carbs_100g: '',
+  fat_100g: '',
+  fiber_100g: '',
+  sugar_100g: '',
+  sodium_mg_100g: '',
+  note: '',
+}
+
+function CustomFoodsManager({
+  foods,
+  isLoading,
+  isOpen,
+  onToggle,
+  onSaveFood,
+  onDeleteFood,
+}) {
+  const [form, setForm] = useState(EMPTY_CUSTOM_FOOD)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  function updateField(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  function editFood(food) {
+    setForm({
+      id: food.id,
+      name_cs: food.name_cs || '',
+      name_en: food.name_en || '',
+      category: food.category || '',
+      default_unit: food.default_unit || 'g',
+      serving_grams: food.serving_grams ?? '',
+      kcal_100g: food.kcal_100g ?? '',
+      protein_100g: food.protein_100g ?? '',
+      carbs_100g: food.carbs_100g ?? '',
+      fat_100g: food.fat_100g ?? '',
+      fiber_100g: food.fiber_100g ?? '',
+      sugar_100g: food.sugar_100g ?? '',
+      sodium_mg_100g: food.sodium_mg_100g ?? '',
+      note: food.note || '',
+    })
+    setError('')
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.name_cs.trim()) {
+      setError('Doplň název potraviny.')
+      return
+    }
+
+    setIsSaving(true)
+    setError('')
+    try {
+      await onSaveFood(form)
+      setForm(EMPTY_CUSTOM_FOOD)
+    } catch {
+      setError('Potravinu se nepodařilo uložit.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleDelete(foodId) {
+    try {
+      await onDeleteFood(foodId)
+      if (form.id === foodId) setForm(EMPTY_CUSTOM_FOOD)
+    } catch {
+      setError('Potravinu se nepodařilo smazat.')
+    }
+  }
+
+  return (
+    <AccordionSection
+      title="Moje potraviny"
+      subtitle={`${foods.length} vlastních položek`}
+      colorClass="panel-violet"
+      isOpen={isOpen}
+      onToggle={onToggle}
+    >
+      <div className="card">
+        <div className="card-title-row">
+          <h4 className="card-title">{form.id ? 'Upravit potravinu' : 'Nová potravina'}</h4>
+          {form.id ? (
+            <button className="button button-light button-small" onClick={() => setForm(EMPTY_CUSTOM_FOOD)}>
+              Nová
+            </button>
+          ) : null}
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="label">Název</label>
+            <input
+              className="input"
+              value={form.name_cs}
+              onChange={(e) => updateField('name_cs', e.target.value)}
+              placeholder="Např. řecký jogurt 5 %"
+            />
+          </div>
+
+          <div className="custom-food-grid">
+            <div className="form-group">
+              <label className="label">Energie kcal / 100 g</label>
+              <input className="input" value={form.kcal_100g} onChange={(e) => updateField('kcal_100g', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="label">Bílkoviny / 100 g</label>
+              <input className="input" value={form.protein_100g} onChange={(e) => updateField('protein_100g', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="label">Sacharidy / 100 g</label>
+              <input className="input" value={form.carbs_100g} onChange={(e) => updateField('carbs_100g', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="label">Tuky / 100 g</label>
+              <input className="input" value={form.fat_100g} onChange={(e) => updateField('fat_100g', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="label">Vláknina / 100 g</label>
+              <input className="input" value={form.fiber_100g} onChange={(e) => updateField('fiber_100g', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="label">Cukry / 100 g</label>
+              <input className="input" value={form.sugar_100g} onChange={(e) => updateField('sugar_100g', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="label">Jednotka</label>
+              <select className="input" value={form.default_unit} onChange={(e) => updateField('default_unit', e.target.value)}>
+                <option value="g">g</option>
+                <option value="ml">ml</option>
+                <option value="ks">ks</option>
+                <option value="plátek">plátek</option>
+                <option value="porce">porce</option>
+                <option value="lžička">lžička</option>
+                <option value="lžíce">lžíce</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="label">Gramů v jednotce</label>
+              <input
+                className="input"
+                value={form.serving_grams}
+                onChange={(e) => updateField('serving_grams', e.target.value)}
+                placeholder="Např. 150"
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="label">Poznámka</label>
+            <input
+              className="input"
+              value={form.note}
+              onChange={(e) => updateField('note', e.target.value)}
+              placeholder="Značka, obchod, složení..."
+            />
+          </div>
+
+          {error ? <div className="inline-error">{error}</div> : null}
+
+          <button className="button button-full" type="submit" disabled={isSaving}>
+            {isSaving ? 'Ukládám...' : form.id ? 'Uložit změny potraviny' : 'Vytvořit potravinu'}
+          </button>
+        </form>
+      </div>
+
+      <div className="card">
+        <h4 className="card-title">Uložené vlastní potraviny</h4>
+        {isLoading ? (
+          <div className="empty-box">Načítám...</div>
+        ) : foods.length === 0 ? (
+          <div className="empty-box">Zatím tu není žádná vlastní potravina.</div>
+        ) : (
+          <div className="list">
+            {foods.map((food) => (
+              <div key={food.id} className="list-item">
+                <div>
+                  <div className="list-title">{food.name_cs}</div>
+                  <div className="list-subtitle">
+                    {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
+                    {food.serving_grams ? ` • 1 ${food.default_unit} ≈ ${Math.round(Number(food.serving_grams))} g` : ''}
+                  </div>
+                </div>
+                <div className="saved-meal-actions">
+                  <button className="button button-light button-small" onClick={() => editFood(food)}>
+                    Upravit
+                  </button>
+                  <button className="delete-button" onClick={() => handleDelete(food.id)}>
+                    Smazat
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </AccordionSection>
+  )
+}
+
 function MealSection({
   section,
   savedMeals,
@@ -761,6 +971,8 @@ export default function App() {
   const [dayInfo, setDayInfo] = useState({})
   const [dayMeals, setDayMeals] = useState([])
   const [isMealsLoading, setIsMealsLoading] = useState(false)
+  const [customFoods, setCustomFoods] = useState([])
+  const [isCustomFoodsLoading, setIsCustomFoodsLoading] = useState(false)
   const [reactions, setReactions] = useState({})
   const [openMain, setOpenMain] = useState(null)
   const [openMeal, setOpenMeal] = useState(null)
@@ -867,6 +1079,11 @@ export default function App() {
     loadDayMeals(today)
   }, [auth.loggedIn, isHydrated, today])
 
+  useEffect(() => {
+    if (!isHydrated || !auth.loggedIn) return
+    loadCustomFoods()
+  }, [auth.loggedIn, isHydrated])
+
   function handleLogin(e) {
     e.preventDefault()
     if (!loginEmail.trim() || !loginPassword.trim()) return
@@ -939,6 +1156,53 @@ export default function App() {
     if (response.ok) {
       await loadDayMeals(today)
     }
+  }
+
+  async function loadCustomFoods() {
+    setIsCustomFoodsLoading(true)
+    try {
+      const response = await fetch('user-foods.php', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('custom_foods_load_failed')
+      const data = await response.json()
+      setCustomFoods(data.foods || [])
+    } catch {
+      setCustomFoods([])
+    } finally {
+      setIsCustomFoodsLoading(false)
+    }
+  }
+
+  async function saveCustomFood(food) {
+    const response = await fetch('food-save.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(food),
+    })
+
+    if (!response.ok) throw new Error('custom_food_save_failed')
+    await loadCustomFoods()
+  }
+
+  async function deleteCustomFood(foodId) {
+    const response = await fetch('food-delete.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id: foodId }),
+    })
+
+    if (!response.ok) throw new Error('custom_food_delete_failed')
+    await loadCustomFoods()
   }
 
   function addFood(name) {
@@ -1094,6 +1358,14 @@ export default function App() {
                 />
               ))}
 
+              <CustomFoodsManager
+                foods={customFoods}
+                isLoading={isCustomFoodsLoading}
+                isOpen={openMeal === 'custom-foods'}
+                onToggle={() => setOpenMeal(openMeal === 'custom-foods' ? null : 'custom-foods')}
+                onSaveFood={saveCustomFood}
+                onDeleteFood={deleteCustomFood}
+              />
             </div>
           </AccordionSection>
 
