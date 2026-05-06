@@ -30,6 +30,9 @@ function nullable_float(array $data, string $key): ?float
 }
 
 $servingGrams = nullable_float($data, 'serving_grams');
+if (in_array($unit, ['g', 'ml'], true)) {
+    $servingGrams = null;
+}
 $kcal = nullable_float($data, 'kcal_100g');
 $protein = nullable_float($data, 'protein_100g');
 $carbs = nullable_float($data, 'carbs_100g');

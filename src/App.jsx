@@ -204,7 +204,7 @@ function FoodValueDetails({ item }) {
         <span>Vláknina</span>
         <strong>{hasValues ? formatMacro(totals.fiber) : '-'}</strong>
       </div>
-      {item.serving_grams ? (
+      {item.serving_grams && !['g', 'ml'].includes(item.unit) ? (
         <div>
           <span>Porce</span>
           <strong>1 {item.unit} ≈ {Math.round(Number(item.serving_grams))} g</strong>
@@ -258,7 +258,11 @@ function CustomFoodsManager({
   const [error, setError] = useState('')
 
   function updateField(field, value) {
-    setForm((prev) => ({ ...prev, [field]: value }))
+    setForm((prev) => ({
+      ...prev,
+      [field]: value,
+      ...(field === 'default_unit' && ['g', 'ml'].includes(value) ? { serving_grams: '' } : {}),
+    }))
   }
 
   function editFood(food) {
@@ -268,7 +272,7 @@ function CustomFoodsManager({
       name_en: food.name_en || '',
       category: food.category || '',
       default_unit: food.default_unit || 'g',
-      serving_grams: food.serving_grams ?? '',
+      serving_grams: ['g', 'ml'].includes(food.default_unit) ? '' : food.serving_grams ?? '',
       kcal_100g: food.kcal_100g ?? '',
       protein_100g: food.protein_100g ?? '',
       carbs_100g: food.carbs_100g ?? '',
@@ -375,15 +379,17 @@ function CustomFoodsManager({
                 <option value="lžíce">lžíce</option>
               </select>
             </div>
-            <div className="form-group">
-              <label className="label">Gramů v jednotce</label>
-              <input
-                className="input"
-                value={form.serving_grams}
-                onChange={(e) => updateField('serving_grams', e.target.value)}
-                placeholder="Např. 150"
-              />
-            </div>
+            {!['g', 'ml'].includes(form.default_unit) ? (
+              <div className="form-group">
+                <label className="label">Velikost 1 {form.default_unit} v gramech</label>
+                <input
+                  className="input"
+                  value={form.serving_grams}
+                  onChange={(e) => updateField('serving_grams', e.target.value)}
+                  placeholder="Např. 150"
+                />
+              </div>
+            ) : null}
           </div>
 
           <div className="form-group">
@@ -418,7 +424,7 @@ function CustomFoodsManager({
                   <div className="list-title">{food.name_cs}</div>
                   <div className="list-subtitle">
                     {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
-                    {food.serving_grams ? ` • 1 ${food.default_unit} ≈ ${Math.round(Number(food.serving_grams))} g` : ''}
+                    {food.serving_grams && !['g', 'ml'].includes(food.default_unit) ? ` • 1 ${food.default_unit} ≈ ${Math.round(Number(food.serving_grams))} g` : ''}
                   </div>
                 </div>
                 <div className="saved-meal-actions">
@@ -646,7 +652,7 @@ function MealSection({
                 <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
                   <span>{food.name_cs}</span>
                   <small>
-                    {food.serving_grams ? `1 ${food.default_unit} ≈ ${Math.round(Number(food.serving_grams))} g • ` : ''}
+                    {food.serving_grams && !['g', 'ml'].includes(food.default_unit) ? `1 ${food.default_unit} ≈ ${Math.round(Number(food.serving_grams))} g • ` : ''}
                     {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
                   </small>
                 </button>
