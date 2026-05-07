@@ -393,6 +393,105 @@ function MealTotals({ items }) {
   )
 }
 
+function getDailyStatus(dayTotals, energyPlan) {
+  if (!energyPlan) return 'Po doplnění cíle se tu ukáže, jestli den směřuje k hubnutí, udržení nebo nabírání.'
+
+  const balance = Math.round(dayTotals.kcal - energyPlan.target)
+  if (energyPlan.goal.key === 'lose') {
+    return balance <= 0
+      ? 'Dnešní příjem je zatím pod cílem pro hubnutí.'
+      : `Dnes jsi asi ${balance} kcal nad cílem pro hubnutí.`
+  }
+  if (energyPlan.goal.key === 'gain') {
+    return balance >= 0
+      ? 'Dnešní příjem už podporuje nabírání.'
+      : `Pro nabírání ještě chybí asi ${Math.abs(balance)} kcal.`
+  }
+  return Math.abs(balance) <= 150
+    ? 'Dnes jsi velmi blízko udržovacímu cíli.'
+    : `Dnes jsi asi ${Math.abs(balance)} kcal ${balance > 0 ? 'nad' : 'pod'} udržovacím cílem.`
+}
+
+function MainDashboard({
+  date,
+  dayTotals,
+  totalItems,
+  energyPlan,
+  mealsByType,
+  isMealsLoading,
+  onOpenSection,
+  onOpenMenu,
+}) {
+  const kcal = Math.round(dayTotals.kcal)
+  const target = energyPlan?.target || null
+  const remaining = target ? Math.round(target - kcal) : null
+  const progress = target ? Math.min(100, Math.round((kcal / target) * 100)) : 0
+  const foodMeals = MEAL_SECTIONS.filter((section) => section.key !== 'piti' && section.key !== 'ostatni')
+
+  return (
+    <section className="day-dashboard">
+      <div className="dashboard-hero">
+        <div>
+          <div className="topbar-small">Denní dashboard</div>
+          <h2>{date}</h2>
+          <p>{getDailyStatus(dayTotals, energyPlan)}</p>
+        </div>
+        <div className="dashboard-score">
+          <strong>{kcal}</strong>
+          <span>kcal</span>
+        </div>
+      </div>
+
+      <div className="dashboard-progress-row">
+        <div>
+          <span>Cíl dne</span>
+          <strong>{target ? `${Math.round(target)} kcal` : '-'}</strong>
+        </div>
+        <div>
+          <span>{remaining !== null && remaining < 0 ? 'Nad cílem' : 'Zbývá'}</span>
+          <strong>{remaining === null ? '-' : `${Math.abs(remaining)} kcal`}</strong>
+        </div>
+        <div>
+          <span>Záznamy</span>
+          <strong>{isMealsLoading ? '...' : totalItems}</strong>
+        </div>
+      </div>
+
+      {target ? (
+        <div className="dashboard-progress" aria-label="Plnění denního cíle">
+          <span style={{ width: `${progress}%` }} />
+        </div>
+      ) : null}
+
+      <div className="dashboard-macros">
+        <div><strong>{formatMacro(dayTotals.protein)}</strong><span>Bílkoviny</span></div>
+        <div><strong>{formatMacro(dayTotals.carbs)}</strong><span>Sacharidy</span></div>
+        <div><strong>{formatMacro(dayTotals.fat)}</strong><span>Tuky</span></div>
+        <div><strong>{formatMacro(dayTotals.fiber)}</strong><span>Vláknina</span></div>
+      </div>
+
+      <div className="quick-actions">
+        <button className="quick-action primary" type="button" onClick={() => onOpenSection('food')}>Přidat jídlo</button>
+        <button className="quick-action" type="button" onClick={() => onOpenSection('exercise')}>Cvičení</button>
+        <button className="quick-action" type="button" onClick={() => onOpenSection('reactions')}>Reakce</button>
+        <button className="quick-action" type="button" onClick={onOpenMenu}>Cíle a profil</button>
+      </div>
+
+      <div className="meal-strip">
+        {foodMeals.map((section) => {
+          const meals = mealsByType[section.key] || []
+          const totals = getMealTotals(meals.flatMap((meal) => meal.items || []))
+          return (
+            <button key={section.key} type="button" onClick={() => onOpenSection('food', section.key)}>
+              <span>{section.title}</span>
+              <strong>{meals.length ? `${Math.round(totals.kcal)} kcal` : 'Přidat'}</strong>
+            </button>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
 function DailyOverview({ date, mealsByType, dayTotals, totalItems, energyPlan, isLoading }) {
   const target = energyPlan?.target || null
   const kcal = Math.round(dayTotals.kcal)
@@ -2449,6 +2548,11 @@ export default function App() {
     setSelectedDate(val)
   }
 
+  function openSection(sectionKey, mealKey = null) {
+    setOpenMain(sectionKey)
+    if (mealKey) setOpenMeal(mealKey)
+  }
+
   if (!isHydrated) {
     return <div className="loading-screen">Načítám…</div>
   }
@@ -2503,7 +2607,20 @@ export default function App() {
           </button>
         </div>
 
-        <div className="accordion-stack">
+        <MainDashboard
+          date={selectedDate}
+          dayTotals={dayTotals}
+          totalItems={totalItemsToday}
+          energyPlan={energyPlan}
+          mealsByType={mealsByType}
+          isMealsLoading={isMealsLoading}
+          onOpenSection={openSection}
+          onOpenMenu={() => setOpenMenu(true)}
+        />
+
+        <div className="app-content">
+          <main className="app-main">
+            <div className="accordion-stack">
           <AccordionSection
             title="Jídlo + pití"
             subtitle="Snídaně, svačiny, oběd, večeře a pití"
@@ -2688,6 +2805,19 @@ export default function App() {
           </AccordionSection>
 
 
+            </div>
+          </main>
+
+          <aside className="desktop-day-panel">
+            <DailyOverview
+              date={selectedDate}
+              mealsByType={mealsByType}
+              dayTotals={dayTotals}
+              totalItems={totalItemsToday}
+              energyPlan={energyPlan}
+              isLoading={isMealsLoading}
+            />
+          </aside>
         </div>
       </div>
 
