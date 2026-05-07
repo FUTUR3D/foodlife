@@ -668,6 +668,56 @@ textarea {
   border-top: 0;
 }
 
+.recipe-picker-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.recipe-hint {
+  margin-top: 8px;
+}
+
+.recipe-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.recipe-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  padding: 4px;
+  background: #f8fafc;
+}
+
+.recipe-chip button {
+  border: 0;
+  background: transparent;
+  color: #0f172a;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.recipe-chip-delete {
+  color: #b91c1c !important;
+  font-size: 12px;
+}
+
+.recipe-save-box {
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 14px;
+  background: #eff6ff;
+}
+
 .food-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -723,6 +773,7 @@ textarea {
   .meal-input-grid,
   .custom-food-grid,
   .profile-grid,
+  .recipe-picker-row,
   .meal-totals {
     grid-template-columns: 1fr;
   }

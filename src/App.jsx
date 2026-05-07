@@ -787,9 +787,19 @@ function MealSection({
   const [editingMealId, setEditingMealId] = useState(null)
   const [expandedDraftItems, setExpandedDraftItems] = useState({})
   const [expandedSavedItems, setExpandedSavedItems] = useState({})
+  const [recipes, setRecipes] = useState([])
+  const [selectedRecipeId, setSelectedRecipeId] = useState('')
+  const [recipeTitle, setRecipeTitle] = useState('')
+  const [isRecipesLoading, setIsRecipesLoading] = useState(false)
+  const [isRecipeSaving, setIsRecipeSaving] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!isOpen) return
+    loadRecipes()
+  }, [isOpen, section.key])
 
   useEffect(() => {
     const q = query.trim()
@@ -830,6 +840,23 @@ function MealSection({
       controller.abort()
     }
   }, [query, selectedFood])
+
+  async function loadRecipes() {
+    setIsRecipesLoading(true)
+    try {
+      const response = await fetch(`recipes-list.php?meal_type=${encodeURIComponent(section.key)}`, {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('recipes_load_failed')
+      const data = await response.json()
+      setRecipes(data.recipes || [])
+    } catch {
+      setRecipes([])
+    } finally {
+      setIsRecipesLoading(false)
+    }
+  }
 
   function handleSelectFood(food) {
     setSelectedFood(food)
@@ -874,6 +901,38 @@ function MealSection({
     setResults([])
     setAmount('')
     setNote('')
+    setError('')
+  }
+
+  function handleInsertRecipe() {
+    const recipe = recipes.find((item) => String(item.id) === String(selectedRecipeId))
+    if (!recipe) {
+      setError('Vyber uložené jídlo.')
+      return
+    }
+
+    setDraftItems((prev) => [
+      ...prev,
+      ...recipe.items.map((item) => ({
+        id: createId(),
+        recipe_id: recipe.id,
+        food_id: item.food_id,
+        name: item.name || item.custom_name,
+        custom_name: item.custom_name,
+        amount: item.amount || '',
+        unit: item.unit || item.default_unit || 'g',
+        grams: item.grams ?? gramsFromAmount(item.amount, item.unit || item.default_unit || 'g', item.serving_grams),
+        serving_grams: item.serving_grams ?? null,
+        note: item.note || '',
+        kcal_100g: item.kcal_100g,
+        protein_100g: item.protein_100g,
+        carbs_100g: item.carbs_100g,
+        fat_100g: item.fat_100g,
+        fiber_100g: item.fiber_100g,
+      })),
+    ])
+    setMealNote((prev) => prev || recipe.title)
+    setSelectedRecipeId('')
     setError('')
   }
 
@@ -946,7 +1005,58 @@ function MealSection({
     }
   }
 
+  async function handleSaveRecipe() {
+    const title = recipeTitle.trim() || mealNote.trim() || section.title
+    if (draftItems.length === 0 || isRecipeSaving) return
+
+    setIsRecipeSaving(true)
+    setError('')
+    try {
+      const response = await fetch('recipe-save.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          meal_type: section.key,
+          note: mealNote,
+          items: draftItems,
+        }),
+      })
+      if (!response.ok) throw new Error('recipe_save_failed')
+      setRecipeTitle('')
+      await loadRecipes()
+    } catch {
+      setError('Uložené jídlo se nepodařilo vytvořit.')
+    } finally {
+      setIsRecipeSaving(false)
+    }
+  }
+
+  async function handleDeleteRecipe(recipeId) {
+    try {
+      const response = await fetch('recipe-delete.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ recipe_id: recipeId }),
+      })
+      if (!response.ok) throw new Error('recipe_delete_failed')
+      if (String(selectedRecipeId) === String(recipeId)) setSelectedRecipeId('')
+      await loadRecipes()
+    } catch {
+      setError('Uložené jídlo se nepodařilo smazat.')
+    }
+  }
+
   const savedCount = savedMeals.reduce((sum, meal) => sum + meal.items.length, 0)
+  const selectedRecipe = recipes.find((recipe) => String(recipe.id) === String(selectedRecipeId))
 
   return (
     <AccordionSection
@@ -956,6 +1066,52 @@ function MealSection({
       isOpen={isOpen}
       onToggle={onToggle}
     >
+      <div className="card">
+        <h4 className="card-title">Moje uložená jídla</h4>
+        {isRecipesLoading ? (
+          <div className="empty-box">Načítám uložená jídla...</div>
+        ) : recipes.length === 0 ? (
+          <div className="empty-box">Zatím tu není žádné uložené jídlo pro tuto část dne.</div>
+        ) : (
+          <>
+            <div className="recipe-picker-row">
+              <select
+                className="input"
+                value={selectedRecipeId}
+                onChange={(e) => setSelectedRecipeId(e.target.value)}
+              >
+                <option value="">Vyber uložené jídlo</option>
+                {recipes.map((recipe) => (
+                  <option key={recipe.id} value={recipe.id}>
+                    {recipe.title} ({recipe.items.length} surovin)
+                  </option>
+                ))}
+              </select>
+              <button className="button" onClick={handleInsertRecipe} disabled={!selectedRecipeId}>
+                Vložit
+              </button>
+            </div>
+            {selectedRecipe ? (
+              <div className="form-hint recipe-hint">
+                {selectedRecipe.items.map((item) => item.name || item.custom_name).join(', ')}
+              </div>
+            ) : null}
+            <div className="recipe-chip-list">
+              {recipes.slice(0, 5).map((recipe) => (
+                <div key={recipe.id} className="recipe-chip">
+                  <button type="button" onClick={() => setSelectedRecipeId(String(recipe.id))}>
+                    {recipe.title}
+                  </button>
+                  <button type="button" className="recipe-chip-delete" onClick={() => handleDeleteRecipe(recipe.id)}>
+                    Smazat
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="card">
         <h4 className="card-title">Skládání {section.title.toLowerCase()}</h4>
 
@@ -1110,6 +1266,27 @@ function MealSection({
                 placeholder="Např. rychlá snídaně, větší porce, po běhu"
               />
             </div>
+
+            {!editingMealId ? (
+              <div className="recipe-save-box">
+                <div className="form-group">
+                  <label className="label">Uložit skladbu jako moje jídlo</label>
+                  <input
+                    className="input"
+                    value={recipeTitle}
+                    onChange={(e) => setRecipeTitle(e.target.value)}
+                    placeholder={`Např. ${section.title} - oblíbená kombinace`}
+                  />
+                </div>
+                <button
+                  className="button button-light button-full"
+                  onClick={handleSaveRecipe}
+                  disabled={isRecipeSaving}
+                >
+                  {isRecipeSaving ? 'Ukládám jídlo...' : 'Vytvořit uložené jídlo z těchto surovin'}
+                </button>
+              </div>
+            ) : null}
 
             <button className="button button-full" onClick={handleSaveMeal} disabled={isSaving}>
               {isSaving

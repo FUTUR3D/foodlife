@@ -86,11 +86,12 @@ try {
     }
     $itemStmt = $pdo->prepare('
         INSERT INTO meal_items (meal_id, food_id, recipe_id, custom_name, amount, unit, grams, note)
-        VALUES (?, ?, NULL, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ');
 
     foreach ($items as $item) {
         $foodId = isset($item['food_id']) && $item['food_id'] !== '' ? (int) $item['food_id'] : null;
+        $recipeId = isset($item['recipe_id']) && $item['recipe_id'] !== '' ? (int) $item['recipe_id'] : null;
         $customName = trim($item['custom_name'] ?? $item['name'] ?? '');
         $amount = isset($item['amount']) && $item['amount'] !== '' ? (float) $item['amount'] : null;
         $unit = trim($item['unit'] ?? '') ?: null;
@@ -109,6 +110,7 @@ try {
         $itemStmt->execute([
             $mealId,
             $foodId,
+            $recipeId,
             $foodId ? null : $customName,
             $amount,
             $unit,
