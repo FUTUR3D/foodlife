@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   foods: 'foodlife_foods',
   entries: 'foodlife_entries',
   dayInfo: 'foodlife_day_info',
+  goals: 'foodlife_goals',
   reactions: 'foodlife_reactions',
 }
 
@@ -68,6 +69,7 @@ const PROFILE_REQUIRED_FIELDS = [
 
 const DEFAULT_DAY_INFO = {
   exercise: '',
+  exerciseKcal: '',
   toiletCount: '',
   toiletType: 'Normální',
   mood: 'Dobře',
@@ -75,6 +77,24 @@ const DEFAULT_DAY_INFO = {
   dayNote: '',
   drinks: '',
 }
+
+const DEFAULT_GOALS = {
+  goalType: 'lose',
+  activityLevel: 'light',
+}
+
+const GOAL_OPTIONS = [
+  { key: 'lose', label: 'Zhubnout', kcalOffset: -500 },
+  { key: 'maintain', label: 'Udržet váhu', kcalOffset: 0 },
+  { key: 'gain', label: 'Nabrat', kcalOffset: 300 },
+]
+
+const ACTIVITY_LEVELS = [
+  { key: 'sedentary', label: 'Málo pohybu', multiplier: 1.2 },
+  { key: 'light', label: 'Lehká aktivita', multiplier: 1.375 },
+  { key: 'moderate', label: 'Střední aktivita', multiplier: 1.55 },
+  { key: 'active', label: 'Vysoká aktivita', multiplier: 1.725 },
+]
 
 const REACTION_TYPES = [
   'Nadýmání',
@@ -113,6 +133,56 @@ function readStorage(key, fallback) {
 
 function writeStorage(key, value) {
   localStorage.setItem(key, JSON.stringify(value))
+}
+
+function readNumber(value) {
+  const number = parseFloat(String(value ?? '').replace(',', '.'))
+  return Number.isFinite(number) ? number : null
+}
+
+function getProfileAge(birthDate) {
+  if (!birthDate) return null
+  const birth = new Date(birthDate)
+  if (Number.isNaN(birth.getTime())) return null
+
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const hadBirthday = today.getMonth() > birth.getMonth() || (
+    today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate()
+  )
+  if (!hadBirthday) age -= 1
+  return age > 0 ? age : null
+}
+
+function getGenderConstant(gender) {
+  const value = String(gender || '').toLowerCase()
+  if (value.includes('žena') || value.includes('zena')) return -161
+  if (value.includes('muž') || value.includes('muz')) return 5
+  return -78
+}
+
+function calculateEnergyPlan(profile, goals, exerciseKcal) {
+  const weight = readNumber(profile.weight || profile.startWeight)
+  const height = readNumber(profile.height)
+  const age = getProfileAge(profile.birthDate)
+  if (!weight || !height || !age) return null
+
+  const activity = ACTIVITY_LEVELS.find((item) => item.key === goals.activityLevel) || ACTIVITY_LEVELS[1]
+  const goal = GOAL_OPTIONS.find((item) => item.key === goals.goalType) || GOAL_OPTIONS[0]
+  const exercise = Math.max(0, readNumber(exerciseKcal) || 0)
+  const bmr = (10 * weight) + (6.25 * height) - (5 * age) + getGenderConstant(profile.gender)
+  const expenditure = (bmr * activity.multiplier) + exercise
+  const target = Math.max(1200, expenditure + goal.kcalOffset)
+
+  return {
+    age,
+    bmr,
+    expenditure,
+    target,
+    exercise,
+    goal,
+    activity,
+  }
 }
 
 function isProfileComplete(profile) {
@@ -323,6 +393,221 @@ function MealTotals({ items }) {
   )
 }
 
+function DailyOverview({ date, mealsByType, dayTotals, totalItems, energyPlan, isLoading }) {
+  const target = energyPlan?.target || null
+  const kcal = Math.round(dayTotals.kcal)
+  const balance = target ? kcal - target : null
+  const progress = target ? Math.min(100, Math.round((kcal / target) * 100)) : 0
+
+  function getStatusText() {
+    if (!energyPlan) return 'Doplň profil a cíl, potom se tu ukáže orientační stav dne.'
+    if (energyPlan.goal.key === 'lose') {
+      return balance <= 0
+        ? 'Dnes jsi zatím v pásmu, které by mělo podporovat hubnutí.'
+        : `Pro hubnutí je dnes příjem asi o ${Math.round(balance)} kcal výš než cíl.`
+    }
+    if (energyPlan.goal.key === 'gain') {
+      return balance >= 0
+        ? 'Dnes jsi zatím nad cílem, což podporuje nabírání.'
+        : `Pro nabírání ještě chybí asi ${Math.abs(Math.round(balance))} kcal.`
+    }
+    return Math.abs(balance) <= 150
+      ? 'Dnes jsi velmi blízko udržovacímu cíli.'
+      : `Od udržovacího cíle jsi asi ${Math.abs(Math.round(balance))} kcal ${balance > 0 ? 'nad' : 'pod'}.`
+  }
+
+  return (
+    <section className="side-panel">
+      <div className="side-panel-head">
+        <div>
+          <div className="side-eyebrow">Denní přehled</div>
+          <h3>{date}</h3>
+        </div>
+        <strong>{totalItems}</strong>
+      </div>
+
+      {isLoading ? <div className="empty-box">Načítám jídla...</div> : null}
+
+      <div className="side-progress">
+        <div>
+          <span>Příjem</span>
+          <strong>{kcal} kcal</strong>
+        </div>
+        <div>
+          <span>Cíl</span>
+          <strong>{target ? `${Math.round(target)} kcal` : '-'}</strong>
+        </div>
+      </div>
+
+      {target ? (
+        <div className="goal-progress" aria-label="Plnění cíle">
+          <span style={{ width: `${progress}%` }} />
+        </div>
+      ) : null}
+
+      <div className="goal-status">{getStatusText()}</div>
+      <MealTotals items={[{ grams: 100, kcal_100g: dayTotals.kcal, protein_100g: dayTotals.protein, carbs_100g: dayTotals.carbs, fat_100g: dayTotals.fat, fiber_100g: dayTotals.fiber }]} />
+
+      <div className="side-meal-list">
+        {MEAL_SECTIONS.map((section) => {
+          const meals = mealsByType[section.key] || []
+          const totals = getMealTotals(meals.flatMap((meal) => meal.items || []))
+          return (
+            <div key={section.key} className="side-meal-row">
+              <span>{section.title}</span>
+              <strong>{meals.length ? `${Math.round(totals.kcal)} kcal` : '-'}</strong>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function GoalsPanel({ goals, onGoalsChange, todayInfo, onTodayInfoChange, energyPlan, dayTotals }) {
+  const intake = Math.round(dayTotals.kcal)
+  const remaining = energyPlan ? Math.round(energyPlan.target - intake) : null
+
+  function updateGoal(field, value) {
+    onGoalsChange((prev) => ({ ...DEFAULT_GOALS, ...prev, [field]: value }))
+  }
+
+  return (
+    <section className="side-panel">
+      <div className="side-panel-head">
+        <div>
+          <div className="side-eyebrow">Cíle</div>
+          <h3>Energetický plán</h3>
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label className="label">Co chci získat</label>
+        <select className="input" value={goals.goalType} onChange={(e) => updateGoal('goalType', e.target.value)}>
+          {GOAL_OPTIONS.map((goal) => (
+            <option key={goal.key} value={goal.key}>{goal.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label className="label">Běžná aktivita</label>
+        <select className="input" value={goals.activityLevel} onChange={(e) => updateGoal('activityLevel', e.target.value)}>
+          {ACTIVITY_LEVELS.map((activity) => (
+            <option key={activity.key} value={activity.key}>{activity.label}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label className="label">Dnešní cvičení navíc (kcal)</label>
+        <input
+          className="input"
+          type="number"
+          min="0"
+          step="1"
+          value={todayInfo.exerciseKcal || ''}
+          onChange={(e) => onTodayInfoChange('exerciseKcal', e.target.value)}
+          placeholder="Např. 250"
+        />
+      </div>
+
+      {energyPlan ? (
+        <div className="side-metric-grid">
+          <div><span>Věk</span><strong>{energyPlan.age}</strong></div>
+          <div><span>BMR</span><strong>{Math.round(energyPlan.bmr)}</strong></div>
+          <div><span>Výdej</span><strong>{Math.round(energyPlan.expenditure)}</strong></div>
+          <div><span>Cíl příjmu</span><strong>{Math.round(energyPlan.target)}</strong></div>
+        </div>
+      ) : (
+        <div className="empty-box">Pro výpočet doplň datum narození, výšku, váhu a pohlaví v profilu.</div>
+      )}
+
+      {energyPlan ? (
+        <div className="goal-status">
+          {remaining >= 0
+            ? `Do dnešního cíle zbývá asi ${remaining} kcal.`
+            : `Dnes jsi asi o ${Math.abs(remaining)} kcal nad cílem.`}
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
+function AppSideMenu({
+  open,
+  onClose,
+  profile,
+  onProfileChange,
+  onProfileSave,
+  isProfileSaving,
+  profileError,
+  bmiValue,
+  bmiCategory,
+  goals,
+  onGoalsChange,
+  todayInfo,
+  onTodayInfoChange,
+  mealsByType,
+  dayTotals,
+  totalItemsToday,
+  energyPlan,
+  selectedDate,
+  isMealsLoading,
+  onLogout,
+}) {
+  return (
+    <>
+      {open ? <button className="side-menu-backdrop" aria-label="Zavřít menu" onClick={onClose} /> : null}
+
+      <aside className={`side-menu ${open ? 'open' : ''}`} aria-hidden={!open}>
+        <div className="side-menu-header">
+          <div>
+            <div className="side-eyebrow">FoodLife</div>
+            <div className="side-menu-title">Můj panel</div>
+          </div>
+          <button className="side-menu-close" type="button" onClick={onClose} aria-label="Zavřít menu">×</button>
+        </div>
+
+        <div className="side-menu-body">
+          <DailyOverview
+            date={selectedDate}
+            mealsByType={mealsByType}
+            dayTotals={dayTotals}
+            totalItems={totalItemsToday}
+            energyPlan={energyPlan}
+            isLoading={isMealsLoading}
+          />
+
+          <GoalsPanel
+            goals={goals}
+            onGoalsChange={onGoalsChange}
+            todayInfo={todayInfo}
+            onTodayInfoChange={onTodayInfoChange}
+            energyPlan={energyPlan}
+            dayTotals={dayTotals}
+          />
+
+          <section className="side-panel">
+            <ProfileEditor
+              profile={profile}
+              onChange={onProfileChange}
+              onSave={onProfileSave}
+              isSaving={isProfileSaving}
+              error={profileError}
+              bmiValue={bmiValue}
+              bmiCategory={bmiCategory}
+            />
+          </section>
+
+          <button className="button button-light button-full" type="button" onClick={onLogout}>
+            Odhlásit
+          </button>
+        </div>
+      </aside>
+    </>
+  )
+}
 function draftItemsFromRecipe(recipe) {
   return (recipe.items || []).map((item) => ({
     id: createId(),
@@ -1674,6 +1959,7 @@ export default function App() {
   const [foods, setFoods] = useState(DEFAULT_FOODS)
   const [entries, setEntries] = useState({})
   const [dayInfo, setDayInfo] = useState({})
+  const [goals, setGoals] = useState(DEFAULT_GOALS)
   const [dayMeals, setDayMeals] = useState([])
   const [isMealsLoading, setIsMealsLoading] = useState(false)
   const [customFoods, setCustomFoods] = useState([])
@@ -1715,6 +2001,7 @@ export default function App() {
     const savedFoods = readStorage(STORAGE_KEYS.foods, DEFAULT_FOODS)
     const savedEntries = readStorage(STORAGE_KEYS.entries, {})
     const savedDayInfo = readStorage(STORAGE_KEYS.dayInfo, {})
+    const savedGoals = readStorage(STORAGE_KEYS.goals, DEFAULT_GOALS)
     const savedReactions = readStorage(STORAGE_KEYS.reactions, {})
 
     async function hydrate() {
@@ -1743,6 +2030,7 @@ export default function App() {
       setFoods(savedFoods?.length ? savedFoods : DEFAULT_FOODS)
       setEntries(savedEntries || {})
       setDayInfo(savedDayInfo || {})
+      setGoals({ ...DEFAULT_GOALS, ...(savedGoals || {}) })
       setReactions(savedReactions || {})
       setIsProfileLoaded(!serverAuth.loggedIn)
       setIsHydrated(true)
@@ -1780,6 +2068,11 @@ export default function App() {
     if (!isHydrated) return
     writeStorage(STORAGE_KEYS.dayInfo, dayInfo)
   }, [dayInfo, isHydrated])
+
+  useEffect(() => {
+    if (!isHydrated) return
+    writeStorage(STORAGE_KEYS.goals, goals)
+  }, [goals, isHydrated])
 
   useEffect(() => {
     if (!isHydrated) return
@@ -2107,6 +2400,14 @@ export default function App() {
     return sum + (mealsByType[section.key] || []).reduce((mealSum, meal) => mealSum + meal.items.length, 0)
   }, 0)
 
+  const dayTotals = useMemo(() => {
+    return getMealTotals(dayMeals.flatMap((meal) => meal.items || []))
+  }, [dayMeals])
+
+  const energyPlan = useMemo(() => {
+    return calculateEnergyPlan(profile, goals, todayInfo.exerciseKcal)
+  }, [profile, goals, todayInfo.exerciseKcal])
+
   function parseNumber(v) {
     const n = parseFloat(String(v).replace(',', '.'))
     return Number.isFinite(n) ? n : null
@@ -2186,7 +2487,7 @@ export default function App() {
     <div className="page app-page">
       <div className="app-container">
         <div className="topbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="topbar-main">
             <button className="calendar-button" onClick={() => setOpenCalendar(true)} aria-label="Otevřít kalendář">📅</button>
             <div>
               <div className="topbar-small">{today === formatToday() ? 'Dnes' : ''}</div>
@@ -2195,10 +2496,11 @@ export default function App() {
             </div>
           </div>
 
-          <div className="topbar-actions">
-            <button className="button button-light" onClick={handleLogout}>Odhlásit</button>
-            <button className="menu-button" onClick={() => setOpenMenu((v) => !v)} aria-label="Otevřít menu">☰</button>
-          </div>
+          <button className="menu-button" onClick={() => setOpenMenu((v) => !v)} aria-label="Otevřít menu">
+            <span />
+            <span />
+            <span />
+          </button>
         </div>
 
         <div className="accordion-stack">
@@ -2258,6 +2560,19 @@ export default function App() {
                   value={todayInfo.exercise || ''}
                   onChange={(e) => updateTodayInfo('exercise', e.target.value)}
                   placeholder="Např. Posilovna 45 min, běh 5 km..."
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label">Odhad spálené energie (kcal)</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={todayInfo.exerciseKcal || ''}
+                  onChange={(e) => updateTodayInfo('exerciseKcal', e.target.value)}
+                  placeholder="Např. 250"
                 />
               </div>
             </div>
@@ -2372,47 +2687,32 @@ export default function App() {
             </div>
           </AccordionSection>
 
-          <AccordionSection
-            title="Profil"
-            subtitle="Osobní informace"
-            colorClass="panel-violet"
-            isOpen={openMain === 'profile'}
-            onToggle={() => setOpenMain(openMain === 'profile' ? null : 'profile')}
-          >
-            <div className="card">
-              <ProfileEditor
-                profile={profile}
-                onChange={setProfile}
-                onSave={saveUserProfile}
-                isSaving={isProfileSaving}
-                error={profileError}
-                bmiValue={bmiValue}
-                bmiCategory={bmiCategory}
-              />
-            </div>
-          </AccordionSection>
 
         </div>
       </div>
 
-      {/* Side sliding menu */}
-      <div className={`side-menu ${openMenu ? 'open' : ''}`}>
-        <div className="side-menu-header">
-          <div className="side-menu-title">Menu</div>
-          <button className="button" onClick={() => setOpenMenu(false)}>Zavřít</button>
-        </div>
-
-        <div className="side-menu-list">
-          <button className="side-item" onClick={() => { setOpenMain('food'); setOpenMenu(false) }}>Jídlo + pití</button>
-          <button className="side-item" onClick={() => { setOpenMain('exercise'); setOpenMenu(false) }}>Cvičení</button>
-          <button className="side-item" onClick={() => { setOpenMain('toilet'); setOpenMenu(false) }}>Toaleta</button>
-          <button className="side-item" onClick={() => { setOpenMain('reactions'); setOpenMenu(false) }}>Reakce těla</button>
-          <button className="side-item" onClick={() => { setOpenMain('mood'); setOpenMenu(false) }}>Jak se cítím</button>
-          <button className="side-item" onClick={() => { setOpenMain('notes'); setOpenMenu(false) }}>Popis dne</button>
-          <button className="side-item" onClick={() => { setOpenMain('profile'); setOpenMenu(false) }}>Profil</button>
-          <button className="side-item" onClick={() => { handleLogout(); setOpenMenu(false) }}>Odhlásit</button>
-        </div>
-      </div>
+      <AppSideMenu
+        open={openMenu}
+        onClose={() => setOpenMenu(false)}
+        profile={profile}
+        onProfileChange={setProfile}
+        onProfileSave={saveUserProfile}
+        isProfileSaving={isProfileSaving}
+        profileError={profileError}
+        bmiValue={bmiValue}
+        bmiCategory={bmiCategory}
+        goals={goals}
+        onGoalsChange={setGoals}
+        todayInfo={todayInfo}
+        onTodayInfoChange={updateTodayInfo}
+        mealsByType={mealsByType}
+        dayTotals={dayTotals}
+        totalItemsToday={totalItemsToday}
+        energyPlan={energyPlan}
+        selectedDate={selectedDate}
+        isMealsLoading={isMealsLoading}
+        onLogout={handleLogout}
+      />
 
       {/* Calendar modal */}
       {openCalendar ? (
