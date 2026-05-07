@@ -34,11 +34,34 @@ const DEFAULT_PROFILE = {
   name: '',
   email: '',
   gender: '',
-  age: '',
+  birthDate: '',
   height: '',
   weight: '',
   startWeight: '',
+  originPlace: '',
+  bodyType: '',
 }
+
+const GENDER_OPTIONS = ['Muž', 'Žena', 'Jiné', 'Nechci uvádět']
+
+const BODY_TYPE_OPTIONS = [
+  'Štíhlá',
+  'Běžná',
+  'Atletická',
+  'Robustnější',
+  'Silnější',
+  'Nevím',
+]
+
+const PROFILE_REQUIRED_FIELDS = [
+  'name',
+  'birthDate',
+  'weight',
+  'height',
+  'gender',
+  'originPlace',
+  'bodyType',
+]
 
 const DEFAULT_DAY_INFO = {
   exercise: '',
@@ -87,6 +110,22 @@ function readStorage(key, fallback) {
 
 function writeStorage(key, value) {
   localStorage.setItem(key, JSON.stringify(value))
+}
+
+function isProfileComplete(profile) {
+  return PROFILE_REQUIRED_FIELDS.every((field) => String(profile[field] || '').trim() !== '')
+}
+
+function profilePayload(profile) {
+  return {
+    name: profile.name || '',
+    birthDate: profile.birthDate || '',
+    weight: profile.weight || '',
+    height: profile.height || '',
+    gender: profile.gender || '',
+    originPlace: profile.originPlace || '',
+    bodyType: profile.bodyType || '',
+  }
 }
 
 function formatToday() {
@@ -263,6 +302,148 @@ function MealTotals({ items }) {
       <div><strong>{formatMacro(totals.fat)}</strong><span>tuky</span></div>
       <div><strong>{formatMacro(totals.fiber)}</strong><span>vláknina</span></div>
     </div>
+  )
+}
+
+function ProfileEditor({
+  profile,
+  onChange,
+  onSave,
+  isSaving,
+  error,
+  bmiValue,
+  bmiCategory,
+  isSetup = false,
+}) {
+  function updateProfile(field, value) {
+    onChange((prev) => ({ ...prev, [field]: value }))
+  }
+
+  return (
+    <form className="profile-form" onSubmit={onSave}>
+      {isSetup ? (
+        <div className="profile-intro">
+          <div className="topbar-small">První nastavení</div>
+          <h1 className="profile-title">Doplň svůj profil</h1>
+          <p className="profile-text">
+            Díky těmto údajům půjde později lépe počítat cíle, doporučovat jídla a hledat souvislosti s trávením.
+          </p>
+        </div>
+      ) : (
+        <h3 className="card-title">Profil</h3>
+      )}
+
+      <div className="profile-grid">
+        <div className="form-group">
+          <label className="label">Jméno</label>
+          <input
+            className="input"
+            value={profile.name || ''}
+            onChange={(e) => updateProfile('name', e.target.value)}
+            placeholder="Jméno"
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="label">Datum narození</label>
+          <input
+            className="input"
+            type="date"
+            value={profile.birthDate || ''}
+            onChange={(e) => updateProfile('birthDate', e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="label">Váha (kg)</label>
+          <input
+            className="input"
+            type="number"
+            min="1"
+            step="0.1"
+            value={profile.weight || ''}
+            onChange={(e) => updateProfile('weight', e.target.value)}
+            placeholder="Např. 78"
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="label">Výška (cm)</label>
+          <input
+            className="input"
+            type="number"
+            min="1"
+            step="0.1"
+            value={profile.height || ''}
+            onChange={(e) => updateProfile('height', e.target.value)}
+            placeholder="Např. 182"
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="label">Pohlaví</label>
+          <select
+            className="input"
+            value={profile.gender || ''}
+            onChange={(e) => updateProfile('gender', e.target.value)}
+            required
+          >
+            <option value="">Vyber</option>
+            {GENDER_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="label">Místo původu</label>
+          <input
+            className="input"
+            value={profile.originPlace || ''}
+            onChange={(e) => updateProfile('originPlace', e.target.value)}
+            placeholder="Např. Praha, Morava, Slovensko..."
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="label">Typ postavy</label>
+          <select
+            className="input"
+            value={profile.bodyType || ''}
+            onChange={(e) => updateProfile('bodyType', e.target.value)}
+            required
+          >
+            <option value="">Vyber</option>
+            {BODY_TYPE_OPTIONS.map((option) => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="label">E-mail</label>
+          <div className="input profile-readonly">{profile.email || '-'}</div>
+        </div>
+      </div>
+
+      <div className="form-group">
+        <label className="label">BMI</label>
+        <div className="input profile-readonly">
+          {bmiValue ? `${bmiValue} (${bmiCategory})` : 'Vyplň výšku a váhu'}
+        </div>
+      </div>
+
+      {error ? <div className="inline-error">{error}</div> : null}
+
+      <button className="button button-full" type="submit" disabled={isSaving}>
+        {isSaving ? 'Ukládám...' : isSetup ? 'Uložit profil a pokračovat' : 'Uložit profil'}
+      </button>
+    </form>
   )
 }
 
@@ -1112,6 +1293,9 @@ export default function App() {
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [profile, setProfile] = useState(DEFAULT_PROFILE)
+  const [isProfileLoaded, setIsProfileLoaded] = useState(false)
+  const [isProfileSaving, setIsProfileSaving] = useState(false)
+  const [profileError, setProfileError] = useState('')
   const [foods, setFoods] = useState(DEFAULT_FOODS)
   const [entries, setEntries] = useState({})
   const [dayInfo, setDayInfo] = useState({})
@@ -1174,6 +1358,7 @@ export default function App() {
       setEntries(savedEntries || {})
       setDayInfo(savedDayInfo || {})
       setReactions(savedReactions || {})
+      setIsProfileLoaded(!serverAuth.loggedIn)
       setIsHydrated(true)
     }
 
@@ -1227,6 +1412,11 @@ export default function App() {
 
   useEffect(() => {
     if (!isHydrated || !auth.loggedIn) return
+    loadUserProfile()
+  }, [auth.loggedIn, isHydrated])
+
+  useEffect(() => {
+    if (!isHydrated || !auth.loggedIn) return
     loadCustomFoods()
   }, [auth.loggedIn, isHydrated])
 
@@ -1247,6 +1437,66 @@ export default function App() {
 
   function handleLogout() {
     window.location.href = 'logout.php'
+  }
+
+  async function loadUserProfile() {
+    setIsProfileLoaded(false)
+    setProfileError('')
+
+    try {
+      const response = await fetch('user-profile.php', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('profile_load_failed')
+
+      const data = await response.json()
+      setProfile((prev) => ({
+        ...prev,
+        ...(data.profile || {}),
+        email: auth.email || prev.email,
+      }))
+    } catch {
+      setProfileError('Profil se nepodařilo načíst.')
+    } finally {
+      setIsProfileLoaded(true)
+    }
+  }
+
+  async function saveUserProfile(e) {
+    e.preventDefault()
+
+    if (!isProfileComplete(profile)) {
+      setProfileError('Doplň prosím všechna pole profilu.')
+      return
+    }
+
+    setIsProfileSaving(true)
+    setProfileError('')
+
+    try {
+      const response = await fetch('user-profile.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(profilePayload(profile)),
+      })
+      if (!response.ok) throw new Error('profile_save_failed')
+
+      const data = await response.json()
+      setProfile((prev) => ({
+        ...prev,
+        ...(data.profile || {}),
+        email: auth.email || prev.email,
+      }))
+    } catch {
+      setProfileError('Profil se nepodařilo uložit.')
+    } finally {
+      setIsProfileSaving(false)
+    }
   }
 
   async function loadDayMeals(date) {
@@ -1436,6 +1686,7 @@ export default function App() {
 
   const bmiValue = getBMI(profile.height, profile.weight || profile.startWeight)
   const bmiCategory = bmiValue ? getBMICategory(bmiValue) : ''
+  const profileComplete = isProfileComplete(profile)
 
   function prevDay() {
     const d = new Date(today)
@@ -1461,6 +1712,32 @@ export default function App() {
     return <div className="loading-screen">Přesměrovávám…</div>
   }
 
+  if (!isProfileLoaded) {
+    return <div className="loading-screen">Načítám profil…</div>
+  }
+
+  if (!profileComplete) {
+    return (
+      <div className="page profile-setup-page">
+        <div className="profile-setup-panel">
+          <ProfileEditor
+            profile={profile}
+            onChange={setProfile}
+            onSave={saveUserProfile}
+            isSaving={isProfileSaving}
+            error={profileError}
+            bmiValue={bmiValue}
+            bmiCategory={bmiCategory}
+            isSetup
+          />
+          <button className="button button-light button-full profile-logout-button" onClick={handleLogout}>
+            Odhlásit
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="page app-page">
       <div className="app-container">
@@ -1475,7 +1752,6 @@ export default function App() {
           </div>
 
           <div className="topbar-actions">
-            <button className="button button-light" onClick={() => setOpenMain(openMain === 'profile' ? null : 'profile')}>Profil</button>
             <button className="button button-light" onClick={handleLogout}>Odhlásit</button>
             <button className="menu-button" onClick={() => setOpenMenu((v) => !v)} aria-label="Otevřít menu">☰</button>
           </div>
@@ -1653,80 +1929,15 @@ export default function App() {
             onToggle={() => setOpenMain(openMain === 'profile' ? null : 'profile')}
           >
             <div className="card">
-              <h3 className="card-title">Profil</h3>
-
-              <div className="form-group">
-                <label className="label">Jméno</label>
-                <input
-                  className="input"
-                  value={profile.name || ''}
-                  onChange={(e) => setProfile((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Jméno"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="label">E-mail</label>
-                <input
-                  className="input"
-                  type="email"
-                  value={profile.email || ''}
-                  onChange={(e) => setProfile((prev) => ({ ...prev, email: e.target.value }))}
-                  placeholder="E-mail"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="label">Pohlaví</label>
-                <select
-                  className="input"
-                  value={profile.gender || ''}
-                  onChange={(e) => setProfile((prev) => ({ ...prev, gender: e.target.value }))}
-                >
-                  <option value="">--</option>
-                  <option value="Muž">Muž</option>
-                  <option value="Žena">Žena</option>
-                  <option value="Jiné">Jiné</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="label">Věk</label>
-                <input
-                  className="input"
-                  type="number"
-                  value={profile.age || ''}
-                  onChange={(e) => setProfile((prev) => ({ ...prev, age: e.target.value }))}
-                  placeholder="Věk"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="label">Výška (cm)</label>
-                <input
-                  className="input"
-                  value={profile.height || ''}
-                  onChange={(e) => setProfile((prev) => ({ ...prev, height: e.target.value }))}
-                  placeholder="Výška v cm"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="label">Váha (kg)</label>
-                <input
-                  className="input"
-                  value={profile.weight || ''}
-                  onChange={(e) => setProfile((prev) => ({ ...prev, weight: e.target.value }))}
-                  placeholder="Váha v kg"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="label">BMI</label>
-                <div className="input">
-                  {bmiValue ? `${bmiValue} (${bmiCategory})` : 'Vyplň výšku a váhu'}
-                </div>
-              </div>
+              <ProfileEditor
+                profile={profile}
+                onChange={setProfile}
+                onSave={saveUserProfile}
+                isSaving={isProfileSaving}
+                error={profileError}
+                bmiValue={bmiValue}
+                bmiCategory={bmiCategory}
+              />
             </div>
           </AccordionSection>
 
@@ -1741,9 +1952,13 @@ export default function App() {
         </div>
 
         <div className="side-menu-list">
+          <button className="side-item" onClick={() => { setOpenMain('food'); setOpenMenu(false) }}>Jídlo + pití</button>
+          <button className="side-item" onClick={() => { setOpenMain('exercise'); setOpenMenu(false) }}>Cvičení</button>
+          <button className="side-item" onClick={() => { setOpenMain('toilet'); setOpenMenu(false) }}>Toaleta</button>
+          <button className="side-item" onClick={() => { setOpenMain('reactions'); setOpenMenu(false) }}>Reakce těla</button>
+          <button className="side-item" onClick={() => { setOpenMain('mood'); setOpenMenu(false) }}>Jak se cítím</button>
+          <button className="side-item" onClick={() => { setOpenMain('notes'); setOpenMenu(false) }}>Popis dne</button>
           <button className="side-item" onClick={() => { setOpenMain('profile'); setOpenMenu(false) }}>Profil</button>
-          <button className="side-item" onClick={() => { setOpenMain('history'); setOpenMenu(false) }}>Historie</button>
-          <button className="side-item" onClick={() => { setOpenMain('settings'); setOpenMenu(false) }}>Nastavení</button>
           <button className="side-item" onClick={() => { handleLogout(); setOpenMenu(false) }}>Odhlásit</button>
         </div>
       </div>

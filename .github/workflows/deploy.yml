@@ -49,6 +49,7 @@ jobs:
           cp resend-verification.php deploy/
           cp reset-password.php deploy/
           cp user-foods.php deploy/
+          cp user-profile.php deploy/
           cp verify-email.php deploy/
           if [ -z "$DB_PASSWORD" ]; then
             echo "::error::Missing DB_PASSWORD secret"
