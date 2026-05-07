@@ -401,17 +401,17 @@ function ProfileEditor({
         </div>
 
         <div className="form-group">
-          <label className="label">Stát / Country</label>
+          <label className="label">Stát</label>
           <select
             className="input"
             value={profile.countryCode || ''}
             onChange={(e) => updateProfile('countryCode', e.target.value)}
             required
           >
-            <option value="">Vyber stát / Select country</option>
+            <option value="">Vyber stát</option>
             {COUNTRIES.map((country) => (
               <option key={country.code} value={country.code}>
-                {country.nameCs} / {country.nameEn}
+                {country.nameCs}
               </option>
             ))}
           </select>
