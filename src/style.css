@@ -22,6 +22,10 @@ body {
   color: #0f172a;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 button,
 input,
 select,
@@ -249,6 +253,7 @@ textarea {
   border-radius: 24px;
   overflow: hidden;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  scroll-margin-top: 16px;
 }
 
 .accordion-header {
@@ -287,6 +292,20 @@ textarea {
 .accordion-body {
   background: #ffffff;
   padding: 14px;
+  animation: accordion-enter 0.24s ease-out both;
+  transform-origin: top center;
+}
+
+@keyframes accordion-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .panel-teal {

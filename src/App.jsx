@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { COUNTRIES } from './countries'
 
 const STORAGE_KEYS = {
@@ -143,8 +143,23 @@ function AccordionSection({
   onToggle,
   children,
 }) {
+  const sectionRef = useRef(null)
+
+  useEffect(() => {
+    if (!isOpen || !sectionRef.current) return
+
+    const timeout = window.setTimeout(() => {
+      sectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }, 60)
+
+    return () => window.clearTimeout(timeout)
+  }, [isOpen])
+
   return (
-    <div className="accordion">
+    <div className={`accordion ${isOpen ? 'accordion-open' : ''}`} ref={sectionRef}>
       <button type="button" className={`accordion-header ${colorClass}`} onClick={onToggle}>
         <div>
           <div className="accordion-title">{title}</div>
