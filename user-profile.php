@@ -13,6 +13,7 @@ function ensure_user_profiles_table(PDO $pdo): void
             weight_kg decimal(5,2) DEFAULT NULL,
             height_cm decimal(5,2) DEFAULT NULL,
             gender varchar(40) DEFAULT NULL,
+            country_code char(2) DEFAULT NULL,
             origin_place varchar(120) DEFAULT NULL,
             body_type varchar(60) DEFAULT NULL,
             created_at timestamp NOT NULL DEFAULT current_timestamp(),
@@ -20,6 +21,11 @@ function ensure_user_profiles_table(PDO $pdo): void
             PRIMARY KEY (user_id),
             CONSTRAINT user_profiles_ibfk_1 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_czech_ci
+    ');
+
+    $pdo->exec('
+        ALTER TABLE user_profiles
+        ADD COLUMN IF NOT EXISTS country_code char(2) DEFAULT NULL AFTER gender
     ');
 }
 
@@ -42,7 +48,7 @@ function profile_from_row(?array $row, string $email): array
             'weight' => '',
             'height' => '',
             'gender' => '',
-            'originPlace' => '',
+            'countryCode' => '',
             'bodyType' => '',
         ];
     }
@@ -54,14 +60,14 @@ function profile_from_row(?array $row, string $email): array
         'weight' => decimal_to_text($row['weight_kg'] ?? ''),
         'height' => decimal_to_text($row['height_cm'] ?? ''),
         'gender' => $row['gender'] ?? '',
-        'originPlace' => $row['origin_place'] ?? '',
+        'countryCode' => $row['country_code'] ?? '',
         'bodyType' => $row['body_type'] ?? '',
     ];
 }
 
 function is_complete_profile(array $profile): bool
 {
-    foreach (['name', 'birthDate', 'weight', 'height', 'gender', 'originPlace', 'bodyType'] as $field) {
+    foreach (['name', 'birthDate', 'weight', 'height', 'gender', 'countryCode', 'bodyType'] as $field) {
         if (trim((string) ($profile[$field] ?? '')) === '') {
             return false;
         }
@@ -110,6 +116,12 @@ function clean_birth_date(array $data): string
     return $date;
 }
 
+function clean_country_code(array $data): string
+{
+    $code = strtoupper(trim((string) ($data['countryCode'] ?? '')));
+    return preg_match('/^[A-Z]{2}$/', $code) ? $code : '';
+}
+
 try {
     ensure_user_profiles_table($pdo);
 
@@ -129,7 +141,7 @@ try {
             'weight' => clean_decimal($data, 'weight', 1, 500),
             'height' => clean_decimal($data, 'height', 1, 300),
             'gender' => clean_text($data, 'gender', 40),
-            'originPlace' => clean_text($data, 'originPlace', 120),
+            'countryCode' => clean_country_code($data),
             'bodyType' => clean_text($data, 'bodyType', 60),
         ];
 
@@ -145,16 +157,18 @@ try {
                 weight_kg,
                 height_cm,
                 gender,
+                country_code,
                 origin_place,
                 body_type
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)
             ON DUPLICATE KEY UPDATE
                 full_name = VALUES(full_name),
                 birth_date = VALUES(birth_date),
                 weight_kg = VALUES(weight_kg),
                 height_cm = VALUES(height_cm),
                 gender = VALUES(gender),
+                country_code = VALUES(country_code),
                 origin_place = VALUES(origin_place),
                 body_type = VALUES(body_type),
                 updated_at = current_timestamp()
@@ -166,7 +180,7 @@ try {
             $profile['weight'],
             $profile['height'],
             $profile['gender'],
-            $profile['originPlace'],
+            $profile['countryCode'],
             $profile['bodyType'],
         ]);
     }

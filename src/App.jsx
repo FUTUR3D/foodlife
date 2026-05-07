@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { COUNTRIES } from './countries'
 
 const STORAGE_KEYS = {
   auth: 'foodlife_auth',
@@ -38,7 +39,7 @@ const DEFAULT_PROFILE = {
   height: '',
   weight: '',
   startWeight: '',
-  originPlace: '',
+  countryCode: '',
   bodyType: '',
 }
 
@@ -59,7 +60,7 @@ const PROFILE_REQUIRED_FIELDS = [
   'weight',
   'height',
   'gender',
-  'originPlace',
+  'countryCode',
   'bodyType',
 ]
 
@@ -123,7 +124,7 @@ function profilePayload(profile) {
     weight: profile.weight || '',
     height: profile.height || '',
     gender: profile.gender || '',
-    originPlace: profile.originPlace || '',
+    countryCode: profile.countryCode || '',
     bodyType: profile.bodyType || '',
   }
 }
@@ -400,14 +401,20 @@ function ProfileEditor({
         </div>
 
         <div className="form-group">
-          <label className="label">Místo původu</label>
-          <input
+          <label className="label">Stát / Country</label>
+          <select
             className="input"
-            value={profile.originPlace || ''}
-            onChange={(e) => updateProfile('originPlace', e.target.value)}
-            placeholder="Např. Praha, Morava, Slovensko..."
+            value={profile.countryCode || ''}
+            onChange={(e) => updateProfile('countryCode', e.target.value)}
             required
-          />
+          >
+            <option value="">Vyber stát / Select country</option>
+            {COUNTRIES.map((country) => (
+              <option key={country.code} value={country.code}>
+                {country.nameCs} / {country.nameEn}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="form-group">

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS `user_profiles` (
   `weight_kg` decimal(5,2) DEFAULT NULL,
   `height_cm` decimal(5,2) DEFAULT NULL,
   `gender` varchar(40) DEFAULT NULL,
+  `country_code` char(2) DEFAULT NULL,
   `origin_place` varchar(120) DEFAULT NULL,
   `body_type` varchar(60) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
