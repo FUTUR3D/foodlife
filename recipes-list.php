@@ -2,12 +2,27 @@
 require 'recipe-helpers.php';
 
 $userId = require_json_user();
-$mealType = valid_meal_type($_GET['meal_type'] ?? '');
+$mealType = trim($_GET['meal_type'] ?? '');
+$filterByMealType = $mealType !== '';
+if ($filterByMealType) {
+    $mealType = valid_meal_type($mealType);
+}
 
 try {
     ensure_recipe_tables($pdo);
 
-    $stmt = $pdo->prepare('
+    $where = 'r.user_id = ?';
+    $params = [$userId];
+    if ($filterByMealType) {
+        $where .= ' AND (r.meal_type = ? OR EXISTS (
+            SELECT 1 FROM recipe_meal_types mt_filter
+            WHERE mt_filter.recipe_id = r.id AND mt_filter.meal_type = ?
+        ))';
+        $params[] = $mealType;
+        $params[] = $mealType;
+    }
+
+    $stmt = $pdo->prepare("
         SELECT
             r.id AS recipe_id,
             r.title,
@@ -25,6 +40,11 @@ try {
             ri.grams,
             ri.note AS item_note,
             ri.sort_order,
+            (
+                SELECT GROUP_CONCAT(mt.meal_type ORDER BY mt.meal_type SEPARATOR ',')
+                FROM recipe_meal_types mt
+                WHERE mt.recipe_id = r.id
+            ) AS meal_types,
             f.name_cs AS food_name,
             f.name_en AS food_name_en,
             f.default_unit,
@@ -37,10 +57,10 @@ try {
         FROM recipes r
         LEFT JOIN recipe_items ri ON ri.recipe_id = r.id
         LEFT JOIN foods f ON f.id = ri.food_id
-        WHERE r.user_id = ? AND r.meal_type = ?
+        WHERE $where
         ORDER BY r.updated_at DESC, r.title ASC, ri.sort_order ASC, ri.id ASC
-    ');
-    $stmt->execute([$userId, $mealType]);
+    ");
+    $stmt->execute($params);
 
     $recipes = [];
     foreach ($stmt->fetchAll() as $row) {
@@ -51,6 +71,7 @@ try {
                 'title' => $row['title'],
                 'description' => $row['description'],
                 'meal_type' => $row['meal_type'],
+                'meal_types' => $row['meal_types'] ? explode(',', $row['meal_types']) : [$row['meal_type']],
                 'servings' => $row['servings'] === null ? null : (float) $row['servings'],
                 'instructions' => $row['instructions'],
                 'goal_type' => $row['goal_type'],

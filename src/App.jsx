@@ -20,6 +20,8 @@ const MEAL_SECTIONS = [
   { key: 'ostatni', title: 'Ostatní', colorClass: 'panel-violet' },
 ]
 
+const RECIPE_MEAL_TAGS = MEAL_SECTIONS.map(({ key, title }) => ({ key, title }))
+
 const DEFAULT_FOODS = [
   { id: createId(), name: 'Ovesná kaše' },
   { id: createId(), name: 'Banán' },
@@ -306,6 +308,26 @@ function MealTotals({ items }) {
   )
 }
 
+function draftItemsFromRecipe(recipe) {
+  return (recipe.items || []).map((item) => ({
+    id: createId(),
+    recipe_id: recipe.id,
+    food_id: item.food_id,
+    name: item.name || item.custom_name,
+    custom_name: item.custom_name,
+    amount: item.amount || '',
+    unit: item.unit || item.default_unit || 'g',
+    grams: item.grams ?? gramsFromAmount(item.amount, item.unit || item.default_unit || 'g', item.serving_grams),
+    serving_grams: item.serving_grams ?? null,
+    note: item.note || '',
+    kcal_100g: item.kcal_100g,
+    protein_100g: item.protein_100g,
+    carbs_100g: item.carbs_100g,
+    fat_100g: item.fat_100g,
+    fiber_100g: item.fiber_100g,
+  }))
+}
+
 function ProfileEditor({
   profile,
   onChange,
@@ -472,20 +494,35 @@ const EMPTY_CUSTOM_FOOD = {
   note: '',
 }
 
+const EMPTY_RECIPE_FORM = {
+  id: null,
+  title: '',
+  note: '',
+  meal_types: ['snidane'],
+  items: [],
+}
+
 function CustomFoodsManager({
   foods,
+  recipes,
   isLoading,
+  isRecipesLoading,
   isOpen,
   onToggle,
   onSaveFood,
   onDeleteFood,
+  onSaveRecipe,
+  onDeleteRecipe,
 }) {
   const [form, setForm] = useState(EMPTY_CUSTOM_FOOD)
+  const [recipeForm, setRecipeForm] = useState(EMPTY_RECIPE_FORM)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isRecipeSaving, setIsRecipeSaving] = useState(false)
   const [error, setError] = useState('')
+  const [recipeError, setRecipeError] = useState('')
 
   useEffect(() => {
     const q = searchQuery.trim()
@@ -567,6 +604,84 @@ function CustomFoodsManager({
     setError('')
   }
 
+  function recipeFormFromRecipe(recipe) {
+    return {
+      id: recipe.id,
+      title: recipe.title || '',
+      note: recipe.description || '',
+      meal_types: recipe.meal_types?.length ? recipe.meal_types : [recipe.meal_type || 'ostatni'],
+      items: draftItemsFromRecipe(recipe),
+    }
+  }
+
+  function editRecipe(recipe) {
+    setRecipeForm(recipeFormFromRecipe(recipe))
+    setRecipeError('')
+  }
+
+  function resetRecipeForm() {
+    setRecipeForm(EMPTY_RECIPE_FORM)
+    setRecipeError('')
+  }
+
+  function toggleRecipeType(type) {
+    setRecipeForm((prev) => {
+      const hasType = prev.meal_types.includes(type)
+      const nextTypes = hasType
+        ? prev.meal_types.filter((item) => item !== type)
+        : [...prev.meal_types, type]
+
+      return {
+        ...prev,
+        meal_types: nextTypes.length ? nextTypes : [type],
+      }
+    })
+  }
+
+  function updateRecipeItem(itemId, patch) {
+    setRecipeForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => {
+        if (item.id !== itemId) return item
+        const next = { ...item, ...patch }
+        next.grams = gramsFromAmount(next.amount, next.unit, next.serving_grams)
+        return next
+      }),
+    }))
+  }
+
+  async function handleRecipeSubmit(e) {
+    e.preventDefault()
+    if (!recipeForm.title.trim()) {
+      setRecipeError('Doplň název jídla.')
+      return
+    }
+    if (recipeForm.items.length === 0) {
+      setRecipeError('Jídlo musí mít aspoň jednu surovinu.')
+      return
+    }
+
+    setIsRecipeSaving(true)
+    setRecipeError('')
+    try {
+      await onSaveRecipe(recipeForm)
+      setRecipeForm(EMPTY_RECIPE_FORM)
+    } catch {
+      setRecipeError('Uložené jídlo se nepodařilo uložit.')
+    } finally {
+      setIsRecipeSaving(false)
+    }
+  }
+
+  async function handleRecipeDelete(recipeId) {
+    try {
+      await onDeleteRecipe(recipeId)
+      if (recipeForm.id === recipeId) setRecipeForm(EMPTY_RECIPE_FORM)
+    } catch {
+      setRecipeError('Uložené jídlo se nepodařilo smazat.')
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     if (!form.name_cs.trim()) {
@@ -598,7 +713,7 @@ function CustomFoodsManager({
   return (
     <AccordionSection
       title="Moje potraviny"
-      subtitle={`${foods.length} vlastních položek`}
+      subtitle={`${foods.length} vlastních položek • ${recipes.length} jídel`}
       colorClass="panel-violet"
       isOpen={isOpen}
       onToggle={onToggle}
@@ -764,6 +879,145 @@ function CustomFoodsManager({
           </div>
         )}
       </div>
+
+      <div className="card">
+        <div className="card-title-row">
+          <h4 className="card-title">{recipeForm.id ? 'Upravit uložené jídlo' : 'Uložená jídla'}</h4>
+          {recipeForm.id ? (
+            <button className="button button-light button-small" onClick={resetRecipeForm}>
+              Zavřít úpravu
+            </button>
+          ) : null}
+        </div>
+
+        {recipeForm.id ? (
+          <form onSubmit={handleRecipeSubmit}>
+            <div className="form-group">
+              <label className="label">Název jídla</label>
+              <input
+                className="input"
+                value={recipeForm.title}
+                onChange={(e) => setRecipeForm((prev) => ({ ...prev, title: e.target.value }))}
+                placeholder="Např. míchaná vajíčka"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="label">Tagy jídla</label>
+              <div className="recipe-tag-grid">
+                {RECIPE_MEAL_TAGS.map((tag) => (
+                  <label key={tag.key} className="recipe-tag-option">
+                    <input
+                      type="checkbox"
+                      checked={recipeForm.meal_types.includes(tag.key)}
+                      onChange={() => toggleRecipeType(tag.key)}
+                    />
+                    <span>{tag.title}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="label">Poznámka</label>
+              <input
+                className="input"
+                value={recipeForm.note}
+                onChange={(e) => setRecipeForm((prev) => ({ ...prev, note: e.target.value }))}
+                placeholder="Např. bez cibule, lehčí večeře..."
+              />
+            </div>
+
+            {recipeForm.items.length === 0 ? (
+              <div className="empty-box">Jídlo nemá žádné suroviny.</div>
+            ) : (
+              <div className="list">
+                {recipeForm.items.map((item) => (
+                  <div key={item.id} className="editable-meal-item">
+                    <div className="list-title">{item.name}</div>
+                    <FoodValueDetails item={item} />
+                    <div className="draft-edit-grid">
+                      <input
+                        className="input"
+                        value={item.amount}
+                        onChange={(e) => updateRecipeItem(item.id, { amount: e.target.value })}
+                        aria-label="Množství"
+                      />
+                      <select
+                        className="input"
+                        value={item.unit || 'g'}
+                        onChange={(e) => updateRecipeItem(item.id, { unit: e.target.value })}
+                        aria-label="Jednotka"
+                      >
+                        <option value="g">g</option>
+                        <option value="ml">ml</option>
+                        <option value="ks">ks</option>
+                        <option value="plátek">plátek</option>
+                        <option value="porce">porce</option>
+                        <option value="lžička">lžička</option>
+                        <option value="lžíce">lžíce</option>
+                      </select>
+                      <input
+                        className="input"
+                        value={item.note || ''}
+                        onChange={(e) => updateRecipeItem(item.id, { note: e.target.value })}
+                        placeholder="Poznámka"
+                        aria-label="Poznámka"
+                      />
+                      <button
+                        type="button"
+                        className="delete-button"
+                        onClick={() => setRecipeForm((prev) => ({
+                          ...prev,
+                          items: prev.items.filter((recipeItem) => recipeItem.id !== item.id),
+                        }))}
+                      >
+                        Smazat
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {recipeError ? <div className="inline-error">{recipeError}</div> : null}
+
+            <button className="button button-full" type="submit" disabled={isRecipeSaving}>
+              {isRecipeSaving ? 'Ukládám...' : 'Uložit změny jídla'}
+            </button>
+          </form>
+        ) : null}
+
+        {isRecipesLoading ? (
+          <div className="empty-box">Načítám uložená jídla...</div>
+        ) : recipes.length === 0 ? (
+          <div className="empty-box">Zatím tu není žádné uložené jídlo.</div>
+        ) : (
+          <div className="list">
+            {recipes.map((recipe) => (
+              <div key={recipe.id} className="list-item">
+                <div>
+                  <div className="list-title">{recipe.title}</div>
+                  <div className="list-subtitle">
+                    {(recipe.meal_types || [recipe.meal_type]).map((type) => (
+                      RECIPE_MEAL_TAGS.find((tag) => tag.key === type)?.title || type
+                    )).join(' • ')}
+                    {` • ${recipe.items.length} surovin`}
+                  </div>
+                </div>
+                <div className="saved-meal-actions">
+                  <button className="button button-light button-small" onClick={() => editRecipe(recipe)}>
+                    Upravit
+                  </button>
+                  <button className="delete-button" onClick={() => handleRecipeDelete(recipe.id)}>
+                    Smazat
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </AccordionSection>
   )
 }
@@ -771,10 +1025,13 @@ function CustomFoodsManager({
 function MealSection({
   section,
   savedMeals,
+  recipes,
+  isRecipesLoading,
   isOpen,
   onToggle,
   onSaveMeal,
   onDeleteMeal,
+  onSaveRecipe,
 }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -787,19 +1044,12 @@ function MealSection({
   const [editingMealId, setEditingMealId] = useState(null)
   const [expandedDraftItems, setExpandedDraftItems] = useState({})
   const [expandedSavedItems, setExpandedSavedItems] = useState({})
-  const [recipes, setRecipes] = useState([])
   const [selectedRecipeId, setSelectedRecipeId] = useState('')
   const [recipeTitle, setRecipeTitle] = useState('')
-  const [isRecipesLoading, setIsRecipesLoading] = useState(false)
   const [isRecipeSaving, setIsRecipeSaving] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (!isOpen) return
-    loadRecipes()
-  }, [isOpen, section.key])
 
   useEffect(() => {
     const q = query.trim()
@@ -840,23 +1090,6 @@ function MealSection({
       controller.abort()
     }
   }, [query, selectedFood])
-
-  async function loadRecipes() {
-    setIsRecipesLoading(true)
-    try {
-      const response = await fetch(`recipes-list.php?meal_type=${encodeURIComponent(section.key)}`, {
-        credentials: 'same-origin',
-        headers: { Accept: 'application/json' },
-      })
-      if (!response.ok) throw new Error('recipes_load_failed')
-      const data = await response.json()
-      setRecipes(data.recipes || [])
-    } catch {
-      setRecipes([])
-    } finally {
-      setIsRecipesLoading(false)
-    }
-  }
 
   function handleSelectFood(food) {
     setSelectedFood(food)
@@ -913,23 +1146,7 @@ function MealSection({
 
     setDraftItems((prev) => [
       ...prev,
-      ...recipe.items.map((item) => ({
-        id: createId(),
-        recipe_id: recipe.id,
-        food_id: item.food_id,
-        name: item.name || item.custom_name,
-        custom_name: item.custom_name,
-        amount: item.amount || '',
-        unit: item.unit || item.default_unit || 'g',
-        grams: item.grams ?? gramsFromAmount(item.amount, item.unit || item.default_unit || 'g', item.serving_grams),
-        serving_grams: item.serving_grams ?? null,
-        note: item.note || '',
-        kcal_100g: item.kcal_100g,
-        protein_100g: item.protein_100g,
-        carbs_100g: item.carbs_100g,
-        fat_100g: item.fat_100g,
-        fiber_100g: item.fiber_100g,
-      })),
+      ...draftItemsFromRecipe(recipe),
     ])
     setMealNote((prev) => prev || recipe.title)
     setSelectedRecipeId('')
@@ -1012,46 +1229,17 @@ function MealSection({
     setIsRecipeSaving(true)
     setError('')
     try {
-      const response = await fetch('recipe-save.php', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          meal_type: section.key,
-          note: mealNote,
-          items: draftItems,
-        }),
+      await onSaveRecipe({
+        title,
+        meal_types: [section.key],
+        note: mealNote,
+        items: draftItems,
       })
-      if (!response.ok) throw new Error('recipe_save_failed')
       setRecipeTitle('')
-      await loadRecipes()
     } catch {
       setError('Uložené jídlo se nepodařilo vytvořit.')
     } finally {
       setIsRecipeSaving(false)
-    }
-  }
-
-  async function handleDeleteRecipe(recipeId) {
-    try {
-      const response = await fetch('recipe-delete.php', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ recipe_id: recipeId }),
-      })
-      if (!response.ok) throw new Error('recipe_delete_failed')
-      if (String(selectedRecipeId) === String(recipeId)) setSelectedRecipeId('')
-      await loadRecipes()
-    } catch {
-      setError('Uložené jídlo se nepodařilo smazat.')
     }
   }
 
@@ -1067,11 +1255,11 @@ function MealSection({
       onToggle={onToggle}
     >
       <div className="card">
-        <h4 className="card-title">Moje uložená jídla</h4>
+        <h4 className="card-title">Vybrat uložené jídlo</h4>
         {isRecipesLoading ? (
           <div className="empty-box">Načítám uložená jídla...</div>
         ) : recipes.length === 0 ? (
-          <div className="empty-box">Zatím tu není žádné uložené jídlo pro tuto část dne.</div>
+          <div className="empty-box">Pro tuto část dne zatím nemáš žádné uložené jídlo.</div>
         ) : (
           <>
             <div className="recipe-picker-row">
@@ -1096,18 +1284,6 @@ function MealSection({
                 {selectedRecipe.items.map((item) => item.name || item.custom_name).join(', ')}
               </div>
             ) : null}
-            <div className="recipe-chip-list">
-              {recipes.slice(0, 5).map((recipe) => (
-                <div key={recipe.id} className="recipe-chip">
-                  <button type="button" onClick={() => setSelectedRecipeId(String(recipe.id))}>
-                    {recipe.title}
-                  </button>
-                  <button type="button" className="recipe-chip-delete" onClick={() => handleDeleteRecipe(recipe.id)}>
-                    Smazat
-                  </button>
-                </div>
-              ))}
-            </div>
           </>
         )}
       </div>
@@ -1487,6 +1663,8 @@ export default function App() {
   const [isMealsLoading, setIsMealsLoading] = useState(false)
   const [customFoods, setCustomFoods] = useState([])
   const [isCustomFoodsLoading, setIsCustomFoodsLoading] = useState(false)
+  const [recipes, setRecipes] = useState([])
+  const [isRecipesLoading, setIsRecipesLoading] = useState(false)
   const [reactions, setReactions] = useState({})
   const [openMain, setOpenMain] = useState(null)
   const [openMeal, setOpenMeal] = useState(null)
@@ -1507,6 +1685,15 @@ export default function App() {
       }
     }, {})
   }, [dayMeals])
+  const recipesByType = useMemo(() => {
+    return recipes.reduce((groups, recipe) => {
+      const tags = recipe.meal_types?.length ? recipe.meal_types : [recipe.meal_type || 'ostatni']
+      return tags.reduce((nextGroups, tag) => ({
+        ...nextGroups,
+        [tag]: [...(nextGroups[tag] || []), recipe],
+      }), groups)
+    }, {})
+  }, [recipes])
 
   useEffect(() => {
     const savedProfile = readStorage(STORAGE_KEYS.profile, DEFAULT_PROFILE)
@@ -1602,6 +1789,11 @@ export default function App() {
   useEffect(() => {
     if (!isHydrated || !auth.loggedIn) return
     loadCustomFoods()
+  }, [auth.loggedIn, isHydrated])
+
+  useEffect(() => {
+    if (!isHydrated || !auth.loggedIn) return
+    loadRecipes()
   }, [auth.loggedIn, isHydrated])
 
   function handleLogin(e) {
@@ -1785,6 +1977,59 @@ export default function App() {
     await loadCustomFoods()
   }
 
+  async function loadRecipes() {
+    setIsRecipesLoading(true)
+    try {
+      const response = await fetch('recipes-list.php', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('recipes_load_failed')
+      const data = await response.json()
+      setRecipes(data.recipes || [])
+    } catch {
+      setRecipes([])
+    } finally {
+      setIsRecipesLoading(false)
+    }
+  }
+
+  async function saveRecipe(recipe) {
+    const response = await fetch('recipe-save.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        recipe_id: recipe.id,
+        title: recipe.title,
+        meal_types: recipe.meal_types,
+        note: recipe.note,
+        items: recipe.items,
+      }),
+    })
+
+    if (!response.ok) throw new Error('recipe_save_failed')
+    await loadRecipes()
+  }
+
+  async function deleteRecipe(recipeId) {
+    const response = await fetch('recipe-delete.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ recipe_id: recipeId }),
+    })
+
+    if (!response.ok) throw new Error('recipe_delete_failed')
+    await loadRecipes()
+  }
+
   function addFood(name) {
     const exists = foods.some((food) => food.name.toLowerCase() === name.toLowerCase())
     if (exists) return
@@ -1957,20 +2202,27 @@ export default function App() {
                   key={section.key}
                   section={section}
                   savedMeals={mealsByType[section.key] || []}
+                  recipes={recipesByType[section.key] || []}
+                  isRecipesLoading={isRecipesLoading}
                   isOpen={openMeal === section.key}
                   onToggle={() => setOpenMeal(openMeal === section.key ? null : section.key)}
                   onSaveMeal={saveMeal}
                   onDeleteMeal={deleteSavedMeal}
+                  onSaveRecipe={saveRecipe}
                 />
               ))}
 
               <CustomFoodsManager
                 foods={customFoods}
+                recipes={recipes}
                 isLoading={isCustomFoodsLoading}
+                isRecipesLoading={isRecipesLoading}
                 isOpen={openMeal === 'custom-foods'}
                 onToggle={() => setOpenMeal(openMeal === 'custom-foods' ? null : 'custom-foods')}
                 onSaveFood={saveCustomFood}
                 onDeleteFood={deleteCustomFood}
+                onSaveRecipe={saveRecipe}
+                onDeleteRecipe={deleteRecipe}
               />
             </div>
           </AccordionSection>

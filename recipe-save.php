@@ -5,7 +5,11 @@ $userId = require_json_user();
 $data = read_json_body();
 
 $title = trim($data['title'] ?? '');
-$mealType = valid_meal_type($data['meal_type'] ?? '');
+$mealTypes = valid_meal_types($data['meal_types'] ?? []);
+if (!$mealTypes) {
+    $mealTypes = [valid_meal_type($data['meal_type'] ?? '')];
+}
+$mealType = $mealTypes[0];
 $note = trim($data['note'] ?? '');
 $items = $data['items'] ?? [];
 $recipeId = isset($data['recipe_id']) && $data['recipe_id'] !== '' ? (int) $data['recipe_id'] : 0;
@@ -44,6 +48,9 @@ try {
 
         $deleteStmt = $pdo->prepare('DELETE FROM recipe_items WHERE recipe_id = ?');
         $deleteStmt->execute([$recipeId]);
+
+        $deleteTypeStmt = $pdo->prepare('DELETE FROM recipe_meal_types WHERE recipe_id = ?');
+        $deleteTypeStmt->execute([$recipeId]);
     } else {
         $stmt = $pdo->prepare('
             INSERT INTO recipes (user_id, title, description, meal_type, servings, is_public, goal_type)
@@ -56,6 +63,11 @@ try {
             $mealType,
         ]);
         $recipeId = (int) $pdo->lastInsertId();
+    }
+
+    $typeStmt = $pdo->prepare('INSERT IGNORE INTO recipe_meal_types (recipe_id, meal_type) VALUES (?, ?)');
+    foreach ($mealTypes as $type) {
+        $typeStmt->execute([$recipeId, $type]);
     }
 
     $itemStmt = $pdo->prepare('
