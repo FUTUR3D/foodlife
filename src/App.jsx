@@ -463,7 +463,7 @@ function MainDashboard({
       <div className="dashboard-hero">
         <div>
           <div className="topbar-small">Denní dashboard</div>
-          <h2>{date}</h2>
+          <h2>Souhrn dne</h2>
           <p>{getDailyStatus(dayTotals, energyPlan)}</p>
         </div>
         <div className="dashboard-score">
@@ -3057,7 +3057,7 @@ export default function App() {
               <div className="topbar-small">{today === formatToday() ? 'Dnes' : ''}</div>
               <div className="day-switcher" aria-label="Přepínání dne">
                 <button className="day-switch-button" type="button" onClick={prevDay} aria-label="Předchozí den">‹</button>
-                <button className="day-date-button" type="button" onClick={openCalendarPicker}>
+                <button className="day-date-button" type="button" onClick={openCalendarPicker} tabIndex="-1">
                   {formatDisplayDate(selectedDate)}
                 </button>
                 <button className="day-switch-button" type="button" onClick={nextDay} aria-label="Další den">›</button>
@@ -3067,8 +3067,7 @@ export default function App() {
                   type="date"
                   value={selectedDate}
                   onChange={(e) => handleDateChange(e.target.value)}
-                  aria-hidden="true"
-                  tabIndex="-1"
+                  aria-label="Vybrat datum"
                 />
               </div>
               <div className="topbar-text">Záznamy: {totalItemsToday}</div>
