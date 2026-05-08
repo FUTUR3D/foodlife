@@ -325,6 +325,27 @@ function formatMacro(value, suffix = 'g') {
   return `${Math.round(value * 10) / 10} ${suffix}`
 }
 
+function formatWeight(value) {
+  const number = readNumber(value)
+  if (!number) return '-'
+  return `${Math.round(number * 10) / 10} kg`
+}
+
+function dateDaysAgo(dateValue, days) {
+  return shiftDate(dateValue, -days)
+}
+
+function formatShortDate(dateValue) {
+  if (!dateValue) return ''
+  const date = new Date(`${dateValue}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return dateValue
+  return date.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })
+}
+
+function getWeightNumber(log) {
+  return readNumber(log?.weight)
+}
+
 function formatItemMeasure(item, grams) {
   if (!grams || !Number.isFinite(Number(grams))) return 'Bez množství'
   const rounded = Math.round(Number(grams) * 10) / 10
@@ -503,6 +524,7 @@ function MainDashboard({
       <div className="quick-actions">
         <button className="quick-action primary" type="button" onClick={() => onOpenSection('food')}>Přidat jídlo</button>
         <button className="quick-action" type="button" onClick={() => onOpenSection('drinks', 'piti')}>Přidat pití</button>
+        <button className="quick-action" type="button" onClick={() => onOpenSection('weight')}>Hmotnost</button>
         <button className="quick-action" type="button" onClick={() => onOpenSection('exercise')}>Cvičení</button>
         <button className="quick-action" type="button" onClick={onOpenMenu}>Cíle a profil</button>
       </div>
@@ -590,6 +612,206 @@ function DailyOverview({ date, mealsByType, dayTotals, totalItems, energyPlan, i
         })}
       </div>
     </section>
+  )
+}
+
+const WEIGHT_RANGES = [
+  { key: '7', label: '7 dnů', days: 7 },
+  { key: '30', label: 'Měsíc', days: 30 },
+  { key: '365', label: 'Rok', days: 365 },
+]
+
+function WeightChart({ logs }) {
+  const points = logs
+    .map((log) => ({ ...log, value: getWeightNumber(log) }))
+    .filter((log) => Number.isFinite(log.value))
+
+  if (points.length < 2) {
+    return (
+      <div className="weight-chart-empty">
+        Přidej aspoň dva záznamy a tady se ukáže vývoj v čase.
+      </div>
+    )
+  }
+
+  const width = 640
+  const height = 190
+  const padding = 24
+  const values = points.map((point) => point.value)
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const spread = Math.max(1, max - min)
+  const lower = min - spread * 0.18
+  const upper = max + spread * 0.18
+  const range = Math.max(1, upper - lower)
+
+  const toX = (index) => padding + (index / Math.max(1, points.length - 1)) * (width - padding * 2)
+  const toY = (value) => height - padding - ((value - lower) / range) * (height - padding * 2)
+  const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${toX(index)} ${toY(point.value)}`).join(' ')
+
+  return (
+    <div className="weight-chart-wrap">
+      <svg className="weight-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Graf vývoje hmotnosti">
+        <line x1={padding} y1={padding} x2={padding} y2={height - padding} />
+        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} />
+        <path d={path} />
+        {points.map((point, index) => (
+          <g key={`${point.date}_${point.weight}`}>
+            <circle cx={toX(index)} cy={toY(point.value)} r="4" />
+            {index === 0 || index === points.length - 1 ? (
+              <text x={toX(index)} y={toY(point.value) - 10} textAnchor={index === 0 ? 'start' : 'end'}>
+                {formatWeight(point.value)}
+              </text>
+            ) : null}
+          </g>
+        ))}
+      </svg>
+      <div className="weight-chart-labels">
+        <span>{formatShortDate(points[0].date)}</span>
+        <span>{formatShortDate(points[points.length - 1].date)}</span>
+      </div>
+    </div>
+  )
+}
+
+function WeightTracker({
+  date,
+  logs,
+  isLoading,
+  profileWeight,
+  onSaveWeight,
+}) {
+  const [rangeKey, setRangeKey] = useState('30')
+  const [weight, setWeight] = useState('')
+  const [note, setNote] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const todayLog = logs.find((log) => log.date === date)
+  const sortedLogs = [...logs].sort((a, b) => a.date.localeCompare(b.date))
+  const latestLog = sortedLogs[sortedLogs.length - 1] || null
+  const previousLog = sortedLogs.length > 1 ? sortedLogs[sortedLogs.length - 2] : null
+  const selectedRange = WEIGHT_RANGES.find((range) => range.key === rangeKey) || WEIGHT_RANGES[1]
+  const rangeStart = dateDaysAgo(date, selectedRange.days - 1)
+  const rangeLogs = sortedLogs.filter((log) => log.date >= rangeStart && log.date <= date)
+  const latestWeight = getWeightNumber(latestLog)
+  const previousWeight = getWeightNumber(previousLog)
+  const change = Number.isFinite(latestWeight) && Number.isFinite(previousWeight)
+    ? Math.round((latestWeight - previousWeight) * 10) / 10
+    : null
+  const firstRangeWeight = getWeightNumber(rangeLogs[0])
+  const rangeChange = Number.isFinite(latestWeight) && Number.isFinite(firstRangeWeight)
+    ? Math.round((latestWeight - firstRangeWeight) * 10) / 10
+    : null
+
+  useEffect(() => {
+    setWeight(todayLog?.weight || '')
+    setNote(todayLog?.note || '')
+    setError('')
+  }, [todayLog?.id, todayLog?.weight, todayLog?.note, date])
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!readNumber(weight)) {
+      setError('Doplň platnou hmotnost.')
+      return
+    }
+
+    setIsSaving(true)
+    setError('')
+    try {
+      await onSaveWeight({ date, weight, note })
+    } catch {
+      setError('Hmotnost se nepodařilo uložit.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <div className="weight-panel">
+      <div className="weight-top">
+        <div>
+          <div className="side-eyebrow">Vážení</div>
+          <h3>Hmotnost v čase</h3>
+          <p>Stačí jeden záznam denně. Dlouhodobý trend je důležitější než jednotlivé výkyvy.</p>
+        </div>
+        <div className="weight-current">
+          <span>Poslední</span>
+          <strong>{latestLog ? formatWeight(latestLog.weight) : formatWeight(profileWeight)}</strong>
+          {change !== null ? <small>{change > 0 ? '+' : ''}{change} kg od minula</small> : null}
+        </div>
+      </div>
+
+      <div className="weight-grid">
+        <form className="weight-form" onSubmit={handleSubmit}>
+          <label className="label">Hmotnost pro {formatShortDate(date)}</label>
+          <div className="weight-input-row">
+            <input
+              className="input"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              inputMode="decimal"
+              placeholder="Např. 82,4"
+            />
+            <span>kg</span>
+          </div>
+          <input
+            className="input"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Poznámka, třeba ráno nalačno"
+          />
+          {error ? <div className="inline-error">{error}</div> : null}
+          <button className="button button-full" type="submit" disabled={isSaving}>
+            {isSaving ? 'Ukládám...' : todayLog ? 'Uložit změnu' : 'Zapsat hmotnost'}
+          </button>
+        </form>
+
+        <div className="weight-summary">
+          <div>
+            <span>Rozsah</span>
+            <strong>{selectedRange.label}</strong>
+          </div>
+          <div>
+            <span>Změna v období</span>
+            <strong>{rangeChange === null ? '-' : `${rangeChange > 0 ? '+' : ''}${rangeChange} kg`}</strong>
+          </div>
+          <div>
+            <span>Záznamů</span>
+            <strong>{isLoading ? '...' : rangeLogs.length}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="weight-range-tabs">
+        {WEIGHT_RANGES.map((range) => (
+          <button
+            key={range.key}
+            type="button"
+            className={rangeKey === range.key ? 'active' : ''}
+            onClick={() => setRangeKey(range.key)}
+          >
+            {range.label}
+          </button>
+        ))}
+      </div>
+
+      <WeightChart logs={rangeLogs} />
+
+      <div className="weight-history">
+        {sortedLogs.slice(-6).reverse().map((log) => (
+          <div key={log.id || log.date} className="weight-history-row">
+            <span>{formatShortDate(log.date)}</span>
+            <strong>{formatWeight(log.weight)}</strong>
+            {log.note ? <small>{log.note}</small> : null}
+          </div>
+        ))}
+        {!isLoading && sortedLogs.length === 0 ? (
+          <div className="empty-box">Zatím tu není žádné vážení.</div>
+        ) : null}
+      </div>
+    </div>
   )
 }
 
@@ -2498,6 +2720,8 @@ export default function App() {
   const [isCustomFoodsLoading, setIsCustomFoodsLoading] = useState(false)
   const [recipes, setRecipes] = useState([])
   const [isRecipesLoading, setIsRecipesLoading] = useState(false)
+  const [weightLogs, setWeightLogs] = useState([])
+  const [isWeightLoading, setIsWeightLoading] = useState(false)
   const [reactions, setReactions] = useState({})
   const [openMain, setOpenMain] = useState(null)
   const [openMeal, setOpenMeal] = useState(null)
@@ -2626,6 +2850,11 @@ export default function App() {
 
   useEffect(() => {
     if (!isHydrated || !auth.loggedIn) return
+    loadWeightLogs(today)
+  }, [auth.loggedIn, isHydrated, today])
+
+  useEffect(() => {
+    if (!isHydrated || !auth.loggedIn) return
     loadUserProfile()
   }, [auth.loggedIn, isHydrated])
 
@@ -2733,6 +2962,38 @@ export default function App() {
     } finally {
       setIsMealsLoading(false)
     }
+  }
+
+  async function loadWeightLogs(endDate = today) {
+    setIsWeightLoading(true)
+    try {
+      const response = await fetch(`weight-logs.php?end_date=${encodeURIComponent(endDate)}&days=370`, {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('weight_logs_load_failed')
+      const data = await response.json()
+      setWeightLogs(data.logs || [])
+    } catch {
+      setWeightLogs([])
+    } finally {
+      setIsWeightLoading(false)
+    }
+  }
+
+  async function saveWeightLog(entry) {
+    const response = await fetch('weight-logs.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(entry),
+    })
+
+    if (!response.ok) throw new Error('weight_log_save_failed')
+    await loadWeightLogs(today)
   }
 
   async function useRecipeForMeal(recipe, mealType) {
@@ -3165,6 +3426,22 @@ export default function App() {
                 onSaveRecipe={saveRecipe}
               />
             ) : null}
+          </AccordionSection>
+
+          <AccordionSection
+            title="Hmotnost"
+            subtitle="Vážení, trend a vývoj v čase"
+            colorClass="panel-sky"
+            isOpen={openMain === 'weight'}
+            onToggle={() => setOpenMain(openMain === 'weight' ? null : 'weight')}
+          >
+            <WeightTracker
+              date={selectedDate}
+              logs={weightLogs}
+              isLoading={isWeightLoading}
+              profileWeight={profile.weight || profile.startWeight}
+              onSaveWeight={saveWeightLog}
+            />
           </AccordionSection>
 
           <AccordionSection
