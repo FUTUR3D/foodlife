@@ -3057,7 +3057,7 @@ export default function App() {
               <div className="topbar-small">{today === formatToday() ? 'Dnes' : ''}</div>
               <div className="day-switcher" aria-label="Přepínání dne">
                 <button className="day-switch-button" type="button" onClick={prevDay} aria-label="Předchozí den">‹</button>
-                <button className="day-date-button" type="button" onClick={openCalendarPicker} tabIndex="-1">
+                <button className="day-date-button" type="button" onClick={openCalendarPicker}>
                   {formatDisplayDate(selectedDate)}
                 </button>
                 <button className="day-switch-button" type="button" onClick={nextDay} aria-label="Další den">›</button>
