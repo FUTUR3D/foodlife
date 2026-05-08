@@ -207,6 +207,28 @@ function formatToday() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function formatDisplayDate(value) {
+  if (!value) return ''
+  const date = new Date(`${value}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString('cs-CZ', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+  })
+}
+
+function shiftDate(value, days) {
+  const date = new Date(`${value}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return value
+  date.setDate(date.getDate() + days)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function AccordionSection({
   title,
   subtitle,
@@ -2958,15 +2980,11 @@ export default function App() {
   const profileComplete = isProfileComplete(profile)
 
   function prevDay() {
-    const d = new Date(today)
-    d.setDate(d.getDate() - 1)
-    setSelectedDate(d.toISOString().slice(0, 10))
+    setSelectedDate(shiftDate(today, -1))
   }
 
   function nextDay() {
-    const d = new Date(today)
-    d.setDate(d.getDate() + 1)
-    setSelectedDate(d.toISOString().slice(0, 10))
+    setSelectedDate(shiftDate(today, 1))
   }
 
   function handleDateChange(val) {
@@ -3017,11 +3035,16 @@ export default function App() {
       <div className="app-container">
         <div className="topbar">
           <div className="topbar-main">
-            <button className="calendar-button" onClick={() => setOpenCalendar(true)} aria-label="Otevřít kalendář">📅</button>
             <div>
               <div className="topbar-small">{today === formatToday() ? 'Dnes' : ''}</div>
-              <h1 className="topbar-title">Můj den</h1>
-              <div className="topbar-text">{selectedDate} • Záznamy: {totalItemsToday}</div>
+              <div className="day-switcher" aria-label="Přepínání dne">
+                <button className="day-switch-button" type="button" onClick={prevDay} aria-label="Předchozí den">‹</button>
+                <button className="day-date-button" type="button" onClick={() => setOpenCalendar(true)}>
+                  {formatDisplayDate(selectedDate)}
+                </button>
+                <button className="day-switch-button" type="button" onClick={nextDay} aria-label="Další den">›</button>
+              </div>
+              <div className="topbar-text">Záznamy: {totalItemsToday}</div>
             </div>
           </div>
 
