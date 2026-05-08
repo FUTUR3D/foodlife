@@ -1032,7 +1032,7 @@ function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEd
                 <article key={recipe.id} className={`recipe-row ${isExpanded ? 'recipe-row-open' : ''}`}>
                   <button
                     type="button"
-                    className="recipe-card-head recipe-row-summary"
+                    className="recipe-row-summary"
                     onClick={() => setExpandedRecipeId(isExpanded ? null : recipe.id)}
                   >
                     <div>
