@@ -11,7 +11,7 @@ if ($filterByMealType) {
 try {
     ensure_recipe_tables($pdo);
 
-    $where = 'r.user_id = ?';
+    $where = '(r.user_id = ? OR r.user_id IS NULL OR r.is_public = 1 OR r.source = "system")';
     $params = [$userId];
     if ($filterByMealType) {
         $where .= ' AND (r.meal_type = ? OR EXISTS (
@@ -25,12 +25,22 @@ try {
     $stmt = $pdo->prepare("
         SELECT
             r.id AS recipe_id,
+            r.user_id,
+            r.source,
+            r.recipe_key,
             r.title,
             r.description,
             r.meal_type,
             r.servings,
+            r.prep_minutes,
+            r.cook_minutes,
             r.instructions,
+            r.difficulty,
+            r.is_public,
             r.goal_type,
+            r.carb_level,
+            r.digestion_score,
+            r.protein_score,
             r.updated_at,
             ri.id AS item_id,
             ri.food_id,
@@ -45,6 +55,18 @@ try {
                 FROM recipe_meal_types mt
                 WHERE mt.recipe_id = r.id
             ) AS meal_types,
+            (
+                SELECT GROUP_CONCAT(rt.code ORDER BY rt.code SEPARATOR ',')
+                FROM recipe_tag_links rtl
+                JOIN recipe_tags rt ON rt.id = rtl.tag_id
+                WHERE rtl.recipe_id = r.id
+            ) AS tag_codes,
+            (
+                SELECT GROUP_CONCAT(rt.label_cs ORDER BY rt.label_cs SEPARATOR ',')
+                FROM recipe_tag_links rtl
+                JOIN recipe_tags rt ON rt.id = rtl.tag_id
+                WHERE rtl.recipe_id = r.id
+            ) AS tag_labels,
             f.name_cs AS food_name,
             f.name_en AS food_name_en,
             f.default_unit,
@@ -58,7 +80,7 @@ try {
         LEFT JOIN recipe_items ri ON ri.recipe_id = r.id
         LEFT JOIN foods f ON f.id = ri.food_id
         WHERE $where
-        ORDER BY r.updated_at DESC, r.title ASC, ri.sort_order ASC, ri.id ASC
+        ORDER BY r.source ASC, r.updated_at DESC, r.title ASC, ri.sort_order ASC, ri.id ASC
     ");
     $stmt->execute($params);
 
@@ -68,13 +90,25 @@ try {
         if (!isset($recipes[$recipeId])) {
             $recipes[$recipeId] = [
                 'id' => $recipeId,
+                'user_id' => $row['user_id'] === null ? null : (int) $row['user_id'],
+                'source' => $row['source'] ?: 'user',
+                'recipe_key' => $row['recipe_key'],
                 'title' => $row['title'],
                 'description' => $row['description'],
                 'meal_type' => $row['meal_type'],
                 'meal_types' => $row['meal_types'] ? explode(',', $row['meal_types']) : [$row['meal_type']],
                 'servings' => $row['servings'] === null ? null : (float) $row['servings'],
+                'prep_minutes' => $row['prep_minutes'] === null ? null : (int) $row['prep_minutes'],
+                'cook_minutes' => $row['cook_minutes'] === null ? null : (int) $row['cook_minutes'],
                 'instructions' => $row['instructions'],
+                'difficulty' => $row['difficulty'],
+                'is_public' => (int) $row['is_public'],
                 'goal_type' => $row['goal_type'],
+                'carb_level' => $row['carb_level'],
+                'digestion_score' => $row['digestion_score'] === null ? null : (int) $row['digestion_score'],
+                'protein_score' => $row['protein_score'] === null ? null : (int) $row['protein_score'],
+                'tag_codes' => $row['tag_codes'] ? explode(',', $row['tag_codes']) : [],
+                'tag_labels' => $row['tag_labels'] ? explode(',', $row['tag_labels']) : [],
                 'updated_at' => $row['updated_at'],
                 'items' => [],
             ];

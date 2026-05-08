@@ -909,6 +909,180 @@ const EMPTY_RECIPE_FORM = {
   items: [],
 }
 
+function RecipeLibrary({ recipes, isLoading, onUseRecipe }) {
+  const [mealFilter, setMealFilter] = useState('all')
+  const [goalFilter, setGoalFilter] = useState('all')
+  const [query, setQuery] = useState('')
+  const [smartPrompt, setSmartPrompt] = useState('')
+  const [usingRecipeId, setUsingRecipeId] = useState(null)
+  const [message, setMessage] = useState('')
+
+  const goalLabels = {
+    none: 'bez cíle',
+    lose_weight: 'hubnutí',
+    maintain_weight: 'udržení',
+    gain_weight: 'nabírání',
+    digestive_comfort: 'trávení',
+    low_fodmap: 'low FODMAP',
+    low_histamine: 'low histamin',
+  }
+
+  const filteredRecipes = recipes.filter((recipe) => {
+    const mealTypes = recipe.meal_types?.length ? recipe.meal_types : [recipe.meal_type || 'ostatni']
+    const haystack = `${recipe.title || ''} ${recipe.description || ''} ${(recipe.tag_labels || []).join(' ')}`.toLowerCase()
+    const matchesMeal = mealFilter === 'all' || mealTypes.includes(mealFilter)
+    const matchesGoal = goalFilter === 'all' || recipe.goal_type === goalFilter || (recipe.tag_codes || []).includes(goalFilter)
+    const matchesQuery = query.trim() === '' || haystack.includes(query.trim().toLowerCase())
+    return matchesMeal && matchesGoal && matchesQuery && recipe.items?.length
+  })
+
+  async function handleUse(recipe, mealType) {
+    setUsingRecipeId(`${recipe.id}_${mealType}`)
+    setMessage('')
+    try {
+      await onUseRecipe(recipe, mealType)
+      setMessage(`Recept „${recipe.title}” je vložený do dne.`)
+    } catch {
+      setMessage('Recept se nepodařilo vložit do dne.')
+    } finally {
+      setUsingRecipeId(null)
+    }
+  }
+
+  return (
+    <AccordionSection
+      title="Recepty"
+      subtitle="Chytrá knihovna jídel z potravin v databázi"
+      colorClass="panel-cyan"
+      isOpen
+      onToggle={() => {}}
+    >
+      <div className="recipe-library">
+        <div className="recipe-smart-box">
+          <div>
+            <div className="side-eyebrow">Chytré recepty</div>
+            <h3>Vyber hotový recept nebo si připrav zadání pro AI</h3>
+            <p>
+              Recepty jsou postavené na potravinách z databáze. Další krok bude generování podle chuti,
+              cíle, denního příjmu a potravin, které uživateli vadí.
+            </p>
+          </div>
+          <div className="form-group">
+            <label className="label">Na co máš chuť</label>
+            <input
+              className="input"
+              value={smartPrompt}
+              onChange={(e) => setSmartPrompt(e.target.value)}
+              placeholder="Např. teplá večeře bez nadýmání, chci hubnout"
+            />
+            <div className="form-hint">
+              Zatím slouží jako příprava zadání. AI napojení přidáme až nad ověřenou receptovou databází.
+            </div>
+          </div>
+        </div>
+
+        <div className="recipe-filter-grid">
+          <div className="form-group">
+            <label className="label">Část dne</label>
+            <select className="input" value={mealFilter} onChange={(e) => setMealFilter(e.target.value)}>
+              <option value="all">Vše</option>
+
+              {FOOD_MEAL_SECTIONS.map((section) => (
+                <option key={section.key} value={section.key}>{section.title}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="label">Cíl</label>
+            <select className="input" value={goalFilter} onChange={(e) => setGoalFilter(e.target.value)}>
+              <option value="all">Vše</option>
+              <option value="lose_weight">Hubnutí</option>
+              <option value="maintain_weight">Udržení</option>
+              <option value="digestive_comfort">Šetřit trávení</option>
+              <option value="low_carb">Nízkosacharidové</option>
+              <option value="high_protein">Vysoký protein</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="label">Hledat</label>
+            <input
+              className="input"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Kuře, večeře, low FODMAP..."
+            />
+          </div>
+        </div>
+
+        {message ? <div className="goal-status">{message}</div> : null}
+        {isLoading ? <div className="empty-box">Načítám recepty...</div> : null}
+
+        {!isLoading && filteredRecipes.length === 0 ? (
+          <div className="empty-box">Zatím tu není recept pro vybraný filtr. Po importu SQL se objeví systémové recepty.</div>
+        ) : (
+          <div className="recipe-card-grid">
+            {filteredRecipes.map((recipe) => {
+              const totals = getMealTotals(recipe.items || [])
+              const mealTypes = (recipe.meal_types || [recipe.meal_type]).filter(Boolean)
+              const actionTypes = mealTypes.filter((type) => type !== 'piti').slice(0, 3)
+              return (
+                <article key={recipe.id} className="recipe-card">
+                  <div className="recipe-card-head">
+                    <div>
+                      <div className="recipe-source">{recipe.source === 'system' ? 'FoodLife recept' : recipe.source === 'ai' ? 'AI návrh' : 'Moje jídlo'}</div>
+                      <h4>{recipe.title}</h4>
+                    </div>
+                    <strong>{Math.round(totals.kcal)} kcal</strong>
+                  </div>
+
+                  {recipe.description ? <p>{recipe.description}</p> : null}
+
+                  <div className="recipe-meta-row">
+                    <span>{goalLabels[recipe.goal_type] || recipe.goal_type}</span>
+                    {recipe.prep_minutes || recipe.cook_minutes ? <span>{Number(recipe.prep_minutes || 0) + Number(recipe.cook_minutes || 0)} min</span> : null}
+                    {recipe.carb_level && recipe.carb_level !== 'unknown' ? <span>Sacharidy: {recipe.carb_level}</span> : null}
+                  </div>
+
+                  <div className="recipe-chip-list">
+                    {(recipe.tag_labels || []).slice(0, 4).map((tag) => <span key={tag}>{tag}</span>)}
+                  </div>
+
+                  <MealTotals items={recipe.items || []} />
+
+                  <div className="recipe-ingredients">
+                    {(recipe.items || []).slice(0, 5).map((item) => (
+                      <span key={item.id}>{item.name} {formatItemAmount(item)}</span>
+                    ))}
+                  </div>
+
+                  {recipe.instructions ? <div className="recipe-instructions">{recipe.instructions}</div> : null}
+
+                  <div className="recipe-use-actions">
+                    {actionTypes.map((type) => {
+                      const tag = RECIPE_MEAL_TAGS.find((item) => item.key === type)
+                      const key = `${recipe.id}_${type}`
+                      return (
+                        <button
+                          key={type}
+                          className="button button-small"
+                          type="button"
+                          disabled={usingRecipeId === key}
+                          onClick={() => handleUse(recipe, type)}
+                        >
+                          {usingRecipeId === key ? 'Vkládám...' : `Vložit: ${tag?.title || type}`}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </AccordionSection>
+  )
+}
 function CustomFoodsManager({
   foods,
   recipes,
@@ -2093,6 +2267,7 @@ export default function App() {
       }
     }, {})
   }, [dayMeals])
+  const userRecipes = useMemo(() => recipes.filter((recipe) => recipe.source !== 'system'), [recipes])
   const recipesByType = useMemo(() => {
     return recipes.reduce((groups, recipe) => {
       const tags = recipe.meal_types?.length ? recipe.meal_types : [recipe.meal_type || 'ostatni']
@@ -2305,6 +2480,12 @@ export default function App() {
     } finally {
       setIsMealsLoading(false)
     }
+  }
+
+  async function useRecipeForMeal(recipe, mealType) {
+    const section = MEAL_SECTIONS.find((item) => item.key === mealType)
+    if (!section || !recipe.items?.length) throw new Error('recipe_not_usable')
+    await saveMeal(section, draftItemsFromRecipe(recipe), recipe.title)
   }
 
   async function saveMeal(section, items, note, mealId = null) {
@@ -2639,6 +2820,12 @@ export default function App() {
             <div className="accordion-stack">
               {isMealsLoading ? <div className="empty-box">Načítám dnešní jídla...</div> : null}
 
+              <RecipeLibrary
+                recipes={recipes}
+                isLoading={isRecipesLoading}
+                onUseRecipe={useRecipeForMeal}
+              />
+
               {FOOD_MEAL_SECTIONS.map((section) => (
                 <MealSection
                   key={section.key}
@@ -2656,7 +2843,7 @@ export default function App() {
 
               <CustomFoodsManager
                 foods={customFoods}
-                recipes={recipes}
+                recipes={userRecipes}
                 isLoading={isCustomFoodsLoading}
                 isRecipesLoading={isRecipesLoading}
                 isOpen={openMeal === 'custom-foods'}
