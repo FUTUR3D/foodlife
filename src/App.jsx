@@ -2505,6 +2505,7 @@ export default function App() {
   const [openMenu, setOpenMenu] = useState(false)
   const [openCalendar, setOpenCalendar] = useState(false)
   const [selectedDate, setSelectedDate] = useState(formatToday())
+  const calendarInputRef = useRef(null)
 
   const today = selectedDate
   const todayEntries = entries[today] || {}
@@ -2991,6 +2992,23 @@ export default function App() {
     setSelectedDate(val)
   }
 
+  function openCalendarPicker() {
+    const picker = calendarInputRef.current
+    if (picker?.showPicker) {
+      try {
+        picker.showPicker()
+        return
+      } catch {
+        // Fallback for browsers that block programmatic date picker opening.
+      }
+    }
+
+    if (picker) {
+      picker.focus()
+    }
+    setOpenCalendar(true)
+  }
+
   function openSection(sectionKey, mealKey = null) {
     setOpenMain(sectionKey)
     if (mealKey) setOpenMeal(mealKey)
@@ -3039,10 +3057,19 @@ export default function App() {
               <div className="topbar-small">{today === formatToday() ? 'Dnes' : ''}</div>
               <div className="day-switcher" aria-label="Přepínání dne">
                 <button className="day-switch-button" type="button" onClick={prevDay} aria-label="Předchozí den">‹</button>
-                <button className="day-date-button" type="button" onClick={() => setOpenCalendar(true)}>
+                <button className="day-date-button" type="button" onClick={openCalendarPicker}>
                   {formatDisplayDate(selectedDate)}
                 </button>
                 <button className="day-switch-button" type="button" onClick={nextDay} aria-label="Další den">›</button>
+                <input
+                  ref={calendarInputRef}
+                  className="native-date-input"
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  aria-hidden="true"
+                  tabIndex="-1"
+                />
               </div>
               <div className="topbar-text">Záznamy: {totalItemsToday}</div>
             </div>

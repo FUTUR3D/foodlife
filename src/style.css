@@ -314,6 +314,7 @@ textarea {
   align-items: center;
   border: 1px solid #dbe3ee;
   background: #ffffff;
+  position: relative;
 }
 
 .day-switch-button,
@@ -343,6 +344,16 @@ textarea {
 .day-switch-button:hover,
 .day-date-button:hover {
   background: #f8fafc;
+}
+
+.native-date-input {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .topbar-text {
