@@ -1119,11 +1119,19 @@ function CustomFoodsManager({
   const [recipeForm, setRecipeForm] = useState(EMPTY_RECIPE_FORM)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
+  const [recipeSearchQuery, setRecipeSearchQuery] = useState('')
+  const [recipeSearchResults, setRecipeSearchResults] = useState([])
+  const [selectedRecipeFood, setSelectedRecipeFood] = useState(null)
+  const [recipeAmount, setRecipeAmount] = useState('')
+  const [recipeUnit, setRecipeUnit] = useState('g')
+  const [recipeItemNote, setRecipeItemNote] = useState('')
   const [isSearching, setIsSearching] = useState(false)
+  const [isRecipeSearching, setIsRecipeSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isRecipeSaving, setIsRecipeSaving] = useState(false)
   const [error, setError] = useState('')
   const [recipeError, setRecipeError] = useState('')
+  const isRecipeFormOpen = recipeForm.id !== null || recipeForm.title.trim() !== '' || recipeForm.note.trim() !== '' || recipeForm.items.length > 0
 
   useEffect(() => {
     const q = searchQuery.trim()
@@ -1156,6 +1164,46 @@ function CustomFoodsManager({
       controller.abort()
     }
   }, [searchQuery])
+
+  useEffect(() => {
+    const q = recipeSearchQuery.trim()
+    setRecipeError('')
+
+    if (selectedRecipeFood?.name_cs === q) {
+      setRecipeSearchResults([])
+      setIsRecipeSearching(false)
+      return undefined
+    }
+
+    if (q.length < 2) {
+      setRecipeSearchResults([])
+      setIsRecipeSearching(false)
+      return undefined
+    }
+
+    const controller = new AbortController()
+    const timeout = window.setTimeout(async () => {
+      setIsRecipeSearching(true)
+      try {
+        const response = await fetch(`foods-search.php?q=${encodeURIComponent(q)}&type=food`, {
+          credentials: 'same-origin',
+          signal: controller.signal,
+        })
+        if (!response.ok) throw new Error('food_search_failed')
+        const data = await response.json()
+        setRecipeSearchResults(data.foods || [])
+      } catch (err) {
+        if (err.name !== 'AbortError') setRecipeError('Potraviny se nepodarilo nacist.')
+      } finally {
+        setIsRecipeSearching(false)
+      }
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [recipeSearchQuery, selectedRecipeFood])
 
   function updateField(field, value) {
     setForm((prev) => ({
@@ -1229,6 +1277,12 @@ function CustomFoodsManager({
   function resetRecipeForm() {
     setRecipeForm(EMPTY_RECIPE_FORM)
     setRecipeError('')
+    setRecipeSearchQuery('')
+    setRecipeSearchResults([])
+    setSelectedRecipeFood(null)
+    setRecipeAmount('')
+    setRecipeUnit('g')
+    setRecipeItemNote('')
   }
 
   function toggleRecipeType(type) {
@@ -1255,6 +1309,56 @@ function CustomFoodsManager({
         return next
       }),
     }))
+  }
+
+  function handleSelectRecipeFood(food) {
+    setSelectedRecipeFood(food)
+    setRecipeSearchQuery(food.name_cs)
+    setRecipeUnit(food.default_unit || 'g')
+    setRecipeAmount(food.serving_grams ? '1' : '')
+    setRecipeSearchResults([])
+  }
+
+  function handleAddRecipeItem() {
+    const parsedAmount = parseAmount(recipeAmount)
+    const name = selectedRecipeFood?.name_cs || recipeSearchQuery.trim()
+
+    if (!name || !parsedAmount) {
+      setRecipeError('Vyber surovinu a dopln mnozstvi.')
+      return
+    }
+
+    const grams = gramsFromAmount(parsedAmount, recipeUnit, selectedRecipeFood?.serving_grams)
+    setRecipeForm((prev) => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        {
+          id: createId(),
+          food_id: selectedRecipeFood?.id || null,
+          name,
+          custom_name: selectedRecipeFood ? null : name,
+          amount: parsedAmount,
+          unit: recipeUnit,
+          grams,
+          serving_grams: selectedRecipeFood?.serving_grams ?? null,
+          note: recipeItemNote.trim(),
+          kcal_100g: selectedRecipeFood?.kcal_100g ?? null,
+          protein_100g: selectedRecipeFood?.protein_100g ?? null,
+          carbs_100g: selectedRecipeFood?.carbs_100g ?? null,
+          fat_100g: selectedRecipeFood?.fat_100g ?? null,
+          fiber_100g: selectedRecipeFood?.fiber_100g ?? null,
+        },
+      ],
+    }))
+
+    setRecipeSearchQuery('')
+    setRecipeSearchResults([])
+    setSelectedRecipeFood(null)
+    setRecipeAmount('')
+    setRecipeUnit('g')
+    setRecipeItemNote('')
+    setRecipeError('')
   }
 
   async function handleRecipeSubmit(e) {
@@ -1489,15 +1593,15 @@ function CustomFoodsManager({
 
       <div className="card">
         <div className="card-title-row">
-          <h4 className="card-title">{recipeForm.id ? 'Upravit uložené jídlo' : 'Uložená jídla'}</h4>
-          {recipeForm.id ? (
+          <h4 className="card-title">{isRecipeFormOpen ? (recipeForm.id ? 'Upravit uložené jídlo' : 'Upravit kopii jídla') : 'Uložená jídla'}</h4>
+          {isRecipeFormOpen ? (
             <button className="button button-light button-small" onClick={resetRecipeForm}>
               Zavřít úpravu
             </button>
           ) : null}
         </div>
 
-        {recipeForm.id ? (
+        {isRecipeFormOpen ? (
           <form onSubmit={handleRecipeSubmit}>
             <div className="form-group">
               <label className="label">Název jídla</label>
@@ -1533,6 +1637,68 @@ function CustomFoodsManager({
                 onChange={(e) => setRecipeForm((prev) => ({ ...prev, note: e.target.value }))}
                 placeholder="Např. bez cibule, lehčí večeře..."
               />
+            </div>
+
+            <div className="form-group food-search-wrap">
+              <label className="label">Přidat surovinu</label>
+              <input
+                className="input"
+                value={recipeSearchQuery}
+                onChange={(e) => setRecipeSearchQuery(e.target.value)}
+                placeholder="Např. banán, tvaroh, vejce..."
+              />
+              {recipeSearchResults.length > 0 ? (
+                <div className="food-search-results">
+                  {recipeSearchResults.map((food) => (
+                    <button type="button" key={food.id} onClick={() => handleSelectRecipeFood(food)}>
+                      <span>{food.name_cs}</span>
+                      <small>
+                        <FoodKindBadge food={food} />
+                        {hasServingSize(food.default_unit, food.serving_grams)
+                          ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) -`
+                          : ''}
+                        {' '}
+                        {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
+                      </small>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {isRecipeSearching ? <div className="form-hint">Hledám...</div> : null}
+            </div>
+
+            <div className="draft-edit-grid">
+              <input
+                className="input"
+                value={recipeAmount}
+                onChange={(e) => setRecipeAmount(e.target.value)}
+                placeholder="Množství"
+                aria-label="Množství nové suroviny"
+              />
+              <select
+                className="input"
+                value={recipeUnit}
+                onChange={(e) => setRecipeUnit(e.target.value)}
+                aria-label="Jednotka nové suroviny"
+              >
+                <option value="g">g</option>
+                <option value="ml">ml</option>
+                <option value="ks">ks</option>
+                <option value="plátek">plátek</option>
+                <option value="porce">porce</option>
+                <option value="lžička">lžička</option>
+                <option value="lžíce">lžíce</option>
+              </select>
+              <input
+                className="input"
+                value={recipeItemNote}
+                onChange={(e) => setRecipeItemNote(e.target.value)}
+                placeholder="Poznámka"
+                aria-label="Poznámka k nové surovině"
+              />
+              <button type="button" className="button button-light button-small" onClick={handleAddRecipeItem}>
+                Přidat
+              </button>
             </div>
 
             {recipeForm.items.length === 0 ? (
@@ -1590,7 +1756,7 @@ function CustomFoodsManager({
             {recipeError ? <div className="inline-error">{recipeError}</div> : null}
 
             <button className="button button-full" type="submit" disabled={isRecipeSaving}>
-              {isRecipeSaving ? 'Ukládám...' : 'Uložit změny jídla'}
+              {isRecipeSaving ? 'Ukládám...' : recipeForm.id ? 'Uložit změny jídla' : 'Uložit jako moje jídlo'}
             </button>
           </form>
         ) : null}
