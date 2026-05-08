@@ -909,11 +909,12 @@ const EMPTY_RECIPE_FORM = {
   items: [],
 }
 
-function RecipeLibrary({ recipes, isLoading, onUseRecipe }) {
+function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEditRecipe }) {
   const [mealFilter, setMealFilter] = useState('all')
   const [goalFilter, setGoalFilter] = useState('all')
   const [query, setQuery] = useState('')
   const [smartPrompt, setSmartPrompt] = useState('')
+  const [expandedRecipeId, setExpandedRecipeId] = useState(null)
   const [usingRecipeId, setUsingRecipeId] = useState(null)
   const [message, setMessage] = useState('')
 
@@ -954,8 +955,8 @@ function RecipeLibrary({ recipes, isLoading, onUseRecipe }) {
       title="Recepty"
       subtitle="Chytrá knihovna jídel z potravin v databázi"
       colorClass="panel-cyan"
-      isOpen
-      onToggle={() => {}}
+      isOpen={isOpen}
+      onToggle={onToggle}
     >
       <div className="recipe-library">
         <div className="recipe-smart-box">
@@ -1020,22 +1021,31 @@ function RecipeLibrary({ recipes, isLoading, onUseRecipe }) {
         {!isLoading && filteredRecipes.length === 0 ? (
           <div className="empty-box">Zatím tu není recept pro vybraný filtr. Po importu SQL se objeví systémové recepty.</div>
         ) : (
-          <div className="recipe-card-grid">
+          <div className="recipe-compact-list">
             {filteredRecipes.map((recipe) => {
               const totals = getMealTotals(recipe.items || [])
               const mealTypes = (recipe.meal_types || [recipe.meal_type]).filter(Boolean)
               const actionTypes = mealTypes.filter((type) => type !== 'piti').slice(0, 3)
+              const isExpanded = expandedRecipeId === recipe.id
+              const isSystemRecipe = recipe.source === 'system'
               return (
-                <article key={recipe.id} className="recipe-card">
-                  <div className="recipe-card-head">
+                <article key={recipe.id} className={`recipe-row ${isExpanded ? 'recipe-row-open' : ''}`}>
+                  <button
+                    type="button"
+                    className="recipe-card-head recipe-row-summary"
+                    onClick={() => setExpandedRecipeId(isExpanded ? null : recipe.id)}
+                  >
                     <div>
                       <div className="recipe-source">{recipe.source === 'system' ? 'FoodLife recept' : recipe.source === 'ai' ? 'AI návrh' : 'Moje jídlo'}</div>
                       <h4>{recipe.title}</h4>
                     </div>
                     <strong>{Math.round(totals.kcal)} kcal</strong>
-                  </div>
+                    <span className={`accordion-arrow ${isExpanded ? 'open' : ''}`}>v</span>
+                  </button>
 
-                  {recipe.description ? <p>{recipe.description}</p> : null}
+                  {isExpanded ? (
+                    <div className="recipe-row-detail">
+                      {recipe.description ? <p>{recipe.description}</p> : null}
 
                   <div className="recipe-meta-row">
                     <span>{goalLabels[recipe.goal_type] || recipe.goal_type}</span>
@@ -1057,7 +1067,7 @@ function RecipeLibrary({ recipes, isLoading, onUseRecipe }) {
 
                   {recipe.instructions ? <div className="recipe-instructions">{recipe.instructions}</div> : null}
 
-                  <div className="recipe-use-actions">
+                      <div className="recipe-use-actions">
                     {actionTypes.map((type) => {
                       const tag = RECIPE_MEAL_TAGS.find((item) => item.key === type)
                       const key = `${recipe.id}_${type}`
@@ -1073,7 +1083,16 @@ function RecipeLibrary({ recipes, isLoading, onUseRecipe }) {
                         </button>
                       )
                     })}
-                  </div>
+                        <button
+                          className="button button-light button-small"
+                          type="button"
+                          onClick={() => onEditRecipe(recipe)}
+                        >
+                          {isSystemRecipe ? 'Upravit kopii' : 'Upravit'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </article>
               )
             })}
@@ -1090,6 +1109,7 @@ function CustomFoodsManager({
   isRecipesLoading,
   isOpen,
   onToggle,
+  editRecipeRequest,
   onSaveFood,
   onDeleteFood,
   onSaveRecipe,
@@ -1185,9 +1205,9 @@ function CustomFoodsManager({
     setError('')
   }
 
-  function recipeFormFromRecipe(recipe) {
+  function recipeFormFromRecipe(recipe, { asCopy = false } = {}) {
     return {
-      id: recipe.id,
+      id: asCopy ? null : recipe.id,
       title: recipe.title || '',
       note: recipe.description || '',
       meal_types: recipe.meal_types?.length ? recipe.meal_types : [recipe.meal_type || 'ostatni'],
@@ -1195,10 +1215,16 @@ function CustomFoodsManager({
     }
   }
 
-  function editRecipe(recipe) {
-    setRecipeForm(recipeFormFromRecipe(recipe))
+  function editRecipe(recipe, options = {}) {
+    const shouldCopy = options.asCopy || recipe.source !== 'user'
+    setRecipeForm(recipeFormFromRecipe(recipe, { asCopy: shouldCopy }))
     setRecipeError('')
   }
+
+  useEffect(() => {
+    if (!editRecipeRequest?.recipe) return
+    editRecipe(editRecipeRequest.recipe, { asCopy: editRecipeRequest.recipe.source !== 'user' })
+  }, [editRecipeRequest])
 
   function resetRecipeForm() {
     setRecipeForm(EMPTY_RECIPE_FORM)
@@ -2250,6 +2276,7 @@ export default function App() {
   const [reactions, setReactions] = useState({})
   const [openMain, setOpenMain] = useState(null)
   const [openMeal, setOpenMeal] = useState(null)
+  const [recipeEditRequest, setRecipeEditRequest] = useState(null)
   const [openMenu, setOpenMenu] = useState(false)
   const [openCalendar, setOpenCalendar] = useState(false)
   const [selectedDate, setSelectedDate] = useState(formatToday())
@@ -2486,6 +2513,12 @@ export default function App() {
     const section = MEAL_SECTIONS.find((item) => item.key === mealType)
     if (!section || !recipe.items?.length) throw new Error('recipe_not_usable')
     await saveMeal(section, draftItemsFromRecipe(recipe), recipe.title)
+  }
+
+  function openRecipeEditor(recipe) {
+    setOpenMain('food')
+    setOpenMeal('custom-foods')
+    setRecipeEditRequest({ recipe, token: Date.now() })
   }
 
   async function saveMeal(section, items, note, mealId = null) {
@@ -2823,7 +2856,10 @@ export default function App() {
               <RecipeLibrary
                 recipes={recipes}
                 isLoading={isRecipesLoading}
+                isOpen={openMeal === 'recipes'}
+                onToggle={() => setOpenMeal(openMeal === 'recipes' ? null : 'recipes')}
                 onUseRecipe={useRecipeForMeal}
+                onEditRecipe={openRecipeEditor}
               />
 
               {FOOD_MEAL_SECTIONS.map((section) => (
@@ -2848,6 +2884,7 @@ export default function App() {
                 isRecipesLoading={isRecipesLoading}
                 isOpen={openMeal === 'custom-foods'}
                 onToggle={() => setOpenMeal(openMeal === 'custom-foods' ? null : 'custom-foods')}
+                editRecipeRequest={recipeEditRequest}
                 onSaveFood={saveCustomFood}
                 onDeleteFood={deleteCustomFood}
                 onSaveRecipe={saveRecipe}

@@ -1077,6 +1077,61 @@ textarea {
   gap: 12px;
 }
 
+.recipe-compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recipe-row {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+.recipe-row-summary {
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 10px 12px;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.recipe-row-summary:hover {
+  background: #f8fafc;
+}
+
+.recipe-row-summary h4 {
+  margin: 2px 0 0;
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.recipe-row-summary > strong {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #0f172a;
+  color: white;
+  padding: 6px 9px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.recipe-row-detail {
+  border-top: 1px solid #edf2f7;
+  padding: 12px;
+  animation: accordion-enter 0.2s ease-out both;
+}
+
+.recipe-row-detail p {
+  margin: 0;
+}
+
 .recipe-card {
   border: 1px solid #e2e8f0;
   border-radius: 18px;
@@ -1104,6 +1159,17 @@ textarea {
   color: white;
   padding: 8px 10px;
   font-size: 14px;
+}
+
+.recipe-row-summary h4 {
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.recipe-row-summary > strong {
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 13px;
 }
 
 .recipe-source {
@@ -1334,6 +1400,7 @@ textarea {
   .recipe-smart-box,
   .recipe-filter-grid,
   .recipe-card-grid,
+  .recipe-compact-list,
   .recipe-picker-row,
   .meal-totals {
     grid-template-columns: 1fr;
