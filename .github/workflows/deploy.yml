@@ -31,7 +31,6 @@ jobs:
         run: |
           mkdir deploy
           cp -R dist/. deploy/
-          cp .htaccess deploy/
           cp api-helpers.php deploy/
           cp app.css deploy/
           cp auth-status.php deploy/
