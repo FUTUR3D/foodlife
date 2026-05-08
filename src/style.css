@@ -1,8 +1,8 @@
 :root {
-  font-family: Arial, Helvetica, sans-serif;
-  color: #1e293b;
-  background: #f1f5f9;
-  line-height: 1.4;
+  font-family: Inter, "Segoe UI", Arial, Helvetica, sans-serif;
+  color: #172033;
+  background: #f6f8fb;
+  line-height: 1.45;
   font-weight: 400;
 }
 
@@ -18,8 +18,18 @@ body,
 }
 
 body {
-  background: linear-gradient(180deg, #eef2f7 0%, #f8fafc 100%);
-  color: #0f172a;
+  background: #f6f8fb;
+  color: #172033;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+strong {
+  font-weight: 650;
 }
 
 html {
@@ -53,10 +63,10 @@ textarea {
   display: inline-block;
   background: white;
   color: #475569;
-  padding: 10px 16px;
+  padding: 8px 13px;
   border-radius: 999px;
-  font-size: 14px;
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+  font-size: 13px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
   margin-bottom: 18px;
 }
 
@@ -64,6 +74,7 @@ textarea {
   margin: 0 0 12px;
   font-size: 36px;
   line-height: 1.15;
+  font-weight: 650;
 }
 
 .main-text {
@@ -81,11 +92,11 @@ textarea {
 
 .day-dashboard {
   margin-bottom: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  border-radius: 26px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 55%, #ecfeff 100%);
-  padding: 18px;
-  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.09);
+  border: 1px solid #e7edf5;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 16px;
+  box-shadow: 0 3px 14px rgba(15, 23, 42, 0.045);
 }
 
 .dashboard-hero {
@@ -97,8 +108,9 @@ textarea {
 
 .dashboard-hero h2 {
   margin: 0;
-  font-size: 30px;
+  font-size: 28px;
   line-height: 1.1;
+  font-weight: 650;
 }
 
 .dashboard-hero p {
@@ -108,20 +120,20 @@ textarea {
 }
 
 .dashboard-score {
-  width: 126px;
-  height: 126px;
+  width: 116px;
+  height: 116px;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 32px;
-  background: #0f172a;
+  border-radius: 12px;
+  background: #111827;
   color: white;
-  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.22);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
 }
 
 .dashboard-score strong {
-  font-size: 34px;
+  font-size: 31px;
   line-height: 1;
 }
 
@@ -146,10 +158,10 @@ textarea {
 .dashboard-progress-row div,
 .dashboard-macros div {
   min-width: 0;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.78);
-  padding: 12px;
+  border: 1px solid #e7edf5;
+  border-radius: 10px;
+  background: #fbfcfe;
+  padding: 10px;
 }
 
 .dashboard-progress-row span,
@@ -164,7 +176,8 @@ textarea {
   display: block;
   margin-top: 4px;
   color: #0f172a;
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .dashboard-progress {
@@ -192,13 +205,13 @@ textarea {
 
 .quick-action {
   min-height: 46px;
-  border: 1px solid #dbe3ee;
-  border-radius: 16px;
+  border: 1px solid #dfe7f1;
+  border-radius: 10px;
   background: white;
   color: #0f172a;
   cursor: pointer;
-  font-weight: 800;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  font-weight: 600;
+  box-shadow: 0 2px 9px rgba(15, 23, 42, 0.035);
 }
 
 .quick-action.primary {
@@ -217,10 +230,10 @@ textarea {
 .meal-strip button {
   min-width: 0;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 10px;
   background: #ffffff;
   color: #0f172a;
-  padding: 11px;
+  padding: 10px;
   text-align: left;
   cursor: pointer;
 }
@@ -257,7 +270,7 @@ textarea {
 }
 
 .desktop-day-panel .side-panel {
-  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.09);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.045);
 }
 .topbar {
   position: relative;
@@ -266,9 +279,10 @@ textarea {
   align-items: flex-start;
   gap: 16px;
   background: white;
-  border-radius: 24px;
+  border: 1px solid #e7edf5;
+  border-radius: 12px;
   padding: 20px 72px 20px 20px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
   margin-bottom: 20px;
 }
 
@@ -285,11 +299,13 @@ textarea {
   text-transform: uppercase;
   color: #94a3b8;
   margin-bottom: 4px;
+  font-weight: 600;
 }
 
 .topbar-title {
   margin: 0;
-  font-size: 32px;
+  font-size: 30px;
+  font-weight: 650;
 }
 
 .topbar-text {
@@ -312,9 +328,9 @@ textarea {
   background: #0f172a;
   color: white;
   border: 0;
-  border-radius: 14px;
+  border-radius: 10px;
   cursor: pointer;
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.13);
 }
 
 .menu-button span {
@@ -331,7 +347,7 @@ textarea {
   background: #e0f2fe;
   color: #075985;
   border: 0;
-  border-radius: 14px;
+  border-radius: 10px;
   font-size: 19px;
   cursor: pointer;
 }
@@ -352,9 +368,9 @@ textarea {
   right: 0;
   width: min(460px, 100vw);
   height: 100dvh;
-  background: #f8fafc;
+  background: #f7f9fc;
   color: #0f172a;
-  box-shadow: -18px 0 45px rgba(15, 23, 42, 0.22);
+  box-shadow: -8px 0 28px rgba(15, 23, 42, 0.16);
   transform: translateX(104%);
   transition: transform 0.28s ease;
   z-index: 60;
@@ -383,14 +399,14 @@ textarea {
 
 .side-menu-title {
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 650;
 }
 
 .side-menu-close {
   width: 42px;
   height: 42px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #e2e8f0;
   color: #0f172a;
   cursor: pointer;
@@ -406,11 +422,11 @@ textarea {
 }
 
 .side-panel {
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
+  border: 1px solid #e7edf5;
+  border-radius: 12px;
   background: white;
   padding: 14px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.035);
 }
 
 .side-panel-head {
@@ -423,7 +439,8 @@ textarea {
 
 .side-panel-head h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 19px;
+  font-weight: 650;
 }
 
 .side-panel-head > strong {
@@ -432,7 +449,7 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #0f172a;
   color: white;
 }
@@ -441,7 +458,7 @@ textarea {
   margin-bottom: 3px;
   color: #64748b;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 650;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -455,10 +472,10 @@ textarea {
 
 .side-progress div,
 .side-metric-grid div {
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  background: #f8fafc;
-  padding: 10px;
+  border: 1px solid #e7edf5;
+  border-radius: 10px;
+  background: #fbfcfe;
+  padding: 9px 10px;
 }
 
 .side-progress span,
@@ -493,7 +510,7 @@ textarea {
 
 .goal-status {
   margin: 12px 0;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #eff6ff;
   color: #1d4ed8;
   padding: 11px 12px;
@@ -536,9 +553,9 @@ textarea {
   width: 100%;
   max-width: 760px;
   background: white;
-  border-radius: 24px;
+  border-radius: 12px;
   padding: 22px;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.07);
 }
 
 .profile-intro {
@@ -547,8 +564,9 @@ textarea {
 
 .profile-title {
   margin: 0 0 10px;
-  font-size: 32px;
+  font-size: 30px;
   line-height: 1.15;
+  font-weight: 650;
 }
 
 .profile-text {
@@ -588,20 +606,20 @@ textarea {
   border-radius: 12px;
   padding: 18px;
   width: 320px;
-  box-shadow: 0 10px 30px rgba(2,6,23,0.25);
+  box-shadow: 0 8px 24px rgba(2,6,23,0.18);
 }
 
 .accordion-stack {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .accordion {
-  border-radius: 24px;
+  border-radius: 12px;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+  border: 1px solid #e7edf5;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.035);
   scroll-margin-top: 16px;
 }
 
@@ -609,7 +627,7 @@ textarea {
   width: 100%;
   border: 0;
   color: #0f172a;
-  padding: 20px 22px;
+  padding: 16px 18px;
   text-align: left;
   cursor: pointer;
   display: flex;
@@ -618,18 +636,18 @@ textarea {
 }
 
 .accordion-title {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 21px;
+  font-weight: 620;
 }
 
 .accordion-subtitle {
-  margin-top: 8px;
-  font-size: 14px;
+  margin-top: 5px;
+  font-size: 13px;
   opacity: 0.9;
 }
 
 .accordion-arrow {
-  font-size: 30px;
+  font-size: 24px;
   line-height: 1;
   transition: transform 0.2s ease;
 }
@@ -640,7 +658,7 @@ textarea {
 
 .accordion-body {
   background: #ffffff;
-  padding: 14px;
+  padding: 12px;
   animation: accordion-enter 0.24s ease-out both;
   transform-origin: top center;
 }
@@ -658,27 +676,27 @@ textarea {
 }
 
 .panel-teal {
-  background: linear-gradient(90deg, #ccfbf1 0%, #ecfeff 100%);
+  background: #f4fbfa;
 }
 
 .panel-cyan {
-  background: linear-gradient(90deg, #cffafe 0%, #f0f9ff 100%);
+  background: #f5fbff;
 }
 
 .panel-sky {
-  background: linear-gradient(90deg, #dbeafe 0%, #f8fafc 100%);
+  background: #f6f9fe;
 }
 
 .panel-blue {
-  background: linear-gradient(90deg, #e0f2fe 0%, #f8fafc 100%);
+  background: #f6fafe;
 }
 
 .panel-indigo {
-  background: linear-gradient(90deg, #e0e7ff 0%, #f8fafc 100%);
+  background: #f7f7ff;
 }
 
 .panel-violet {
-  background: linear-gradient(90deg, #ede9fe 0%, #f8fafc 100%);
+  background: #faf7ff;
 }
 
 .card {
@@ -756,7 +774,7 @@ textarea {
   background: #2563eb;
   color: white;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 550;
 }
 
 .button:hover {
@@ -768,21 +786,21 @@ textarea {
 }
 
 .button-light {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: #eef2f7;
+  color: #172033;
 }
 
 .button-small {
   width: auto;
-  padding: 8px 10px;
-  border-radius: 10px;
-  font-size: 14px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  font-size: 13px;
 }
 
 .empty-box {
   border: 1px dashed #cbd5e1;
-  border-radius: 14px;
-  padding: 16px;
+  border-radius: 10px;
+  padding: 14px;
   color: #64748b;
   font-size: 14px;
 }
@@ -790,13 +808,13 @@ textarea {
 .list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .list-item {
-  border: 1px solid #edf2f7;
-  border-radius: 14px;
-  padding: 12px 14px;
+  border: 1px solid #e7edf5;
+  border-radius: 10px;
+  padding: 10px 12px;
   display: flex;
   gap: 12px;
   justify-content: space-between;
@@ -804,7 +822,7 @@ textarea {
 }
 
 .list-title {
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 4px;
 }
 
@@ -836,8 +854,8 @@ textarea {
   overflow: auto;
   background: white;
   border: 1px solid #dbe3ee;
-  border-radius: 14px;
-  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.14);
+  border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
 }
 
 .food-search-results button {
@@ -878,13 +896,13 @@ textarea {
   background: #e0f2fe;
   color: #075985;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .food-edit-notice {
   margin-bottom: 14px;
   border: 1px solid #bfdbfe;
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 10px 12px;
   background: #eff6ff;
   color: #1d4ed8;
@@ -921,8 +939,8 @@ textarea {
 }
 
 .meal-totals div {
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border: 1px solid #e7edf5;
+  border-radius: 8px;
   background: #f9fbfd;
   padding: 9px 10px;
   min-width: 0;
@@ -936,6 +954,7 @@ textarea {
 .meal-totals strong {
   font-size: 14px;
   color: #0f172a;
+  font-weight: 600;
 }
 
 .meal-totals span {
@@ -950,9 +969,9 @@ textarea {
   gap: 0;
   margin: 8px 0;
   padding: 7px 8px;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #f9fbfd;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e7edf5;
 }
 
 .food-value-details div {
@@ -978,12 +997,13 @@ textarea {
 .food-value-details strong {
   color: #0f172a;
   font-size: 13px;
+  font-weight: 600;
   line-height: 1.25;
 }
 
 .editable-meal-item {
   border: 1px solid #e6edf5;
-  border-radius: 11px;
+  border-radius: 9px;
   padding: 10px;
   background: #ffffff;
 }
@@ -1011,9 +1031,9 @@ textarea {
 }
 
 .saved-meal {
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 12px;
+  border: 1px solid #e7edf5;
+  border-radius: 10px;
+  padding: 10px;
 }
 
 .saved-meal-head {
@@ -1049,7 +1069,7 @@ textarea {
 .recipe-library {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .recipe-smart-box {
@@ -1057,15 +1077,16 @@ textarea {
   grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.8fr);
   gap: 14px;
   align-items: start;
-  border: 1px solid #dbeafe;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #f8fafc 0%, #eef6ff 100%);
-  padding: 14px;
+  border: 1px solid #e7edf5;
+  border-radius: 10px;
+  background: #fbfcfe;
+  padding: 12px;
 }
 
 .recipe-smart-box h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
+  font-weight: 620;
 }
 
 .recipe-smart-box p {
@@ -1093,11 +1114,11 @@ textarea {
 }
 
 .recipe-row {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border: 1px solid #e7edf5;
+  border-radius: 9px;
   background: #ffffff;
   overflow: hidden;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  box-shadow: none;
 }
 
 .recipe-row-summary {
@@ -1110,7 +1131,7 @@ textarea {
   color: inherit;
   text-align: left;
   cursor: pointer;
-  padding: 10px 12px;
+  padding: 9px 11px;
   transition: background 0.18s ease, transform 0.18s ease;
 }
 
@@ -1120,7 +1141,8 @@ textarea {
 
 .recipe-row-summary h4 {
   margin: 2px 0 0;
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 620;
   line-height: 1.25;
 }
 
@@ -1133,7 +1155,7 @@ textarea {
   justify-self: center;
   min-width: 78px;
   border-radius: 999px;
-  background: #0f172a;
+  background: #111827;
   color: white;
   padding: 6px 9px;
   font-size: 13px;
@@ -1156,11 +1178,11 @@ textarea {
 }
 
 .recipe-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
+  border: 1px solid #e7edf5;
+  border-radius: 10px;
   background: #ffffff;
-  padding: 14px;
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+  padding: 12px;
+  box-shadow: none;
 }
 
 .recipe-card-head {
@@ -1172,20 +1194,22 @@ textarea {
 
 .recipe-card-head h4 {
   margin: 2px 0 0;
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 620;
 }
 
 .recipe-card-head > strong {
   flex: 0 0 auto;
-  border-radius: 14px;
-  background: #0f172a;
+  border-radius: 999px;
+  background: #111827;
   color: white;
-  padding: 8px 10px;
-  font-size: 14px;
+  padding: 6px 9px;
+  font-size: 13px;
 }
 
 .recipe-row-summary h4 {
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 620;
   line-height: 1.25;
 }
 
@@ -1198,7 +1222,7 @@ textarea {
 .recipe-source {
   color: #64748b;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1225,7 +1249,7 @@ textarea {
   color: #334155;
   padding: 5px 8px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 550;
 }
 
 .recipe-ingredients {
@@ -1248,16 +1272,16 @@ textarea {
   gap: 12px;
   align-items: center;
   margin-top: 12px;
-  border: 1px solid #dbeafe;
-  border-radius: 12px;
-  background: #f8fbff;
+  border: 1px solid #e7edf5;
+  border-radius: 9px;
+  background: #fbfcfe;
   padding: 10px;
 }
 
 .recipe-edit-choice span {
   color: #334155;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 550;
 }
 
 .recipe-edit-choice > div {
@@ -1289,12 +1313,12 @@ textarea {
   align-items: center;
   gap: 6px;
   border: 1px solid #dbe3ee;
-  border-radius: 12px;
-  padding: 8px 10px;
-  background: #f8fafc;
+  border-radius: 9px;
+  padding: 7px 9px;
+  background: #fbfcfe;
   color: #334155;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 550;
 }
 
 .recipe-tag-option input {
@@ -1313,9 +1337,9 @@ textarea {
   align-items: center;
   gap: 6px;
   border: 1px solid #dbe3ee;
-  border-radius: 12px;
+  border-radius: 9px;
   padding: 4px;
-  background: #f8fafc;
+  background: #fbfcfe;
 }
 
 .recipe-chip button {
@@ -1324,7 +1348,7 @@ textarea {
   color: #0f172a;
   padding: 6px 8px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 550;
 }
 
 .recipe-chip-delete {
@@ -1333,11 +1357,11 @@ textarea {
 }
 
 .recipe-save-box {
-  border: 1px solid #bfdbfe;
-  border-radius: 14px;
-  padding: 12px;
-  margin-bottom: 14px;
-  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  border-radius: 9px;
+  padding: 10px;
+  margin-bottom: 12px;
+  background: #f8fbff;
 }
 
 .food-grid {
@@ -1347,11 +1371,11 @@ textarea {
 }
 
 .food-chip {
-  background: #f8fafc;
+  background: #fbfcfe;
   color: #334155;
-  border-radius: 14px;
-  padding: 12px;
-  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  padding: 10px;
+  border: 1px solid #e7edf5;
 }
 
 .loading-screen {
@@ -1384,7 +1408,7 @@ textarea {
 
   .topbar {
     padding: 16px 68px 16px 16px;
-    border-radius: 18px;
+    border-radius: 12px;
   }
 
   .topbar-title {
@@ -1398,7 +1422,7 @@ textarea {
 
   .day-dashboard {
     padding: 14px;
-    border-radius: 20px;
+    border-radius: 12px;
   }
 
   .dashboard-hero {
@@ -1413,7 +1437,7 @@ textarea {
     width: 100%;
     height: auto;
     min-height: 86px;
-    border-radius: 20px;
+    border-radius: 12px;
   }
 
   .dashboard-progress-row,
@@ -1461,7 +1485,7 @@ textarea {
 
   .profile-setup-panel {
     min-height: calc(100vh - 24px);
-    border-radius: 18px;
+    border-radius: 12px;
     padding: 16px;
   }
 
