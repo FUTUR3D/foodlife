@@ -1532,3 +1532,224 @@ textarea {
     align-items: stretch;
   }
 }
+
+/* Minimalist skin */
+h1,
+h2,
+h3,
+h4,
+strong,
+.card-title,
+.accordion-title,
+.topbar-title,
+.list-title,
+.side-menu-title,
+.side-panel-head h3,
+.recipe-row-summary h4,
+.recipe-card-head h4 {
+  font-weight: 500;
+}
+
+.topbar-small,
+.side-eyebrow,
+.recipe-source,
+.label,
+.list-subtitle,
+.food-value-details span,
+.meal-totals span,
+.dashboard-progress-row span,
+.dashboard-macros span,
+.side-progress span,
+.side-metric-grid span {
+  font-weight: 400;
+  color: #667085;
+}
+
+.page {
+  background: #fafbfc;
+}
+
+.day-dashboard,
+.topbar,
+.side-panel,
+.profile-setup-panel,
+.calendar-modal,
+.accordion,
+.card,
+.list-item,
+.saved-meal,
+.editable-meal-item,
+.recipe-smart-box,
+.recipe-row,
+.recipe-card,
+.recipe-edit-choice,
+.recipe-tag-option,
+.recipe-chip,
+.recipe-save-box,
+.food-chip,
+.food-search-results,
+.food-edit-notice,
+.inline-error,
+.empty-box,
+.meal-totals div,
+.food-value-details,
+.dashboard-progress-row div,
+.dashboard-macros div,
+.side-progress div,
+.side-metric-grid div,
+.meal-strip button,
+.quick-action,
+.input,
+.textarea,
+.button,
+.button-small,
+.delete-button,
+.menu-button,
+.calendar-button,
+.side-menu-close {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.day-dashboard,
+.topbar,
+.side-panel,
+.accordion,
+.card,
+.list-item,
+.saved-meal,
+.editable-meal-item,
+.recipe-smart-box,
+.recipe-row,
+.recipe-card,
+.recipe-edit-choice,
+.meal-totals div,
+.food-value-details,
+.dashboard-progress-row div,
+.dashboard-macros div,
+.side-progress div,
+.side-metric-grid div {
+  border-color: #e5e9f0;
+}
+
+.day-dashboard,
+.topbar,
+.side-panel,
+.accordion-body,
+.card,
+.recipe-row-summary,
+.recipe-row,
+.recipe-card,
+.editable-meal-item,
+.saved-meal {
+  background: #ffffff;
+}
+
+.panel-teal,
+.panel-cyan,
+.panel-sky,
+.panel-blue,
+.panel-indigo,
+.panel-violet,
+.recipe-smart-box,
+.recipe-edit-choice,
+.meal-totals div,
+.food-value-details,
+.dashboard-progress-row div,
+.dashboard-macros div,
+.side-progress div,
+.side-metric-grid div,
+.food-chip,
+.recipe-tag-option,
+.recipe-chip,
+.recipe-save-box {
+  background: #fbfcfd;
+}
+
+.dashboard-score,
+.side-panel-head > strong,
+.recipe-row-summary > strong,
+.recipe-card-head > strong {
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  background: transparent;
+  color: #172033;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  text-align: right;
+}
+
+.dashboard-score {
+  align-items: flex-end;
+}
+
+.dashboard-score strong {
+  font-size: 25px;
+  font-weight: 500;
+}
+
+.dashboard-score span,
+.recipe-row-summary > strong,
+.recipe-card-head > strong {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.recipe-row-summary {
+  grid-template-columns: minmax(0, 1fr) 86px 18px;
+}
+
+.menu-button {
+  background: transparent;
+  color: #172033;
+  border: 1px solid #e5e9f0;
+}
+
+.calendar-button,
+.button-light,
+.side-menu-close {
+  background: #f5f7fa;
+}
+
+.button {
+  background: #2563eb;
+  font-weight: 500;
+}
+
+.delete-button {
+  background: #fff5f5;
+  color: #b42318;
+}
+
+.accordion-header,
+.recipe-row-summary,
+.food-search-results button,
+.meal-strip button,
+.quick-action {
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.accordion-header:hover,
+.recipe-row-summary:hover,
+.food-search-results button:hover,
+.meal-strip button:hover,
+.quick-action:hover {
+  background: #f8fafc;
+}
+
+.food-value-details {
+  padding: 6px 0;
+}
+
+.food-value-details div {
+  padding: 0 8px;
+}
+
+.meal-totals div {
+  padding: 8px 0;
+  border-width: 0 0 1px;
+}
