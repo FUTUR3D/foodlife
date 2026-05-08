@@ -21,6 +21,8 @@ const MEAL_SECTIONS = [
   { key: 'ostatni', title: 'Ostatní', colorClass: 'panel-violet' },
 ]
 
+const FOOD_MEAL_SECTIONS = MEAL_SECTIONS.filter((section) => section.key !== 'piti')
+const DRINK_SECTION = MEAL_SECTIONS.find((section) => section.key === 'piti')
 const RECIPE_MEAL_TAGS = MEAL_SECTIONS.map(({ key, title }) => ({ key, title }))
 
 const DEFAULT_FOODS = [
@@ -301,6 +303,12 @@ function formatMacro(value, suffix = 'g') {
   return `${Math.round(value * 10) / 10} ${suffix}`
 }
 
+function formatItemMeasure(item, grams) {
+  if (!grams || !Number.isFinite(Number(grams))) return 'Bez množství'
+  const rounded = Math.round(Number(grams) * 10) / 10
+  return item.unit === 'ml' ? `${rounded} ml` : `${rounded} g`
+}
+
 function hasServingSize(unit, servingGrams) {
   return servingGrams && !['g', 'ml'].includes(unit)
 }
@@ -347,7 +355,7 @@ function FoodValueDetails({ item }) {
     <div className="food-value-details">
       <div>
         <span>Přepočet</span>
-        <strong>{totals.grams ? formatMacro(totals.grams) : 'Bez gramáže'}</strong>
+        <strong>{formatItemMeasure(item, totals.grams)}</strong>
       </div>
       <div>
         <span>Energie</span>
@@ -426,7 +434,7 @@ function MainDashboard({
   const target = energyPlan?.target || null
   const remaining = target ? Math.round(target - kcal) : null
   const progress = target ? Math.min(100, Math.round((kcal / target) * 100)) : 0
-  const foodMeals = MEAL_SECTIONS.filter((section) => section.key !== 'piti' && section.key !== 'ostatni')
+  const foodMeals = FOOD_MEAL_SECTIONS.filter((section) => section.key !== 'ostatni')
 
   return (
     <section className="day-dashboard">
@@ -472,8 +480,8 @@ function MainDashboard({
 
       <div className="quick-actions">
         <button className="quick-action primary" type="button" onClick={() => onOpenSection('food')}>Přidat jídlo</button>
+        <button className="quick-action" type="button" onClick={() => onOpenSection('drinks', 'piti')}>Přidat pití</button>
         <button className="quick-action" type="button" onClick={() => onOpenSection('exercise')}>Cvičení</button>
-        <button className="quick-action" type="button" onClick={() => onOpenSection('reactions')}>Reakce</button>
         <button className="quick-action" type="button" onClick={onOpenMenu}>Cíle a profil</button>
       </div>
 
@@ -1470,7 +1478,7 @@ function MealSection({
     const timeout = window.setTimeout(async () => {
       setIsSearching(true)
       try {
-        const response = await fetch(`foods-search.php?q=${encodeURIComponent(q)}`, {
+        const response = await fetch(`foods-search.php?q=${encodeURIComponent(q)}&type=${section.key === 'piti' ? 'drink' : 'food'}`, {
           credentials: 'same-origin',
           signal: controller.signal,
         })
@@ -1494,7 +1502,7 @@ function MealSection({
     setSelectedFood(food)
     setQuery(food.name_cs)
     setUnit(food.default_unit || (section.key === 'piti' ? 'ml' : 'g'))
-    setAmount(food.serving_grams ? '1' : '')
+    setAmount(section.key === 'piti' && (food.default_unit || 'ml') === 'ml' ? '250' : food.serving_grams ? '1' : '')
     setResults([])
   }
 
@@ -1691,7 +1699,7 @@ function MealSection({
         <h4 className="card-title">Skládání {section.title.toLowerCase()}</h4>
 
         <div className="form-group food-search-wrap">
-          <label className="label">Potravina nebo nápoj</label>
+          <label className="label">{section.key === 'piti' ? 'Nápoj' : 'Potravina'}</label>
           <input
             className="input"
             value={query}
@@ -1709,7 +1717,7 @@ function MealSection({
                   <small>
                     <FoodKindBadge food={food} />
                     {hasServingSize(food.default_unit, food.serving_grams) ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) • ` : ' '}
-                    {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
+                    {Math.round(Number(food.kcal_100g || 0))} kcal / 100 {section.key === 'piti' ? 'ml' : 'g'}
                   </small>
                 </button>
               ))}
@@ -1752,7 +1760,7 @@ function MealSection({
             className="input"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Např. vařená rýže, bez cukru, po tréninku"
+            placeholder={section.key === 'piti' ? 'Např. bez cukru, po tréninku, s ledem' : 'Např. vařená rýže, bez cukru, po tréninku'}
           />
         </div>
 
@@ -2622,8 +2630,8 @@ export default function App() {
           <main className="app-main">
             <div className="accordion-stack">
           <AccordionSection
-            title="Jídlo + pití"
-            subtitle="Snídaně, svačiny, oběd, večeře a pití"
+            title="Jídlo"
+            subtitle="Snídaně, svačiny, oběd a večeře"
             colorClass="panel-teal"
             isOpen={openMain === 'food'}
             onToggle={() => setOpenMain(openMain === 'food' ? null : 'food')}
@@ -2631,7 +2639,7 @@ export default function App() {
             <div className="accordion-stack">
               {isMealsLoading ? <div className="empty-box">Načítám dnešní jídla...</div> : null}
 
-              {MEAL_SECTIONS.map((section) => (
+              {FOOD_MEAL_SECTIONS.map((section) => (
                 <MealSection
                   key={section.key}
                   section={section}
@@ -2659,6 +2667,28 @@ export default function App() {
                 onDeleteRecipe={deleteRecipe}
               />
             </div>
+          </AccordionSection>
+
+          <AccordionSection
+            title="Pití"
+            subtitle="Voda, káva, čaj, džus, limonády a alkohol"
+            colorClass="panel-cyan"
+            isOpen={openMain === 'drinks'}
+            onToggle={() => setOpenMain(openMain === 'drinks' ? null : 'drinks')}
+          >
+            {DRINK_SECTION ? (
+              <MealSection
+                section={DRINK_SECTION}
+                savedMeals={mealsByType[DRINK_SECTION.key] || []}
+                recipes={recipesByType[DRINK_SECTION.key] || []}
+                isRecipesLoading={isRecipesLoading}
+                isOpen={openMeal === DRINK_SECTION.key}
+                onToggle={() => setOpenMeal(openMeal === DRINK_SECTION.key ? null : DRINK_SECTION.key)}
+                onSaveMeal={saveMeal}
+                onDeleteMeal={deleteSavedMeal}
+                onSaveRecipe={saveRecipe}
+              />
+            ) : null}
           </AccordionSection>
 
           <AccordionSection

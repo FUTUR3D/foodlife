@@ -3,6 +3,7 @@ require 'api-helpers.php';
 
 $userId = require_json_user();
 $query = trim($_GET['q'] ?? '');
+$type = trim($_GET['type'] ?? '');
 
 if (strlen($query) < 2) {
     echo json_encode(['foods' => []]);
@@ -10,7 +11,28 @@ if (strlen($query) < 2) {
 }
 
 $like = '%' . $query . '%';
-$stmt = $pdo->prepare('
+$prefix = $query . '%';
+$typeFilter = '';
+$params = [$userId, $like, $like, $like];
+
+if ($type === 'drink') {
+    $typeFilter = "
+        AND (
+            COALESCE(external_source, '') = 'all_drinks_nutrition_database_cz'
+            OR COALESCE(category, '') LIKE 'Nápoj%'
+        )";
+} elseif ($type === 'food') {
+    $typeFilter = "
+        AND NOT (
+            COALESCE(external_source, '') = 'all_drinks_nutrition_database_cz'
+            OR COALESCE(category, '') LIKE 'Nápoj%'
+        )";
+}
+
+$params[] = $query;
+$params[] = $prefix;
+
+$stmt = $pdo->prepare("
     SELECT
         id,
         source,
@@ -34,6 +56,7 @@ $stmt = $pdo->prepare('
     WHERE
         (user_id IS NULL OR user_id = ?)
         AND (name_cs LIKE ? OR name_en LIKE ? OR external_code LIKE ?)
+        {$typeFilter}
     ORDER BY
         CASE
             WHEN name_cs = ? THEN 0
@@ -42,9 +65,8 @@ $stmt = $pdo->prepare('
         END,
         name_cs ASC
     LIMIT 30
-');
+");
 
-$prefix = $query . '%';
-$stmt->execute([$userId, $like, $like, $like, $query, $prefix]);
+$stmt->execute($params);
 
 echo json_encode(['foods' => $stmt->fetchAll()]);

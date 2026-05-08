@@ -1,0 +1,121 @@
+name_cz,category_cz,name,category,kcal_100ml,sugar_g_100ml,fat_g_100ml,protein_g_100ml,salt_g_100ml,caffeine_mg_100ml,alcohol_percent
+Neperlivá voda,Voda,Still Water,Water,0,0.0,0.0,0.0,0.02,0,0.0
+Perlivá voda,Voda,Sparkling Water,Water,0,0.0,0.0,0.0,0.01,0,0.0
+Minerální voda,Voda,Mineral Water,Water,0,0.0,0.0,0.0,0.2,0,0.0
+Mattoni,Voda,Mattoni,Water,0,0.0,0.0,0.0,0.23,0,0.0
+Aquila,Voda,Aquila,Water,0,0.0,0.0,0.0,0.25,0,0.0
+Evian,Voda,Evian,Water,0,0.0,0.0,0.0,0.29,0,0.0
+San Pellegrino,Voda,San Pellegrino,Water,0,0.0,0.0,0.0,0.19,0,0.0
+Perrier,Voda,Perrier,Water,0,0.0,0.0,0.0,0.08,0,0.0
+Voss Water,Voda,Voss Water,Water,0,0.0,0.0,0.0,0.25,0,0.0
+Kokosová voda,Voda,Coconut Water,Water,0,0.0,0.0,0.0,0.24,0,0.0
+Vitamínová voda,Voda,Vitamin Water,Water,0,0.0,0.0,0.0,0.09,0,0.0
+Zelený čaj,Čaj,Green Tea,Tea,14,0.9,0.0,0.0,0.13,18,0.0
+Černý čaj,Čaj,Black Tea,Tea,0,3.4,0.0,0.4,0.08,7,0.0
+Bílý čaj,Čaj,White Tea,Tea,2,3.7,0.0,0.2,0.1,5,0.0
+Matcha čaj,Čaj,Matcha Tea,Tea,6,4.6,0.0,0.2,0.24,5,0.0
+Heřmánkový čaj,Čaj,Chamomile Tea,Tea,16,3.2,0.0,0.4,0.09,5,0.0
+Mátový čaj,Čaj,Mint Tea,Tea,15,1.2,0.0,0.0,0.25,9,0.0
+Rooibos čaj,Čaj,Rooibos Tea,Tea,2,5.1,0.0,0.0,0.12,25,0.0
+Earl Grey čaj,Čaj,Earl Grey Tea,Tea,17,4.1,0.0,0.4,0.0,12,0.0
+Jasmínový čaj,Čaj,Jasmine Tea,Tea,8,0.4,0.0,0.3,0.11,7,0.0
+Ledový čaj citron,Čaj,Iced Tea Lemon,Tea,16,0.6,0.0,0.2,0.24,15,0.0
+Ledový čaj broskev,Čaj,Iced Tea Peach,Tea,16,3.2,0.0,0.2,0.26,9,0.0
+Bubble Tea,Čaj,Bubble Tea,Tea,13,5.4,0.0,0.4,0.09,21,0.0
+Espresso,Káva,Espresso,Coffee,106,0.9,3.9,4.6,0.02,157,0.0
+Dvojité espresso,Káva,Double Espresso,Coffee,21,2.7,3.2,2.7,0.16,120,0.0
+Americano,Káva,Americano,Coffee,70,2.0,1.7,1.6,0.17,129,0.0
+Latte,Káva,Latte,Coffee,65,2.6,2.2,4.0,0.02,155,0.0
+Cappuccino,Káva,Cappuccino,Coffee,68,9.7,2.5,3.1,0.14,182,0.0
+Flat White,Káva,Flat White,Coffee,40,9.4,2.1,0.7,0.08,81,0.0
+Mocha,Káva,Mocha,Coffee,101,1.3,0.8,1.0,0.28,171,0.0
+Cold Brew,Káva,Cold Brew,Coffee,104,4.0,0.6,1.2,0.27,162,0.0
+Frappuccino,Káva,Frappuccino,Coffee,104,3.9,3.0,2.8,0.25,191,0.0
+Irská káva,Káva,Irish Coffee,Coffee,110,3.8,2.1,3.1,0.06,150,0.0
+Coca-Cola,Limonáda,Coca-Cola,Soft Drink,24,10.5,0.0,0.0,0.16,8,0.0
+Coca-Cola Zero,Limonáda,Coca-Cola Zero,Soft Drink,21,11.2,0.0,0.0,0.1,0,0.0
+Pepsi,Limonáda,Pepsi,Soft Drink,19,11.4,0.0,0.0,0.18,10,0.0
+Pepsi Max,Limonáda,Pepsi Max,Soft Drink,30,1.0,0.0,0.0,0.28,20,0.0
+Sprite,Limonáda,Sprite,Soft Drink,35,4.8,0.0,0.0,0.23,11,0.0
+Fanta Orange,Limonáda,Fanta Orange,Soft Drink,41,9.2,0.0,0.0,0.1,16,0.0
+Fanta Lemon,Limonáda,Fanta Lemon,Soft Drink,33,9.9,0.0,0.0,0.14,2,0.0
+7UP,Limonáda,7UP,Soft Drink,2,11.4,0.0,0.0,0.01,9,0.0
+Kofola,Limonáda,Kofola,Soft Drink,1,8.6,0.0,0.0,0.15,0,0.0
+Mountain Dew,Limonáda,Mountain Dew,Soft Drink,8,11.4,0.0,0.0,0.26,6,0.0
+Dr Pepper,Limonáda,Dr Pepper,Soft Drink,15,4.0,0.0,0.0,0.15,1,0.0
+Schweppes Tonic,Limonáda,Schweppes Tonic,Soft Drink,42,2.7,0.0,0.0,0.28,17,0.0
+Mirinda,Limonáda,Mirinda,Soft Drink,3,3.3,0.0,0.0,0.17,17,0.0
+Ginger Ale,Limonáda,Ginger Ale,Soft Drink,43,8.8,0.0,0.0,0.08,9,0.0
+Red Bull,Energy drink,Red Bull,Energy Drink,53,8.4,0.0,0.0,0.17,27,0.0
+Monster Energy,Energy drink,Monster Energy,Energy Drink,36,14.1,0.0,0.0,0.02,26,0.0
+Rockstar,Energy drink,Rockstar,Energy Drink,60,14.1,0.0,0.0,0.29,27,0.0
+Hell Energy,Energy drink,Hell Energy,Energy Drink,58,7.5,0.0,0.0,0.2,34,0.0
+Semtex,Energy drink,Semtex,Energy Drink,48,10.7,0.0,0.0,0.06,29,0.0
+Big Shock,Energy drink,Big Shock,Energy Drink,53,9.2,0.0,0.0,0.16,32,0.0
+Tiger Energy,Energy drink,Tiger Energy,Energy Drink,59,8.8,0.0,0.0,0.26,30,0.0
+Burn,Energy drink,Burn,Energy Drink,36,8.9,0.0,0.0,0.07,37,0.0
+Prime Energy,Energy drink,Prime Energy,Energy Drink,54,13.5,0.0,0.0,0.03,34,0.0
+Celsius,Energy drink,Celsius,Energy Drink,50,9.7,0.0,0.0,0.11,26,0.0
+Pomerančový džus,Džus,Orange Juice,Juice,49,12.1,0.5,0.4,0.05,0,0.0
+Jablečný džus,Džus,Apple Juice,Juice,37,11.5,0.4,0.3,0.02,0,0.0
+Hroznový džus,Džus,Grape Juice,Juice,35,7.8,0.4,0.5,0.24,0,0.0
+Rajčatový džus,Džus,Tomato Juice,Juice,41,8.8,0.4,1.0,0.06,0,0.0
+Ananasový džus,Džus,Pineapple Juice,Juice,51,12.4,0.2,0.4,0.3,0,0.0
+Mangový džus,Džus,Mango Juice,Juice,48,8.9,0.0,0.6,0.03,0,0.0
+Mrkvový džus,Džus,Carrot Juice,Juice,34,5.1,0.2,0.8,0.06,0,0.0
+Brusinkový džus,Džus,Cranberry Juice,Juice,33,6.8,0.4,0.1,0.29,0,0.0
+Multivitamínový džus,Džus,Multivitamin Juice,Juice,59,11.8,0.0,0.7,0.1,0,0.0
+Smoothie jahoda-banán,Džus,Smoothie Strawberry Banana,Juice,30,10.0,0.3,0.3,0.06,0,0.0
+Plnotučné mléko,Mléčný nápoj,Whole Milk,Milk Drink,53,4.5,0.9,10.2,0.18,0,0.0
+Mléko 1.5%,Mléčný nápoj,Milk 1.5%,Milk Drink,45,7.9,0.1,5.6,0.18,0,0.0
+Nízkotučné mléko,Mléčný nápoj,Skim Milk,Milk Drink,97,3.5,3.1,8.3,0.14,0,0.0
+Čokoládové mléko,Mléčný nápoj,Chocolate Milk,Milk Drink,65,3.3,2.2,3.9,0.3,0,0.0
+Proteinový nápoj,Mléčný nápoj,Protein Shake,Milk Drink,81,6.7,4.3,6.8,0.23,0,0.0
+Kefír,Mléčný nápoj,Kefir,Milk Drink,12,5.0,3.9,1.9,0.2,0,0.0
+Jogurtový nápoj,Mléčný nápoj,Yogurt Drink,Milk Drink,38,2.5,4.0,7.2,0.13,0,0.0
+Pitný jogurt,Mléčný nápoj,Drinkable Yogurt,Milk Drink,100,2.3,1.5,10.2,0.26,0,0.0
+Mandlové mléko,Rostlinné mléko,Almond Milk,Plant Milk,52,6.2,1.5,5.5,0.26,0,0.0
+Sójové mléko,Rostlinné mléko,Soy Milk,Plant Milk,84,2.2,3.8,7.5,0.01,0,0.0
+Ovesné mléko,Rostlinné mléko,Oat Milk,Plant Milk,25,4.4,3.3,5.3,0.26,0,0.0
+Rýžové mléko,Rostlinné mléko,Rice Milk,Plant Milk,95,5.2,1.5,14.6,0.22,0,0.0
+Kokosové mléko,Rostlinné mléko,Coconut Milk,Plant Milk,47,6.2,2.2,8.3,0.18,0,0.0
+Kešu mléko,Rostlinné mléko,Cashew Milk,Plant Milk,87,6.7,2.1,11.0,0.26,0,0.0
+Gatorade,Sportovní nápoj,Gatorade,Sports Drink,29,3.6,0.0,0.0,0.01,0,0.0
+Powerade,Sportovní nápoj,Powerade,Sports Drink,25,8.9,0.0,0.0,0.03,0,0.0
+Iontový nápoj,Sportovní nápoj,Ion Drink,Sports Drink,19,7.6,0.0,0.0,0.24,0,0.0
+Elektrolytový nápoj,Sportovní nápoj,Electrolyte Drink,Sports Drink,38,5.2,0.0,0.0,0.25,0,0.0
+Isotonický nápoj,Sportovní nápoj,Isotonic Drink,Sports Drink,19,3.6,0.0,0.0,0.13,0,0.0
+Ležák,Pivo,Pilsner Lager,Beer,39,4.4,0.0,0.4,0.02,0,6.4
+IPA pivo,Pivo,IPA Beer,Beer,36,2.4,0.0,0.0,0.0,0,2.7
+Tmavé pivo,Pivo,Dark Beer,Beer,40,1.9,0.0,0.4,0.17,0,3.3
+Pšeničné pivo,Pivo,Wheat Beer,Beer,45,4.4,0.0,0.0,0.17,0,4.9
+Řemeslné pivo,Pivo,Craft Beer,Beer,48,2.0,0.0,0.9,0.19,0,3.9
+Radler,Pivo,Radler,Beer,36,1.2,0.0,0.7,0.13,0,6.1
+Nealkoholické pivo,Pivo,Non-Alcoholic Beer,Beer,32,3.9,0.0,0.4,0.15,0,1.8
+Cider,Pivo,Cider,Beer,50,1.2,0.0,0.5,0.3,0,3.2
+Červené víno,Víno,Red Wine,Wine,86,3.9,0.0,0.1,0.1,0,8.9
+Bílé víno,Víno,White Wine,Wine,117,1.3,0.0,0.1,0.29,0,10.9
+Růžové víno,Víno,Rose Wine,Wine,104,5.8,0.0,0.1,0.06,0,14.5
+Šumivé víno,Víno,Sparkling Wine,Wine,87,3.6,0.0,0.1,0.14,0,13.8
+Šampaňské,Víno,Champagne,Wine,100,7.4,0.0,0.1,0.16,0,10.8
+Prosecco,Víno,Prosecco,Wine,84,7.4,0.0,0.1,0.01,0,9.2
+Dezertní víno,Víno,Dessert Wine,Wine,118,4.6,0.0,0.1,0.14,0,8.1
+Vodka,Tvrdý alkohol,Vodka,Spirits,279,2.9,0.0,0.0,0.02,0,22.4
+Whisky,Tvrdý alkohol,Whiskey,Spirits,289,2.7,0.0,0.0,0.27,0,55.5
+Rum,Tvrdý alkohol,Rum,Spirits,252,3.3,0.0,0.0,0.11,0,32.7
+Gin,Tvrdý alkohol,Gin,Spirits,231,0.6,0.0,0.0,0.15,0,53.8
+Tequila,Tvrdý alkohol,Tequila,Spirits,284,3.6,0.0,0.0,0.04,0,37.3
+Brandy,Tvrdý alkohol,Brandy,Spirits,237,4.0,0.0,0.0,0.2,0,35.6
+Absint,Tvrdý alkohol,Absinthe,Spirits,312,3.6,0.0,0.0,0.15,0,59.2
+Koňak,Tvrdý alkohol,Cognac,Spirits,213,4.2,0.0,0.0,0.1,0,27.0
+Jägermeister,Tvrdý alkohol,Jagermeister,Spirits,211,3.0,0.0,0.0,0.24,0,35.4
+Baileys,Tvrdý alkohol,Baileys,Spirits,293,2.2,0.0,0.0,0.08,0,35.7
+Mojito,Koktejl,Mojito,Cocktail,106,24.7,1.3,1.2,0.28,3,22.5
+Margarita,Koktejl,Margarita,Cocktail,171,14.3,0.2,1.5,0.08,9,11.6
+Gin Tonic,Koktejl,Gin Tonic,Cocktail,272,18.1,5.9,2.0,0.03,15,16.6
+Cuba Libre,Koktejl,Cuba Libre,Cocktail,202,23.5,1.6,1.9,0.2,6,13.3
+Piña Colada,Koktejl,Pina Colada,Cocktail,199,14.8,5.1,0.1,0.08,6,20.6
+Aperol Spritz,Koktejl,Aperol Spritz,Cocktail,201,15.7,4.5,1.1,0.19,14,24.0
+Negroni,Koktejl,Negroni,Cocktail,185,17.4,0.2,1.8,0.09,1,10.9
+Long Island Iced Tea,Koktejl,Long Island Iced Tea,Cocktail,181,8.0,1.1,0.6,0.17,14,12.5
+Martini,Koktejl,Martini,Cocktail,200,24.7,1.7,0.0,0.18,15,13.7
