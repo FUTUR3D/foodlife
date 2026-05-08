@@ -915,6 +915,7 @@ function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEd
   const [query, setQuery] = useState('')
   const [smartPrompt, setSmartPrompt] = useState('')
   const [expandedRecipeId, setExpandedRecipeId] = useState(null)
+  const [editChoiceRecipeId, setEditChoiceRecipeId] = useState(null)
   const [usingRecipeId, setUsingRecipeId] = useState(null)
   const [message, setMessage] = useState('')
 
@@ -948,6 +949,15 @@ function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEd
     } finally {
       setUsingRecipeId(null)
     }
+  }
+
+  function handleEditRequest(recipe) {
+    if (recipe.source !== 'user') {
+      onEditRecipe(recipe, { asCopy: true })
+      return
+    }
+
+    setEditChoiceRecipeId((currentId) => currentId === recipe.id ? null : recipe.id)
   }
 
   return (
@@ -1086,11 +1096,38 @@ function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEd
                         <button
                           className="button button-light button-small"
                           type="button"
-                          onClick={() => onEditRecipe(recipe)}
+                          onClick={() => handleEditRequest(recipe)}
                         >
                           {isSystemRecipe ? 'Upravit kopii' : 'Upravit'}
                         </button>
                       </div>
+                      {editChoiceRecipeId === recipe.id ? (
+                        <div className="recipe-edit-choice">
+                          <span>Chceš upravit tento recept, nebo z něj vytvořit novou kopii?</span>
+                          <div>
+                            <button
+                              className="button button-small"
+                              type="button"
+                              onClick={() => {
+                                setEditChoiceRecipeId(null)
+                                onEditRecipe(recipe, { asCopy: false })
+                              }}
+                            >
+                              Upravit stávající
+                            </button>
+                            <button
+                              className="button button-light button-small"
+                              type="button"
+                              onClick={() => {
+                                setEditChoiceRecipeId(null)
+                                onEditRecipe(recipe, { asCopy: true })
+                              }}
+                            >
+                              Vytvořit kopii
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </article>
@@ -1271,7 +1308,7 @@ function CustomFoodsManager({
 
   useEffect(() => {
     if (!editRecipeRequest?.recipe) return
-    editRecipe(editRecipeRequest.recipe, { asCopy: editRecipeRequest.recipe.source !== 'user' })
+    editRecipe(editRecipeRequest.recipe, { asCopy: editRecipeRequest.asCopy })
   }, [editRecipeRequest])
 
   function resetRecipeForm() {
@@ -2681,10 +2718,10 @@ export default function App() {
     await saveMeal(section, draftItemsFromRecipe(recipe), recipe.title)
   }
 
-  function openRecipeEditor(recipe) {
+  function openRecipeEditor(recipe, options = {}) {
     setOpenMain('food')
     setOpenMeal('custom-foods')
-    setRecipeEditRequest({ recipe, token: Date.now() })
+    setRecipeEditRequest({ recipe, asCopy: Boolean(options.asCopy), token: Date.now() })
   }
 
   async function saveMeal(section, items, note, mealId = null) {

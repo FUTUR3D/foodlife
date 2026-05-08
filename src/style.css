@@ -1232,6 +1232,32 @@ textarea {
   border-top: 1px solid #edf2f7;
   padding-top: 10px;
 }
+
+.recipe-edit-choice {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #f8fbff;
+  padding: 10px;
+}
+
+.recipe-edit-choice span {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.recipe-edit-choice > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .recipe-picker-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
