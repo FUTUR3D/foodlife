@@ -1,0 +1,7 @@
+DirectoryIndex index.html login.php index.php
+
+Options -Indexes
+
+<FilesMatch "\.(env|sql|mjs|json|lock)$">
+  Require all denied
+</FilesMatch>
