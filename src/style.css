@@ -1092,6 +1092,9 @@ textarea {
 }
 
 .recipe-row-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px 22px;
+  align-items: center;
   width: 100%;
   border: 0;
   background: #ffffff;
@@ -1112,14 +1115,25 @@ textarea {
   line-height: 1.25;
 }
 
+.recipe-row-summary > div {
+  min-width: 0;
+}
+
 .recipe-row-summary > strong {
   flex: 0 0 auto;
+  justify-self: center;
+  min-width: 78px;
   border-radius: 999px;
   background: #0f172a;
   color: white;
   padding: 6px 9px;
   font-size: 13px;
+  text-align: center;
   white-space: nowrap;
+}
+
+.recipe-row-summary .accordion-arrow {
+  justify-self: end;
 }
 
 .recipe-row-detail {
