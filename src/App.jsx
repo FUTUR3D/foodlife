@@ -267,6 +267,22 @@ function AccordionSection({
   )
 }
 
+function InnerSection({ title, subtitle, isOpen, onToggle, children }) {
+  return (
+    <section className={`inner-section ${isOpen ? 'inner-section-open' : ''}`}>
+      <button type="button" className="inner-section-header" onClick={onToggle}>
+        <span>
+          <span className="inner-section-title">{title}</span>
+          {subtitle ? <span className="inner-section-subtitle">{subtitle}</span> : null}
+        </span>
+        <span className={`inner-section-arrow ${isOpen ? 'open' : ''}`}>v</span>
+      </button>
+
+      {isOpen ? <div className="inner-section-body">{children}</div> : null}
+    </section>
+  )
+}
+
 function parseAmount(value) {
   const number = parseFloat(String(value).replace(',', '.'))
   return Number.isFinite(number) && number > 0 ? number : null
@@ -1412,7 +1428,16 @@ function CustomFoodsManager({
   const [isRecipeSaving, setIsRecipeSaving] = useState(false)
   const [error, setError] = useState('')
   const [recipeError, setRecipeError] = useState('')
+  const [openParts, setOpenParts] = useState({})
   const isRecipeFormOpen = recipeForm.id !== null || recipeForm.title.trim() !== '' || recipeForm.note.trim() !== '' || recipeForm.items.length > 0
+
+  function togglePart(part) {
+    setOpenParts((prev) => ({ ...prev, [part]: !prev[part] }))
+  }
+
+  function openPart(part) {
+    setOpenParts((prev) => ({ ...prev, [part]: true }))
+  }
 
   useEffect(() => {
     const q = searchQuery.trim()
@@ -1520,6 +1545,7 @@ function CustomFoodsManager({
   function editFood(food) {
     setForm(formFromFood(food))
     setError('')
+    openPart('foodForm')
   }
 
   function editSearchFood(food) {
@@ -1527,6 +1553,7 @@ function CustomFoodsManager({
     setSearchQuery('')
     setSearchResults([])
     setError('')
+    openPart('foodForm')
   }
 
   function resetForm() {
@@ -1548,6 +1575,7 @@ function CustomFoodsManager({
     const shouldCopy = options.asCopy || recipe.source !== 'user'
     setRecipeForm(recipeFormFromRecipe(recipe, { asCopy: shouldCopy }))
     setRecipeError('')
+    openPart('recipes')
   }
 
   useEffect(() => {
@@ -1710,17 +1738,19 @@ function CustomFoodsManager({
       isOpen={isOpen}
       onToggle={onToggle}
     >
-      <div className="card">
-        <div className="card-title-row">
-          <h4 className="card-title">
-            {form.base_food_id ? 'Upravit databázovou potravinu' : form.id ? 'Upravit potravinu' : 'Nová potravina'}
-          </h4>
-          {form.id || form.base_food_id ? (
+      <InnerSection
+        title={form.base_food_id ? 'Upravit databázovou potravinu' : form.id ? 'Upravit potravinu' : 'Nová potravina'}
+        subtitle="Vytvoření nebo doladění hodnot na 100 g"
+        isOpen={Boolean(openParts.foodForm)}
+        onToggle={() => togglePart('foodForm')}
+      >
+        {form.id || form.base_food_id ? (
+          <div className="inner-action-row">
             <button className="button button-light button-small" onClick={resetForm}>
               Nová
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         <div className="form-group food-search-wrap">
           <label className="label">Najít potravinu z databáze k úpravě</label>
@@ -1837,10 +1867,14 @@ function CustomFoodsManager({
                   : 'Vytvořit potravinu'}
           </button>
         </form>
-      </div>
+      </InnerSection>
 
-      <div className="card">
-        <h4 className="card-title">Uložené vlastní potraviny</h4>
+      <InnerSection
+        title="Uložené vlastní potraviny"
+        subtitle={`${foods.length} položek`}
+        isOpen={Boolean(openParts.foods)}
+        onToggle={() => togglePart('foods')}
+      >
         {isLoading ? (
           <div className="empty-box">Načítám...</div>
         ) : foods.length === 0 ? (
@@ -1870,17 +1904,21 @@ function CustomFoodsManager({
             ))}
           </div>
         )}
-      </div>
+      </InnerSection>
 
-      <div className="card">
-        <div className="card-title-row">
-          <h4 className="card-title">{isRecipeFormOpen ? (recipeForm.id ? 'Upravit uložené jídlo' : 'Upravit kopii jídla') : 'Uložená jídla'}</h4>
-          {isRecipeFormOpen ? (
+      <InnerSection
+        title={isRecipeFormOpen ? (recipeForm.id ? 'Upravit uložené jídlo' : 'Upravit kopii jídla') : 'Uložená jídla'}
+        subtitle={`${recipes.length} jídel`}
+        isOpen={Boolean(openParts.recipes)}
+        onToggle={() => togglePart('recipes')}
+      >
+        {isRecipeFormOpen ? (
+          <div className="inner-action-row">
             <button className="button button-light button-small" onClick={resetRecipeForm}>
               Zavřít úpravu
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         {isRecipeFormOpen ? (
           <form onSubmit={handleRecipeSubmit}>
@@ -2071,7 +2109,7 @@ function CustomFoodsManager({
             ))}
           </div>
         )}
-      </div>
+      </InnerSection>
     </AccordionSection>
   )
 }
@@ -2104,6 +2142,15 @@ function MealSection({
   const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
+  const [openParts, setOpenParts] = useState({})
+
+  function togglePart(part) {
+    setOpenParts((prev) => ({ ...prev, [part]: !prev[part] }))
+  }
+
+  function openPart(part) {
+    setOpenParts((prev) => ({ ...prev, [part]: true }))
+  }
 
   useEffect(() => {
     const q = query.trim()
@@ -2159,6 +2206,7 @@ function MealSection({
 
     if (!name || !parsedAmount) {
       setError('Vyber potravinu a doplň množství.')
+      openPart('builder')
       return
     }
 
@@ -2189,12 +2237,14 @@ function MealSection({
     setAmount('')
     setNote('')
     setError('')
+    openPart('draft')
   }
 
   function handleInsertRecipe() {
     const recipe = recipes.find((item) => String(item.id) === String(selectedRecipeId))
     if (!recipe) {
       setError('Vyber uložené jídlo.')
+      openPart('recipePicker')
       return
     }
 
@@ -2205,6 +2255,7 @@ function MealSection({
     setMealNote((prev) => prev || recipe.title)
     setSelectedRecipeId('')
     setError('')
+    openPart('draft')
   }
 
   function updateDraftItem(itemId, patch) {
@@ -2248,6 +2299,7 @@ function MealSection({
     setMealNote(meal.note || '')
     setError('')
     setExpandedDraftItems({})
+    openPart('draft')
   }
 
   function cancelEditMeal() {
@@ -2308,8 +2360,12 @@ function MealSection({
       isOpen={isOpen}
       onToggle={onToggle}
     >
-      <div className="card">
-        <h4 className="card-title">Vybrat uložené jídlo</h4>
+      <InnerSection
+        title="Vybrat uložené jídlo"
+        subtitle={isRecipesLoading ? 'Načítám...' : `${recipes.length} jídel`}
+        isOpen={Boolean(openParts.recipePicker)}
+        onToggle={() => togglePart('recipePicker')}
+      >
         {isRecipesLoading ? (
           <div className="empty-box">Načítám uložená jídla...</div>
         ) : recipes.length === 0 ? (
@@ -2340,11 +2396,14 @@ function MealSection({
             ) : null}
           </>
         )}
-      </div>
+      </InnerSection>
 
-      <div className="card">
-        <h4 className="card-title">Skládání {section.title.toLowerCase()}</h4>
-
+      <InnerSection
+        title={`Skládání ${section.title.toLowerCase()}`}
+        subtitle={selectedFood ? selectedFood.name_cs : section.key === 'piti' ? 'Přidat nápoj' : 'Přidat surovinu'}
+        isOpen={Boolean(openParts.builder)}
+        onToggle={() => togglePart('builder')}
+      >
         <div className="form-group food-search-wrap">
           <label className="label">{section.key === 'piti' ? 'Nápoj' : 'Potravina'}</label>
           <input
@@ -2416,17 +2475,21 @@ function MealSection({
         <button className="button button-full" onClick={handleAddItem}>
           Přidat položku
         </button>
-      </div>
+      </InnerSection>
 
-      <div className="card">
-        <div className="card-title-row">
-          <h4 className="card-title">{editingMealId ? `Úprava ${section.title.toLowerCase()}` : 'Rozpracováno'}</h4>
-          {editingMealId ? (
+      <InnerSection
+        title={editingMealId ? `Úprava ${section.title.toLowerCase()}` : 'Rozpracováno'}
+        subtitle={`${draftItems.length} položek`}
+        isOpen={Boolean(openParts.draft)}
+        onToggle={() => togglePart('draft')}
+      >
+        {editingMealId ? (
+          <div className="inner-action-row">
             <button className="button button-light button-small" onClick={cancelEditMeal}>
               Zrušit úpravy
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
         {draftItems.length === 0 ? (
           <div className="empty-box">Přidej první položku a potom celé jídlo ulož.</div>
         ) : (
@@ -2527,10 +2590,14 @@ function MealSection({
             </button>
           </>
         )}
-      </div>
+      </InnerSection>
 
-      <div className="card">
-        <h4 className="card-title">Dnešní přehled</h4>
+      <InnerSection
+        title="Dnešní přehled"
+        subtitle={`${savedMeals.length} záznamů`}
+        isOpen={Boolean(openParts.overview)}
+        onToggle={() => togglePart('overview')}
+      >
         {savedMeals.length === 0 ? (
           <div className="empty-box">Zatím není uložený žádný záznam.</div>
         ) : (
@@ -2567,7 +2634,7 @@ function MealSection({
             ))}
           </div>
         )}
-      </div>
+      </InnerSection>
     </AccordionSection>
   )
 }

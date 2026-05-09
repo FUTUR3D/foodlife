@@ -716,6 +716,72 @@ textarea {
   transform-origin: top center;
 }
 
+.inner-section {
+  overflow: hidden;
+  margin-bottom: 8px;
+  border: 1px solid #e6eaf0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.inner-section:last-child {
+  margin-bottom: 0;
+}
+
+.inner-section-header {
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+  color: #101828;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inner-section-title,
+.inner-section-subtitle {
+  display: block;
+}
+
+.inner-section-title {
+  font-size: 16px;
+  font-weight: 560;
+}
+
+.inner-section-subtitle {
+  margin-top: 2px;
+  color: #667085;
+  font-size: 12px;
+}
+
+.inner-section-arrow {
+  color: #98a2b3;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.inner-section-arrow.open {
+  transform: rotate(180deg);
+}
+
+.inner-section-body {
+  padding: 12px 14px 14px;
+  border-top: 1px solid #eef2f7;
+  animation: accordion-enter 0.2s ease-out both;
+  transform-origin: top center;
+}
+
+.inner-action-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
 @keyframes accordion-enter {
   from {
     opacity: 0;
@@ -1594,6 +1660,7 @@ h4,
 strong,
 .card-title,
 .accordion-title,
+.inner-section-title,
 .topbar-title,
 .list-title,
 .side-menu-title,
@@ -1628,6 +1695,7 @@ strong,
 .profile-setup-panel,
 .calendar-modal,
 .accordion,
+.inner-section,
 .card,
 .list-item,
 .saved-meal,
@@ -1668,6 +1736,7 @@ strong,
 .topbar,
 .side-panel,
 .accordion,
+.inner-section,
 .card,
 .list-item,
 .saved-meal,
@@ -1689,6 +1758,8 @@ strong,
 .topbar,
 .side-panel,
 .accordion-body,
+.inner-section-header,
+.inner-section-body,
 .card,
 .recipe-row-summary,
 .recipe-row,
@@ -1779,6 +1850,7 @@ strong,
 }
 
 .accordion-header,
+.inner-section-header,
 .recipe-row-summary,
 .food-search-results button,
 .meal-strip button,
@@ -1787,6 +1859,7 @@ strong,
 }
 
 .accordion-header:hover,
+.inner-section-header:hover,
 .recipe-row-summary:hover,
 .food-search-results button:hover,
 .meal-strip button:hover,
@@ -1824,6 +1897,7 @@ h3,
 h4,
 .topbar-title,
 .accordion-title,
+.inner-section-title,
 .card-title,
 .list-title,
 .recipe-row-summary h4,
@@ -1845,6 +1919,7 @@ h4,
 .side-panel,
 .profile-setup-panel,
 .accordion,
+.inner-section,
 .card,
 .list-item,
 .saved-meal,
@@ -1862,6 +1937,7 @@ h4,
 }
 
 .accordion,
+.inner-section,
 .card,
 .recipe-row,
 .editable-meal-item,
@@ -1880,6 +1956,10 @@ h4,
   padding: 15px 18px;
 }
 
+.inner-section-header {
+  background: #ffffff;
+}
+
 .panel-teal,
 .panel-cyan,
 .panel-sky,
@@ -1890,6 +1970,7 @@ h4,
 }
 
 .accordion-header:hover,
+.inner-section-header:hover,
 .recipe-row-summary:hover,
 .food-search-results button:hover,
 .meal-strip button:hover,
@@ -1906,9 +1987,19 @@ h4,
   font-weight: 400;
 }
 
-.accordion-arrow {
+.inner-section-subtitle {
+  color: #667085;
+  font-weight: 400;
+}
+
+.accordion-arrow,
+.inner-section-arrow {
   color: #98a2b3;
   font-size: 22px;
+}
+
+.inner-section-arrow {
+  font-size: 15px;
 }
 
 .card {
@@ -2116,6 +2207,7 @@ h4,
   .side-panel,
   .profile-setup-panel,
   .accordion,
+  .inner-section,
   .card,
   .recipe-row,
   .editable-meal-item {
