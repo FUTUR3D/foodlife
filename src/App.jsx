@@ -2251,6 +2251,7 @@ function MealSection({
   recipes,
   isRecipesLoading,
   profile,
+  embedded = false,
   isOpen,
   onToggle,
   onSaveMeal,
@@ -2522,17 +2523,12 @@ function MealSection({
   const fluidSavedMl = isDrinkSection ? getDrinkMealsMl(drinkMealsForHydration) : 0
   const fluidCurrentMl = fluidSavedMl + fluidDraftMl
   const fluidProgress = fluidTargetMl ? Math.min(100, Math.round((fluidCurrentMl / fluidTargetMl) * 100)) : 0
+  const sectionSubtitle = isDrinkSection
+    ? `${formatFluidMl(fluidCurrentMl)} / ${formatFluidMl(fluidTargetMl)} • ${savedCount} položek`
+    : `${savedMeals.length} uložených jídel • ${savedCount} položek`
 
-  return (
-    <AccordionSection
-      title={section.title}
-      subtitle={isDrinkSection
-        ? `${formatFluidMl(fluidCurrentMl)} / ${formatFluidMl(fluidTargetMl)} • ${savedCount} položek`
-        : `${savedMeals.length} uložených jídel • ${savedCount} položek`}
-      colorClass={section.colorClass}
-      isOpen={isOpen}
-      onToggle={onToggle}
-    >
+  const sectionContent = (
+    <>
       {isDrinkSection ? (
         <InnerSection
           title="Pitný režim"
@@ -2852,6 +2848,20 @@ function MealSection({
           </div>
         )}
       </InnerSection>
+    </>
+  )
+
+  if (embedded) return sectionContent
+
+  return (
+    <AccordionSection
+      title={section.title}
+      subtitle={sectionSubtitle}
+      colorClass={section.colorClass}
+      isOpen={isOpen}
+      onToggle={onToggle}
+    >
+      {sectionContent}
     </AccordionSection>
   )
 }
@@ -4060,6 +4070,7 @@ export default function App() {
                 recipes={recipesByType[DRINK_SECTION.key] || []}
                 isRecipesLoading={isRecipesLoading}
                 profile={profile}
+                embedded
                 isOpen={openMeal === DRINK_SECTION.key}
                 onToggle={() => setOpenMeal(openMeal === DRINK_SECTION.key ? null : DRINK_SECTION.key)}
                 onSaveMeal={saveMeal}
