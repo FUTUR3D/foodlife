@@ -18,14 +18,14 @@ $params = [$userId, $like, $like, $like];
 if ($type === 'drink') {
     $typeFilter = "
         AND (
-            COALESCE(external_source, '') = 'all_drinks_nutrition_database_cz'
-            OR COALESCE(category, '') LIKE 'Nápoj%'
+            COALESCE(foods.external_source, '') = 'all_drinks_nutrition_database_cz'
+            OR COALESCE(foods.category, '') LIKE 'Nápoj%'
         )";
 } elseif ($type === 'food') {
     $typeFilter = "
         AND NOT (
-            COALESCE(external_source, '') = 'all_drinks_nutrition_database_cz'
-            OR COALESCE(category, '') LIKE 'Nápoj%'
+            COALESCE(foods.external_source, '') = 'all_drinks_nutrition_database_cz'
+            OR COALESCE(foods.category, '') LIKE 'Nápoj%'
         )";
 }
 
@@ -37,38 +37,38 @@ $sighiJoin = $sighiEnabled ? sighi_join_sql('foods') : '';
 
 $stmt = $pdo->prepare("
     SELECT
-        id,
-        source,
-        external_source,
-        name_cs,
-        name_en,
-        category,
-        default_unit,
-        serving_grams,
-        kcal_100g,
-        protein_100g,
-        carbs_100g,
-        fat_100g,
-        fiber_100g,
-        sugar_100g,
-        sodium_mg_100g,
-        note,
-        fodmap_level,
-        histamine_level
+        foods.id AS id,
+        foods.source AS source,
+        foods.external_source AS external_source,
+        foods.name_cs AS name_cs,
+        foods.name_en AS name_en,
+        foods.category AS category,
+        foods.default_unit AS default_unit,
+        foods.serving_grams AS serving_grams,
+        foods.kcal_100g AS kcal_100g,
+        foods.protein_100g AS protein_100g,
+        foods.carbs_100g AS carbs_100g,
+        foods.fat_100g AS fat_100g,
+        foods.fiber_100g AS fiber_100g,
+        foods.sugar_100g AS sugar_100g,
+        foods.sodium_mg_100g AS sodium_mg_100g,
+        foods.note AS note,
+        foods.fodmap_level AS fodmap_level,
+        foods.histamine_level AS histamine_level
         {$sighiSelect}
     FROM foods
     {$sighiJoin}
     WHERE
-        (user_id IS NULL OR user_id = ?)
-        AND (name_cs LIKE ? OR name_en LIKE ? OR external_code LIKE ?)
+        (foods.user_id IS NULL OR foods.user_id = ?)
+        AND (foods.name_cs LIKE ? OR foods.name_en LIKE ? OR foods.external_code LIKE ?)
         {$typeFilter}
     ORDER BY
         CASE
-            WHEN name_cs = ? THEN 0
-            WHEN name_cs LIKE ? THEN 1
+            WHEN foods.name_cs = ? THEN 0
+            WHEN foods.name_cs LIKE ? THEN 1
             ELSE 2
         END,
-        name_cs ASC
+        foods.name_cs ASC
     LIMIT 30
 ");
 
