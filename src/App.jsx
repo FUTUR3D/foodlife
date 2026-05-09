@@ -559,14 +559,23 @@ function MealTotals({ items }) {
 
 function getDrinkItemMl(item) {
   const amount = parseAmount(item.amount)
-  if (item.unit === 'ml' && amount) return amount
-  const grams = item.grams ?? gramsFromAmount(item.amount, item.unit, item.serving_grams)
-  return parseAmount(grams) || 0
+  const unit = item.unit || item.default_unit
+  if (unit === 'ml' && amount) return amount
+
+  const grams = item.grams ?? gramsFromAmount(item.amount, unit, item.serving_grams)
+  const gramsValue = parseAmount(grams)
+  if (gramsValue) return gramsValue
+
+  return amount || 0
+}
+
+function getDrinkItemsMl(items) {
+  return (items || []).reduce((sum, item) => sum + getDrinkItemMl(item), 0)
 }
 
 function getDrinkMealsMl(meals) {
   return meals.reduce((mealSum, meal) => {
-    return mealSum + (meal.items || []).reduce((itemSum, item) => itemSum + getDrinkItemMl(item), 0)
+    return mealSum + getDrinkItemsMl(meal.items)
   }, 0)
 }
 
@@ -2506,7 +2515,12 @@ function MealSection({
   const savedCount = savedMeals.reduce((sum, meal) => sum + meal.items.length, 0)
   const selectedRecipe = recipes.find((recipe) => String(recipe.id) === String(selectedRecipeId))
   const fluidTargetMl = getFluidTargetMl(profile)
-  const fluidCurrentMl = isDrinkSection ? getDrinkMealsMl(savedMeals) : 0
+  const drinkMealsForHydration = editingMealId
+    ? savedMeals.filter((meal) => meal.id !== editingMealId)
+    : savedMeals
+  const fluidDraftMl = isDrinkSection ? getDrinkItemsMl(draftItems) : 0
+  const fluidSavedMl = isDrinkSection ? getDrinkMealsMl(drinkMealsForHydration) : 0
+  const fluidCurrentMl = fluidSavedMl + fluidDraftMl
   const fluidProgress = fluidTargetMl ? Math.min(100, Math.round((fluidCurrentMl / fluidTargetMl) * 100)) : 0
 
   return (
@@ -2544,6 +2558,9 @@ function MealSection({
             <div className="hydration-meter" aria-label="Plnění pitného režimu">
               <span style={{ width: `${fluidProgress}%` }} />
             </div>
+            {fluidDraftMl > 0 ? (
+              <div className="form-hint">Včetně rozpracovaných nápojů: {formatFluidMl(fluidDraftMl)}</div>
+            ) : null}
             <div className="hydration-actions">
               <button className="button button-light" onClick={() => handleQuickDrink('Voda', 250)} disabled={Boolean(quickDrinkSaving)}>
                 Voda 250 ml
