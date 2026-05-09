@@ -406,6 +406,45 @@ function formatItemAmount(item) {
   return `${amount} ${unit}`.trim()
 }
 
+function getExerciseUnitLabel(calcUnit) {
+  if (calcUnit === 'distance_km') return 'km'
+  if (calcUnit === 'reps') return 'opakování'
+  return 'min'
+}
+
+function getExerciseUnitHint(calcUnit) {
+  if (calcUnit === 'distance_km') return 'Vzdálenost v km'
+  if (calcUnit === 'reps') return 'Počet opakování'
+  return 'Délka v minutách'
+}
+
+function calculateExerciseKcal(exercise, amount, weightKg) {
+  const value = parseAmount(amount)
+  if (!exercise || !value) return null
+
+  if (exercise.calc_unit === 'duration') {
+    const met = parseAmount(exercise.met)
+    const weight = parseAmount(weightKg)
+    if (!met || !weight) return null
+    return met * weight * (value / 60)
+  }
+
+  if (exercise.calc_unit === 'distance_km') {
+    const perKm = parseAmount(exercise.kcal_per_km_per_kg)
+    const weight = parseAmount(weightKg)
+    if (!perKm || !weight) return null
+    return perKm * weight * value
+  }
+
+  if (exercise.calc_unit === 'reps') {
+    const perRep = parseAmount(exercise.kcal_per_rep)
+    if (!perRep) return null
+    return perRep * value
+  }
+
+  return null
+}
+
 function getFoodKindLabel(food) {
   if (
     food.food_kind === 'edited' ||
@@ -2658,6 +2697,194 @@ function MealSection({
   )
 }
 
+function ExercisePanel({ todayInfo, onTodayInfoChange, profile }) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [selectedExercise, setSelectedExercise] = useState(null)
+  const [amount, setAmount] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
+  const [error, setError] = useState('')
+  const [openParts, setOpenParts] = useState({ database: true, manual: false })
+
+  const profileWeight = parseAmount(profile.weight) || parseAmount(profile.startWeight)
+  const estimatedKcal = useMemo(() => (
+    calculateExerciseKcal(selectedExercise, amount, profileWeight)
+  ), [selectedExercise, amount, profileWeight])
+
+  function togglePart(part) {
+    setOpenParts((prev) => ({ ...prev, [part]: !prev[part] }))
+  }
+
+  useEffect(() => {
+    const q = query.trim()
+    setError('')
+
+    if (selectedExercise?.name_cs === q) {
+      setResults([])
+      setIsSearching(false)
+      return undefined
+    }
+
+    if (q.length < 2) {
+      setResults([])
+      setIsSearching(false)
+      return undefined
+    }
+
+    const controller = new AbortController()
+    const timeout = window.setTimeout(async () => {
+      setIsSearching(true)
+      try {
+        const response = await fetch(`exercises-search.php?q=${encodeURIComponent(q)}`, {
+          credentials: 'same-origin',
+          signal: controller.signal,
+        })
+        if (!response.ok) throw new Error('exercise_search_failed')
+        const data = await response.json()
+        setResults(data.exercises || [])
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setResults([])
+          setError('Databáze cvičení není dostupná. Zkontroluj import tabulky exercises.')
+        }
+      } finally {
+        setIsSearching(false)
+      }
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [query, selectedExercise])
+
+  function selectExercise(exercise) {
+    setSelectedExercise(exercise)
+    setQuery(exercise.name_cs)
+    setAmount(exercise.default_amount || '')
+    setResults([])
+    setError('')
+  }
+
+  function addExerciseToDay() {
+    const kcal = estimatedKcal ? Math.round(estimatedKcal) : null
+
+    if (!selectedExercise || !kcal) {
+      setError(profileWeight ? 'Vyber aktivitu a doplň množství.' : 'Doplň v profilu hmotnost, aby šel spočítat výdej.')
+      return
+    }
+
+    const unitLabel = getExerciseUnitLabel(selectedExercise.calc_unit)
+    const itemText = `${selectedExercise.name_cs}: ${amount} ${unitLabel} (~${kcal} kcal)`
+    const previousExercise = todayInfo.exercise?.trim()
+    const previousKcal = parseFloat(String(todayInfo.exerciseKcal || '0').replace(',', '.')) || 0
+
+    onTodayInfoChange('exercise', previousExercise ? `${previousExercise}; ${itemText}` : itemText)
+    onTodayInfoChange('exerciseKcal', String(Math.round(previousKcal + kcal)))
+
+    setQuery('')
+    setSelectedExercise(null)
+    setAmount('')
+    setResults([])
+    setError('')
+  }
+
+  return (
+    <div className="exercise-panel">
+      <InnerSection
+        title="Vybrat cvičení z databáze"
+        subtitle={selectedExercise ? selectedExercise.name_cs : 'Najdi aktivitu a nech spočítat výdej'}
+        isOpen={Boolean(openParts.database)}
+        onToggle={() => togglePart('database')}
+      >
+        <div className="form-group food-search-wrap">
+          <label className="label">Aktivita</label>
+          <input
+            className="input"
+            value={query}
+            onChange={(e) => {
+              setSelectedExercise(null)
+              setQuery(e.target.value)
+            }}
+            placeholder="Např. kliky, kolo, běh, chůze..."
+          />
+          {results.length > 0 ? (
+            <div className="food-search-results">
+              {results.map((exercise) => (
+                <button type="button" key={exercise.id} onClick={() => selectExercise(exercise)}>
+                  <span>{exercise.name_cs}</span>
+                  <small>
+                    {exercise.category}
+                    {exercise.intensity ? ` • ${exercise.intensity}` : ''}
+                    {exercise.calc_unit === 'duration' && exercise.met ? ` • MET ${exercise.met}` : ''}
+                  </small>
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {isSearching ? <div className="form-hint">Hledám...</div> : null}
+        </div>
+
+        <div className="exercise-input-grid">
+          <div className="form-group">
+            <label className="label">{getExerciseUnitHint(selectedExercise?.calc_unit)}</label>
+            <input
+              className="input"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={selectedExercise?.default_amount || '30'}
+            />
+          </div>
+          <div className="exercise-estimate">
+            <span>Odhad výdeje</span>
+            <strong>{estimatedKcal ? `${Math.round(estimatedKcal)} kcal` : '-'}</strong>
+          </div>
+        </div>
+
+        {selectedExercise?.note ? <div className="form-hint">{selectedExercise.note}</div> : null}
+        {!profileWeight && selectedExercise && selectedExercise.calc_unit !== 'reps' ? (
+          <div className="inline-error">Pro výpočet podle času nebo vzdálenosti je potřeba hmotnost v profilu.</div>
+        ) : null}
+        {error ? <div className="inline-error">{error}</div> : null}
+
+        <button className="button button-full" onClick={addExerciseToDay}>
+          Přidat do dnešního cvičení
+        </button>
+      </InnerSection>
+
+      <InnerSection
+        title="Ruční zápis"
+        subtitle="Když máš údaj z hodinek nebo aplikace"
+        isOpen={Boolean(openParts.manual)}
+        onToggle={() => togglePart('manual')}
+      >
+        <div className="form-group">
+          <label className="label">Záznam cvičení</label>
+          <input
+            className="input"
+            value={todayInfo.exercise || ''}
+            onChange={(e) => onTodayInfoChange('exercise', e.target.value)}
+            placeholder="Např. Posilovna 45 min, běh 5 km..."
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="label">Odhad spálené energie (kcal)</label>
+          <input
+            className="input"
+            type="number"
+            min="0"
+            step="1"
+            value={todayInfo.exerciseKcal || ''}
+            onChange={(e) => onTodayInfoChange('exerciseKcal', e.target.value)}
+            placeholder="Např. 250"
+          />
+        </div>
+      </InnerSection>
+    </div>
+  )
+}
+
 function ReactionsPanel({ reactions, onAddReaction, onDeleteReaction }) {
   const [type, setType] = useState(REACTION_TYPES[0])
   const [intensity, setIntensity] = useState('5')
@@ -3537,31 +3764,11 @@ export default function App() {
             isOpen={openMain === 'exercise'}
             onToggle={() => setOpenMain(openMain === 'exercise' ? null : 'exercise')}
           >
-            <div className="card">
-              <h3 className="card-title">Cvičení</h3>
-              <div className="form-group">
-                <label className="label">Záznam cvičení</label>
-                <input
-                  className="input"
-                  value={todayInfo.exercise || ''}
-                  onChange={(e) => updateTodayInfo('exercise', e.target.value)}
-                  placeholder="Např. Posilovna 45 min, běh 5 km..."
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="label">Odhad spálené energie (kcal)</label>
-                <input
-                  className="input"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={todayInfo.exerciseKcal || ''}
-                  onChange={(e) => updateTodayInfo('exerciseKcal', e.target.value)}
-                  placeholder="Např. 250"
-                />
-              </div>
-            </div>
+            <ExercisePanel
+              todayInfo={todayInfo}
+              onTodayInfoChange={updateTodayInfo}
+              profile={profile}
+            />
           </AccordionSection>
 
           <AccordionSection
