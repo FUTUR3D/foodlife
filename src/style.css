@@ -683,6 +683,7 @@ textarea {
   padding: 16px 18px;
   text-align: left;
   cursor: pointer;
+  touch-action: manipulation;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -734,6 +735,7 @@ textarea {
   background: #ffffff;
   color: #101828;
   padding: 12px 14px;
+  touch-action: manipulation;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;

@@ -229,6 +229,22 @@ function shiftDate(value, days) {
   return `${year}-${month}-${day}`
 }
 
+function useTapToggle(onToggle) {
+  const lastTouchRef = useRef(0)
+
+  return {
+    onClick: () => {
+      if (Date.now() - lastTouchRef.current < 500) return
+      onToggle()
+    },
+    onTouchEnd: (event) => {
+      lastTouchRef.current = Date.now()
+      event.preventDefault()
+      onToggle()
+    },
+  }
+}
+
 function AccordionSection({
   title,
   subtitle,
@@ -238,6 +254,7 @@ function AccordionSection({
   children,
 }) {
   const sectionRef = useRef(null)
+  const tapHandlers = useTapToggle(onToggle)
 
   useEffect(() => {
     if (!isOpen || !sectionRef.current) return
@@ -254,7 +271,7 @@ function AccordionSection({
 
   return (
     <div className={`accordion ${isOpen ? 'accordion-open' : ''}`} ref={sectionRef}>
-      <button type="button" className={`accordion-header ${colorClass}`} onClick={onToggle}>
+      <button type="button" className={`accordion-header ${colorClass}`} {...tapHandlers}>
         <div>
           <div className="accordion-title">{title}</div>
           {subtitle ? <div className="accordion-subtitle">{subtitle}</div> : null}
@@ -268,9 +285,11 @@ function AccordionSection({
 }
 
 function InnerSection({ title, subtitle, isOpen, onToggle, children }) {
+  const tapHandlers = useTapToggle(onToggle)
+
   return (
     <section className={`inner-section ${isOpen ? 'inner-section-open' : ''}`}>
-      <button type="button" className="inner-section-header" onClick={onToggle}>
+      <button type="button" className="inner-section-header" {...tapHandlers}>
         <span>
           <span className="inner-section-title">{title}</span>
           {subtitle ? <span className="inner-section-subtitle">{subtitle}</span> : null}
