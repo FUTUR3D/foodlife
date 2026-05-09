@@ -512,11 +512,12 @@ function SighiBadge({ item }) {
 
   const raw = item.sighi_score_raw ?? '?'
   const score = item.sighi_score
+  const isSuggested = Number(item.sighi_approved) !== 1
   const className = score === null || score === undefined
-    ? 'sighi-badge sighi-unknown'
-    : `sighi-badge sighi-${score}`
+    ? `sighi-badge sighi-unknown${isSuggested ? ' sighi-suggested' : ''}`
+    : `sighi-badge sighi-${score}${isSuggested ? ' sighi-suggested' : ''}`
 
-  return <span className={className}>SIGHI {raw}</span>
+  return <span className={className}>SIGHI {raw}{isSuggested ? ' návrh' : ''}</span>
 }
 
 function getSighiMarkers(item) {
@@ -544,6 +545,12 @@ function SighiDetails({ item }) {
         <div>
           <span>SIGHI shoda</span>
           <strong>{item.sighi_food}</strong>
+        </div>
+      ) : null}
+      {item.sighi_confidence !== null && item.sighi_confidence !== undefined ? (
+        <div>
+          <span>Párování</span>
+          <strong>{Number(item.sighi_approved) === 1 ? 'schváleno' : 'návrh'} · {item.sighi_confidence} %</strong>
         </div>
       ) : null}
       {markers.length ? (
@@ -575,6 +582,7 @@ function sighiFieldsFromFood(food) {
     uncertain_marker: food?.uncertain_marker ?? null,
     other_marker: food?.other_marker ?? null,
     sighi_notes: food?.sighi_notes ?? null,
+    sighi_approved: food?.sighi_approved ?? null,
     sighi_confidence: food?.sighi_confidence ?? null,
     sighi_match_method: food?.sighi_match_method ?? null,
   }

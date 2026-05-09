@@ -77,6 +77,7 @@ function sighi_select_sql(string $foodAlias = 'f'): string
         sf.uncertain_marker,
         sf.other_marker,
         sf.notes AS sighi_notes,
+        fsl.approved AS sighi_approved,
         fsl.confidence AS sighi_confidence,
         fsl.match_method AS sighi_match_method";
 }
@@ -95,6 +96,7 @@ function sighi_empty_select_sql(): string
         NULL AS uncertain_marker,
         NULL AS other_marker,
         NULL AS sighi_notes,
+        NULL AS sighi_approved,
         NULL AS sighi_confidence,
         NULL AS sighi_match_method";
 }
@@ -105,8 +107,9 @@ function sighi_join_sql(string $foodAlias = 'f'): string
         LEFT JOIN food_sighi_links fsl ON fsl.id = (
             SELECT l.id
             FROM food_sighi_links l
-            WHERE l.food_id = {$foodAlias}.id AND l.approved = 1
-            ORDER BY l.confidence DESC, l.id ASC
+            WHERE l.food_id = {$foodAlias}.id
+                AND (l.approved = 1 OR l.confidence >= 70)
+            ORDER BY l.approved DESC, l.confidence DESC, l.id ASC
             LIMIT 1
         )
         LEFT JOIN sighi_foods sf ON sf.id = fsl.sighi_food_id";
@@ -126,6 +129,7 @@ function sighi_payload(array $row): array
         'uncertain_marker' => $row['uncertain_marker'] ?? null,
         'other_marker' => $row['other_marker'] ?? null,
         'sighi_notes' => $row['sighi_notes'] ?? null,
+        'sighi_approved' => $row['sighi_approved'] === null ? null : (int) $row['sighi_approved'],
         'sighi_confidence' => $row['sighi_confidence'] === null ? null : (int) $row['sighi_confidence'],
         'sighi_match_method' => $row['sighi_match_method'] ?? null,
     ];

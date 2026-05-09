@@ -1035,6 +1035,10 @@ textarea {
   white-space: nowrap;
 }
 
+.sighi-suggested {
+  border-style: dashed;
+}
+
 .sighi-0 {
   border-color: #abefc6;
   background: #ecfdf3;
@@ -1052,6 +1056,20 @@ textarea {
   border-color: #fecdd6;
   background: #fff1f3;
   color: #c01048;
+}
+
+.sighi-suggested.sighi-0,
+.sighi-suggested.sighi-1,
+.sighi-suggested.sighi-2,
+.sighi-suggested.sighi-3 {
+  background: #fff;
+}
+
+.sighi-suggested.sighi-0,
+.sighi-suggested.sighi-1,
+.sighi-suggested.sighi-2,
+.sighi-suggested.sighi-3 {
+  background: #fff;
 }
 
 .sighi-details {
