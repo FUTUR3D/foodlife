@@ -1036,6 +1036,60 @@ textarea {
   gap: 10px;
 }
 
+.hydration-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hydration-top {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hydration-top div {
+  border: 1px solid #d7efe1;
+  background: #f6fbf8;
+  padding: 10px 12px;
+}
+
+.hydration-top span,
+.hydration-top strong {
+  display: block;
+}
+
+.hydration-top span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.hydration-top strong {
+  margin-top: 4px;
+  color: #14532d;
+  font-size: 18px;
+  font-weight: 580;
+}
+
+.hydration-meter {
+  height: 9px;
+  overflow: hidden;
+  background: #eef2f6;
+}
+
+.hydration-meter span {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  background: #22a06b;
+}
+
+.hydration-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .exercise-panel {
   display: flex;
   flex-direction: column;
@@ -1656,6 +1710,8 @@ textarea {
   }
 
   .meal-input-grid,
+  .hydration-top,
+  .hydration-actions,
   .exercise-input-grid,
   .exercise-manual-grid,
   .exercise-entry-grid,
@@ -1782,6 +1838,8 @@ strong,
 .food-chip,
 .food-search-results,
 .food-edit-notice,
+.hydration-top div,
+.hydration-meter,
 .exercise-estimate,
 .exercise-total,
 .inline-error,
@@ -1819,6 +1877,8 @@ strong,
 .recipe-row,
 .recipe-card,
 .recipe-edit-choice,
+.hydration-top div,
+.hydration-meter,
 .exercise-estimate,
 .exercise-total,
 .meal-totals div,
@@ -1863,6 +1923,7 @@ strong,
 .recipe-tag-option,
 .recipe-chip,
 .recipe-save-box,
+.hydration-top div,
 .exercise-estimate,
 .exercise-total {
   background: #fbfcfd;
@@ -2104,6 +2165,8 @@ h4,
 .empty-box,
 .inline-error,
 .food-edit-notice,
+.hydration-top div,
+.hydration-meter,
 .exercise-estimate,
 .exercise-total {
   border-radius: 6px;
@@ -2190,6 +2253,7 @@ h4,
 .recipe-tag-option,
 .recipe-chip,
 .recipe-save-box,
+.hydration-top div,
 .exercise-estimate,
 .exercise-total {
   background: #fafbfc;

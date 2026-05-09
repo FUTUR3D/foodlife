@@ -557,6 +557,31 @@ function MealTotals({ items }) {
   )
 }
 
+function getDrinkItemMl(item) {
+  const amount = parseAmount(item.amount)
+  if (item.unit === 'ml' && amount) return amount
+  const grams = item.grams ?? gramsFromAmount(item.amount, item.unit, item.serving_grams)
+  return parseAmount(grams) || 0
+}
+
+function getDrinkMealsMl(meals) {
+  return meals.reduce((mealSum, meal) => {
+    return mealSum + (meal.items || []).reduce((itemSum, item) => itemSum + getDrinkItemMl(item), 0)
+  }, 0)
+}
+
+function getFluidTargetMl(profile) {
+  const weight = parseAmount(profile?.weight) || parseAmount(profile?.startWeight)
+  if (!weight) return 2500
+  return Math.round(weight * 35)
+}
+
+function formatFluidMl(value) {
+  const ml = Math.round(value || 0)
+  if (ml >= 1000) return `${Math.round((ml / 1000) * 10) / 10} l`
+  return `${ml} ml`
+}
+
 function getDailyStatus(dayTotals, energyPlan) {
   if (!energyPlan) return 'Po doplnění cíle se tu ukáže, jestli den směřuje k hubnutí, udržení nebo nabírání.'
 
@@ -2216,6 +2241,7 @@ function MealSection({
   savedMeals,
   recipes,
   isRecipesLoading,
+  profile,
   isOpen,
   onToggle,
   onSaveMeal,
@@ -2236,10 +2262,12 @@ function MealSection({
   const [selectedRecipeId, setSelectedRecipeId] = useState('')
   const [recipeTitle, setRecipeTitle] = useState('')
   const [isRecipeSaving, setIsRecipeSaving] = useState(false)
+  const [quickDrinkSaving, setQuickDrinkSaving] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
-  const [openParts, setOpenParts] = useState({})
+  const [openParts, setOpenParts] = useState({ hydration: true })
+  const isDrinkSection = section.key === 'piti'
 
   function togglePart(part) {
     setOpenParts((prev) => ({ ...prev, [part]: !prev[part] }))
@@ -2446,54 +2474,129 @@ function MealSection({
     }
   }
 
+  async function handleQuickDrink(name, ml) {
+    if (quickDrinkSaving) return
+
+    setQuickDrinkSaving(name)
+    setError('')
+    try {
+      await onSaveMeal(section, [{
+        id: createId(),
+        food_id: null,
+        name,
+        custom_name: name,
+        amount: ml,
+        unit: 'ml',
+        grams: ml,
+        serving_grams: null,
+        note: 'rychlé přidání',
+        kcal_100g: 0,
+        protein_100g: 0,
+        carbs_100g: 0,
+        fat_100g: 0,
+        fiber_100g: 0,
+      }], name)
+    } catch {
+      setError('Nápoj se nepodařilo uložit.')
+    } finally {
+      setQuickDrinkSaving('')
+    }
+  }
+
   const savedCount = savedMeals.reduce((sum, meal) => sum + meal.items.length, 0)
   const selectedRecipe = recipes.find((recipe) => String(recipe.id) === String(selectedRecipeId))
+  const fluidTargetMl = getFluidTargetMl(profile)
+  const fluidCurrentMl = isDrinkSection ? getDrinkMealsMl(savedMeals) : 0
+  const fluidProgress = fluidTargetMl ? Math.min(100, Math.round((fluidCurrentMl / fluidTargetMl) * 100)) : 0
 
   return (
     <AccordionSection
       title={section.title}
-      subtitle={`${savedMeals.length} uložených jídel • ${savedCount} položek`}
+      subtitle={isDrinkSection
+        ? `${formatFluidMl(fluidCurrentMl)} / ${formatFluidMl(fluidTargetMl)} • ${savedCount} položek`
+        : `${savedMeals.length} uložených jídel • ${savedCount} položek`}
       colorClass={section.colorClass}
       isOpen={isOpen}
       onToggle={onToggle}
     >
-      <InnerSection
-        title="Vybrat uložené jídlo"
-        subtitle={isRecipesLoading ? 'Načítám...' : `${recipes.length} jídel`}
-        isOpen={Boolean(openParts.recipePicker)}
-        onToggle={() => togglePart('recipePicker')}
-      >
-        {isRecipesLoading ? (
-          <div className="empty-box">Načítám uložená jídla...</div>
-        ) : recipes.length === 0 ? (
-          <div className="empty-box">Pro tuto část dne zatím nemáš žádné uložené jídlo.</div>
-        ) : (
-          <>
-            <div className="recipe-picker-row">
-              <select
-                className="input"
-                value={selectedRecipeId}
-                onChange={(e) => setSelectedRecipeId(e.target.value)}
-              >
-                <option value="">Vyber uložené jídlo</option>
-                {recipes.map((recipe) => (
-                  <option key={recipe.id} value={recipe.id}>
-                    {recipe.title} ({recipe.items.length} surovin)
-                  </option>
-                ))}
-              </select>
-              <button className="button" onClick={handleInsertRecipe} disabled={!selectedRecipeId}>
-                Vložit
+      {isDrinkSection ? (
+        <InnerSection
+          title="Pitný režim"
+          subtitle={`${formatFluidMl(fluidCurrentMl)} z ${formatFluidMl(fluidTargetMl)}`}
+          isOpen={openParts.hydration !== false}
+          onToggle={() => togglePart('hydration')}
+        >
+          <div className="hydration-panel">
+            <div className="hydration-top">
+              <div>
+                <span>Dnes vypito</span>
+                <strong>{formatFluidMl(fluidCurrentMl)}</strong>
+              </div>
+              <div>
+                <span>Doporučení</span>
+                <strong>{formatFluidMl(fluidTargetMl)}</strong>
+              </div>
+              <div>
+                <span>Zbývá</span>
+                <strong>{formatFluidMl(Math.max(0, fluidTargetMl - fluidCurrentMl))}</strong>
+              </div>
+            </div>
+            <div className="hydration-meter" aria-label="Plnění pitného režimu">
+              <span style={{ width: `${fluidProgress}%` }} />
+            </div>
+            <div className="hydration-actions">
+              <button className="button button-light" onClick={() => handleQuickDrink('Voda', 250)} disabled={Boolean(quickDrinkSaving)}>
+                Voda 250 ml
+              </button>
+              <button className="button button-light" onClick={() => handleQuickDrink('Čaj', 250)} disabled={Boolean(quickDrinkSaving)}>
+                Čaj 250 ml
+              </button>
+              <button className="button button-light" onClick={() => handleQuickDrink('Voda', 500)} disabled={Boolean(quickDrinkSaving)}>
+                Voda 500 ml
               </button>
             </div>
-            {selectedRecipe ? (
-              <div className="form-hint recipe-hint">
-                {selectedRecipe.items.map((item) => item.name || item.custom_name).join(', ')}
+            {quickDrinkSaving ? <div className="form-hint">Ukládám {quickDrinkSaving.toLowerCase()}...</div> : null}
+          </div>
+        </InnerSection>
+      ) : (
+        <InnerSection
+          title="Vybrat uložené jídlo"
+          subtitle={isRecipesLoading ? 'Načítám...' : `${recipes.length} jídel`}
+          isOpen={Boolean(openParts.recipePicker)}
+          onToggle={() => togglePart('recipePicker')}
+        >
+          {isRecipesLoading ? (
+            <div className="empty-box">Načítám uložená jídla...</div>
+          ) : recipes.length === 0 ? (
+            <div className="empty-box">Pro tuto část dne zatím nemáš žádné uložené jídlo.</div>
+          ) : (
+            <>
+              <div className="recipe-picker-row">
+                <select
+                  className="input"
+                  value={selectedRecipeId}
+                  onChange={(e) => setSelectedRecipeId(e.target.value)}
+                >
+                  <option value="">Vyber uložené jídlo</option>
+                  {recipes.map((recipe) => (
+                    <option key={recipe.id} value={recipe.id}>
+                      {recipe.title} ({recipe.items.length} surovin)
+                    </option>
+                  ))}
+                </select>
+                <button className="button" onClick={handleInsertRecipe} disabled={!selectedRecipeId}>
+                  Vložit
+                </button>
               </div>
-            ) : null}
-          </>
-        )}
-      </InnerSection>
+              {selectedRecipe ? (
+                <div className="form-hint recipe-hint">
+                  {selectedRecipe.items.map((item) => item.name || item.custom_name).join(', ')}
+                </div>
+              ) : null}
+            </>
+          )}
+        </InnerSection>
+      )}
 
       <InnerSection
         title={`Skládání ${section.title.toLowerCase()}`}
@@ -2657,7 +2760,7 @@ function MealSection({
               />
             </div>
 
-            {!editingMealId ? (
+            {!editingMealId && !isDrinkSection ? (
               <div className="recipe-save-box">
                 <div className="form-group">
                   <label className="label">Uložit skladbu jako moje jídlo</label>
@@ -3939,6 +4042,7 @@ export default function App() {
                 savedMeals={mealsByType[DRINK_SECTION.key] || []}
                 recipes={recipesByType[DRINK_SECTION.key] || []}
                 isRecipesLoading={isRecipesLoading}
+                profile={profile}
                 isOpen={openMeal === DRINK_SECTION.key}
                 onToggle={() => setOpenMeal(openMeal === DRINK_SECTION.key ? null : DRINK_SECTION.key)}
                 onSaveMeal={saveMeal}
