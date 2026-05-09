@@ -121,6 +121,20 @@ const ONSET_SPEEDS = [
   'Nevím',
 ]
 
+const HISTAMINE_BASE_POINTS = {
+  0: 0,
+  1: 1,
+  2: 3,
+  3: 6,
+}
+
+const HISTAMINE_MARKER_POINTS = {
+  histamine_marker: 1,
+  other_amines_marker: 1,
+  liberator_marker: 1,
+  inhibitor_marker: 2,
+}
+
 function createId() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 }
@@ -586,6 +600,147 @@ function sighiFieldsFromFood(food) {
     sighi_confidence: food?.sighi_confidence ?? null,
     sighi_match_method: food?.sighi_match_method ?? null,
   }
+}
+
+function getHistamineServingMultiplier(item) {
+  const grams = Number(item?.grams ?? 0)
+  if (!Number.isFinite(grams) || grams <= 0) return 1
+  if (grams <= 50) return 0.7
+  if (grams <= 150) return 1
+  if (grams <= 300) return 1.25
+  return 1.5
+}
+
+function getHistamineItemRisk(item) {
+  if (!hasSighiInfo(item)) {
+    return {
+      points: 0,
+      known: false,
+      basePoints: 0,
+      markerPoints: 0,
+      multiplier: 1,
+      markers: [],
+    }
+  }
+
+  const score = Number(item.sighi_score)
+  const basePoints = HISTAMINE_BASE_POINTS[score] ?? 0
+  const markers = Object.entries(HISTAMINE_MARKER_POINTS)
+    .filter(([field]) => item?.[field])
+    .map(([field, points]) => ({ field, points, value: item[field] }))
+  const markerPoints = markers.reduce((sum, marker) => sum + marker.points, 0)
+  const multiplier = getHistamineServingMultiplier(item)
+  const suggestedPenalty = Number(item.sighi_approved) === 1 ? 0 : 0.5
+  const points = (basePoints + markerPoints + suggestedPenalty) * multiplier
+
+  return {
+    points,
+    known: true,
+    basePoints,
+    markerPoints,
+    multiplier,
+    markers,
+  }
+}
+
+function getHistamineRiskLevel(score) {
+  if (score >= 13) {
+    return {
+      key: 'high',
+      label: 'Vyšší riziko',
+      tone: 'risk-high',
+      text: 'Dnes je tam víc rizikových položek nebo markerů. U citlivějšího člověka už může dávat smysl sledovat příznaky.',
+    }
+  }
+  if (score >= 8) {
+    return {
+      key: 'elevated',
+      label: 'Zvýšené riziko',
+      tone: 'risk-elevated',
+      text: 'Den už má několik histaminově zajímavých položek. Nejde o diagnózu, spíš o signál ke sledování.',
+    }
+  }
+  if (score >= 3) {
+    return {
+      key: 'moderate',
+      label: 'Mírné riziko',
+      tone: 'risk-moderate',
+      text: 'Zatím převládá nízké až střední riziko. Důležité bude, jestli se opakuje stejný vzorec s příznaky.',
+    }
+  }
+  return {
+    key: 'low',
+    label: 'Nízké riziko',
+    tone: 'risk-low',
+    text: 'Podle spárovaných SIGHI položek je dnešní histaminové riziko zatím nízké.',
+  }
+}
+
+function getHistamineSummary(meals) {
+  const mealRows = []
+  const riskyItems = []
+  let score = 0
+  let knownItems = 0
+  let unknownItems = 0
+
+  for (const meal of meals || []) {
+    let mealScore = 0
+    const mealRiskyItems = []
+
+    for (const item of meal.items || []) {
+      const risk = getHistamineItemRisk(item)
+      if (!risk.known) {
+        unknownItems += 1
+        continue
+      }
+
+      knownItems += 1
+      score += risk.points
+      mealScore += risk.points
+
+      if (risk.points > 0) {
+        const row = {
+          ...item,
+          mealTitle: meal.title,
+          mealType: meal.meal_type,
+          risk,
+        }
+        riskyItems.push(row)
+        mealRiskyItems.push(row)
+      }
+    }
+
+    mealRows.push({
+      meal,
+      score: mealScore,
+      level: getHistamineRiskLevel(mealScore),
+      items: mealRiskyItems.sort((a, b) => b.risk.points - a.risk.points),
+    })
+  }
+
+  const roundedScore = Math.round(score * 10) / 10
+
+  return {
+    score: roundedScore,
+    level: getHistamineRiskLevel(roundedScore),
+    knownItems,
+    unknownItems,
+    riskyItems: riskyItems.sort((a, b) => b.risk.points - a.risk.points),
+    meals: mealRows.filter((meal) => meal.meal.items?.length),
+  }
+}
+
+function getHistamineReactionInsight(histamineSummary, reactions) {
+  if (!reactions.length) {
+    return 'Zatím nejsou zapsané příznaky. Jakmile něco zaznamenáš, půjde porovnat rizikové položky a reakci v čase.'
+  }
+
+  const topItems = histamineSummary.riskyItems.slice(0, 3).map((item) => item.name || item.custom_name).filter(Boolean)
+  if (!topItems.length) {
+    return 'Dnes jsou zapsané příznaky, ale u jídel zatím není dost spárovaných SIGHI údajů pro smysluplnou stopu.'
+  }
+
+  return `Dnes jsou zapsané příznaky a největší histaminovou stopu táhnou: ${topItems.join(', ')}. Ber to jako hypotézu k pozorování, ne jako jistý závěr.`
 }
 
 function FoodValueDetails({ item }) {
@@ -3319,7 +3474,103 @@ function ExercisePanel({ todayInfo, onTodayInfoChange, profile }) {
   )
 }
 
-function ReactionsPanel({ reactions, onAddReaction, onDeleteReaction }) {
+function HistaminePanel({ histamineSummary, reactions }) {
+  const topItems = histamineSummary.riskyItems.slice(0, 6)
+  const insight = getHistamineReactionInsight(histamineSummary, reactions)
+
+  return (
+    <div className="histamine-panel">
+      <div className={`histamine-score-card ${histamineSummary.level.tone}`}>
+        <div>
+          <span>Histaminové riziko dne</span>
+          <strong>{histamineSummary.level.label}</strong>
+          <p>{histamineSummary.level.text}</p>
+        </div>
+        <div className="histamine-score">
+          <strong>{histamineSummary.score}</strong>
+          <span>bodů</span>
+        </div>
+      </div>
+
+      <div className="histamine-metrics">
+        <div>
+          <span>Spárované položky</span>
+          <strong>{histamineSummary.knownItems}</strong>
+        </div>
+        <div>
+          <span>Bez SIGHI dat</span>
+          <strong>{histamineSummary.unknownItems}</strong>
+        </div>
+        <div>
+          <span>Zapsané příznaky</span>
+          <strong>{reactions.length}</strong>
+        </div>
+      </div>
+
+      <div className="card histamine-explainer">
+        <h3 className="card-title">Jak to počítáme</h3>
+        <p>
+          Nejde o přesné mg histaminu. SIGHI je kompatibilitní škála, proto FoodLife počítá
+          orientační rizikové body podle skóre 0-3, markerů H/A/L/B a velikosti porce.
+        </p>
+      </div>
+
+      <div className="card">
+        <h3 className="card-title">Největší tahouni rizika</h3>
+        {topItems.length === 0 ? (
+          <div className="empty-box">Z dnešních jídel zatím nevychází žádná riziková SIGHI položka.</div>
+        ) : (
+          <div className="histamine-risk-list">
+            {topItems.map((item) => (
+              <div key={`${item.id}_${item.mealTitle}`} className="histamine-risk-item">
+                <div>
+                  <div className="list-title">
+                    {item.name || item.custom_name}
+                    <SighiBadge item={item} />
+                  </div>
+                  <div className="list-subtitle">
+                    {item.mealTitle || 'Jídlo'} • {formatItemAmount(item)}
+                    {item.sighi_food ? ` • SIGHI: ${item.sighi_food}` : ''}
+                  </div>
+                </div>
+                <strong>{Math.round(item.risk.points * 10) / 10} b</strong>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <h3 className="card-title">Rozpad podle jídel</h3>
+        {histamineSummary.meals.length === 0 ? (
+          <div className="empty-box">Zatím tu nejsou jídla k vyhodnocení.</div>
+        ) : (
+          <div className="histamine-meal-list">
+            {histamineSummary.meals.map(({ meal, score, level, items }) => (
+              <div key={meal.id} className="histamine-meal-row">
+                <div>
+                  <div className="list-title">{meal.title}</div>
+                  <div className="list-subtitle">
+                    {level.label}
+                    {items.length ? ` • ${items.slice(0, 3).map((item) => item.name || item.custom_name).join(', ')}` : ''}
+                  </div>
+                </div>
+                <strong>{Math.round(score * 10) / 10} b</strong>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="card histamine-insight">
+        <h3 className="card-title">Zpětné vyhodnocení</h3>
+        <p>{insight}</p>
+      </div>
+    </div>
+  )
+}
+
+function ReactionsPanel({ reactions, histamineSummary, onAddReaction, onDeleteReaction }) {
   const [type, setType] = useState(REACTION_TYPES[0])
   const [intensity, setIntensity] = useState('5')
   const [onsetTime, setOnsetTime] = useState('')
@@ -3409,13 +3660,9 @@ function ReactionsPanel({ reactions, onAddReaction, onDeleteReaction }) {
       </form>
 
       {reactions.length > 0 ? (
-        <div className="card">
-          <h4 className="card-title">Možná souvislost</h4>
-          <div className="empty-box">
-            Později zde bude analýza jídel za posledních 2–48 hodin. Reakce nemusí být
-            způsobena jen posledním jídlem, ale i kumulací potravin během dne nebo předchozích
-            dnů.
-          </div>
+        <div className="card histamine-insight">
+          <h4 className="card-title">Histaminová stopa</h4>
+          <p>{getHistamineReactionInsight(histamineSummary, reactions)}</p>
         </div>
       ) : null}
 
@@ -3959,6 +4206,10 @@ export default function App() {
     return getMealTotals(dayMeals.flatMap((meal) => meal.items || []))
   }, [dayMeals])
 
+  const histamineSummary = useMemo(() => {
+    return getHistamineSummary(dayMeals)
+  }, [dayMeals])
+
   const energyPlan = useMemo(() => {
     return calculateEnergyPlan(profile, goals, todayInfo.exerciseKcal)
   }, [profile, goals, todayInfo.exerciseKcal])
@@ -4208,6 +4459,19 @@ export default function App() {
           </AccordionSection>
 
           <AccordionSection
+            title="Histamin"
+            subtitle={`${histamineSummary.level.label} • ${histamineSummary.score} bodů`}
+            colorClass="panel-indigo"
+            isOpen={openMain === 'histamine'}
+            onToggle={() => setOpenMain(openMain === 'histamine' ? null : 'histamine')}
+          >
+            <HistaminePanel
+              histamineSummary={histamineSummary}
+              reactions={todayReactions}
+            />
+          </AccordionSection>
+
+          <AccordionSection
             title="Toaleta"
             subtitle="Počet a konzistence"
             colorClass="panel-blue"
@@ -4253,6 +4517,7 @@ export default function App() {
           >
             <ReactionsPanel
               reactions={todayReactions}
+              histamineSummary={histamineSummary}
               onAddReaction={addReaction}
               onDeleteReaction={deleteReaction}
             />

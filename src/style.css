@@ -1241,6 +1241,115 @@ textarea {
   font-weight: 580;
 }
 
+.histamine-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.histamine-score-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  border: 1px solid #e6eaf0;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.histamine-score-card span,
+.histamine-score-card p,
+.histamine-metrics span,
+.histamine-explainer p,
+.histamine-insight p {
+  color: #667085;
+}
+
+.histamine-score-card span,
+.histamine-metrics span {
+  display: block;
+  font-size: 12px;
+}
+
+.histamine-score-card strong {
+  display: block;
+  margin-top: 4px;
+  color: #101828;
+  font-size: 20px;
+  font-weight: 580;
+}
+
+.histamine-score-card p,
+.histamine-explainer p,
+.histamine-insight p {
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+.histamine-score {
+  min-width: 84px;
+  text-align: right;
+}
+
+.histamine-score strong {
+  font-size: 30px;
+}
+
+.risk-low {
+  border-color: #abefc6;
+}
+
+.risk-moderate {
+  border-color: #fedf89;
+}
+
+.risk-elevated,
+.risk-high {
+  border-color: #fecdd6;
+}
+
+.histamine-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.histamine-metrics div,
+.histamine-risk-item,
+.histamine-meal-row {
+  border: 1px solid #e6eaf0;
+  background: #fafbfc;
+  padding: 10px 12px;
+}
+
+.histamine-metrics strong {
+  display: block;
+  margin-top: 4px;
+  color: #101828;
+  font-size: 18px;
+  font-weight: 580;
+}
+
+.histamine-risk-list,
+.histamine-meal-list {
+  display: grid;
+  gap: 8px;
+}
+
+.histamine-risk-item,
+.histamine-meal-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.histamine-risk-item > strong,
+.histamine-meal-row > strong {
+  color: #101828;
+  white-space: nowrap;
+}
+
 .custom-food-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2459,6 +2568,29 @@ h4,
 }
 
 @media (max-width: 640px) {
+  .histamine-score-card,
+  .histamine-metrics,
+  .histamine-risk-item,
+  .histamine-meal-row {
+    grid-template-columns: 1fr;
+  }
+
+  .histamine-score,
+  .histamine-risk-item > strong,
+  .histamine-meal-row > strong {
+    text-align: left;
+  }
+
+  .histamine-risk-item,
+  .histamine-meal-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .histamine-metrics {
+    display: grid;
+  }
+
   .day-dashboard,
   .topbar,
   .side-panel,
