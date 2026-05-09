@@ -71,6 +71,7 @@ const PROFILE_REQUIRED_FIELDS = [
 
 const DEFAULT_DAY_INFO = {
   exercise: '',
+  exerciseEntries: [],
   exerciseKcal: '',
   toiletCount: '',
   toiletType: 'Normální',
@@ -443,6 +444,44 @@ function calculateExerciseKcal(exercise, amount, weightKg) {
   }
 
   return null
+}
+
+function normalizeExerciseEntries(todayInfo) {
+  if (Array.isArray(todayInfo.exerciseEntries) && todayInfo.exerciseEntries.length > 0) {
+    return todayInfo.exerciseEntries
+  }
+
+  if (todayInfo.exercise || todayInfo.exerciseKcal) {
+    return [{
+      id: 'legacy-exercise',
+      source: 'manual',
+      name: todayInfo.exercise || 'Ruční záznam cvičení',
+      amount: '',
+      unit: '',
+      kcal: todayInfo.exerciseKcal || '',
+      note: '',
+    }]
+  }
+
+  return []
+}
+
+function getExerciseEntriesSummary(entries) {
+  return entries
+    .map((entry) => {
+      const amount = entry.amount ? `${entry.amount}${entry.unit ? ` ${entry.unit}` : ''}` : ''
+      const kcal = parseAmount(entry.kcal)
+      return [
+        entry.name,
+        amount,
+        kcal ? `~${Math.round(kcal)} kcal` : '',
+      ].filter(Boolean).join(' ')
+    })
+    .join('; ')
+}
+
+function getExerciseEntriesKcal(entries) {
+  return entries.reduce((sum, entry) => sum + (parseAmount(entry.kcal) || 0), 0)
 }
 
 function getFoodKindLabel(food) {
@@ -2702,11 +2741,17 @@ function ExercisePanel({ todayInfo, onTodayInfoChange, profile }) {
   const [results, setResults] = useState([])
   const [selectedExercise, setSelectedExercise] = useState(null)
   const [amount, setAmount] = useState('')
+  const [manualName, setManualName] = useState('')
+  const [manualAmount, setManualAmount] = useState('')
+  const [manualKcal, setManualKcal] = useState('')
+  const [manualNote, setManualNote] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [error, setError] = useState('')
-  const [openParts, setOpenParts] = useState({ database: true, manual: false })
+  const [manualError, setManualError] = useState('')
+  const [openParts, setOpenParts] = useState({ database: true, manual: false, entries: true })
 
   const profileWeight = parseAmount(profile.weight) || parseAmount(profile.startWeight)
+  const exerciseEntries = useMemo(() => normalizeExerciseEntries(todayInfo), [todayInfo])
   const estimatedKcal = useMemo(() => (
     calculateExerciseKcal(selectedExercise, amount, profileWeight)
   ), [selectedExercise, amount, profileWeight])
@@ -2766,6 +2811,12 @@ function ExercisePanel({ todayInfo, onTodayInfoChange, profile }) {
     setError('')
   }
 
+  function syncExerciseEntries(nextEntries) {
+    onTodayInfoChange('exerciseEntries', nextEntries)
+    onTodayInfoChange('exercise', getExerciseEntriesSummary(nextEntries))
+    onTodayInfoChange('exerciseKcal', String(Math.round(getExerciseEntriesKcal(nextEntries))))
+  }
+
   function addExerciseToDay() {
     const kcal = estimatedKcal ? Math.round(estimatedKcal) : null
 
@@ -2775,18 +2826,78 @@ function ExercisePanel({ todayInfo, onTodayInfoChange, profile }) {
     }
 
     const unitLabel = getExerciseUnitLabel(selectedExercise.calc_unit)
-    const itemText = `${selectedExercise.name_cs}: ${amount} ${unitLabel} (~${kcal} kcal)`
-    const previousExercise = todayInfo.exercise?.trim()
-    const previousKcal = parseFloat(String(todayInfo.exerciseKcal || '0').replace(',', '.')) || 0
-
-    onTodayInfoChange('exercise', previousExercise ? `${previousExercise}; ${itemText}` : itemText)
-    onTodayInfoChange('exerciseKcal', String(Math.round(previousKcal + kcal)))
+    syncExerciseEntries([
+      ...exerciseEntries,
+      {
+        id: createId(),
+        source: 'database',
+        exercise_id: selectedExercise.id,
+        name: selectedExercise.name_cs,
+        amount: String(amount),
+        unit: unitLabel,
+        kcal: String(kcal),
+        category: selectedExercise.category || '',
+        intensity: selectedExercise.intensity || '',
+        calc_unit: selectedExercise.calc_unit,
+        met: selectedExercise.met,
+        kcal_per_rep: selectedExercise.kcal_per_rep,
+        kcal_per_km_per_kg: selectedExercise.kcal_per_km_per_kg,
+        note: selectedExercise.note || '',
+      },
+    ])
 
     setQuery('')
     setSelectedExercise(null)
     setAmount('')
     setResults([])
     setError('')
+  }
+
+  function addManualExercise() {
+    const kcal = parseAmount(manualKcal)
+    if (!manualName.trim() || !kcal) {
+      setManualError('Doplň název aktivity a kcal.')
+      return
+    }
+
+    syncExerciseEntries([
+      ...exerciseEntries,
+      {
+        id: createId(),
+        source: 'manual',
+        name: manualName.trim(),
+        amount: manualAmount.trim(),
+        unit: '',
+        kcal: String(Math.round(kcal)),
+        note: manualNote.trim(),
+      },
+    ])
+
+    setManualName('')
+    setManualAmount('')
+    setManualKcal('')
+    setManualNote('')
+    setManualError('')
+  }
+
+  function updateExerciseEntry(entryId, patch) {
+    const nextEntries = exerciseEntries.map((entry) => {
+      if (entry.id !== entryId) return entry
+
+      const next = { ...entry, ...patch }
+      if (Object.prototype.hasOwnProperty.call(patch, 'amount') && next.source === 'database') {
+        const recalculated = calculateExerciseKcal(next, next.amount, profileWeight)
+        if (recalculated) next.kcal = String(Math.round(recalculated))
+      }
+
+      return next
+    })
+
+    syncExerciseEntries(nextEntries)
+  }
+
+  function deleteExerciseEntry(entryId) {
+    syncExerciseEntries(exerciseEntries.filter((entry) => entry.id !== entryId))
   }
 
   return (
@@ -2853,33 +2964,129 @@ function ExercisePanel({ todayInfo, onTodayInfoChange, profile }) {
       </InnerSection>
 
       <InnerSection
-        title="Ruční zápis"
+        title="Přidat ručně"
         subtitle="Když máš údaj z hodinek nebo aplikace"
         isOpen={Boolean(openParts.manual)}
         onToggle={() => togglePart('manual')}
       >
         <div className="form-group">
-          <label className="label">Záznam cvičení</label>
+          <label className="label">Aktivita</label>
           <input
             className="input"
-            value={todayInfo.exercise || ''}
-            onChange={(e) => onTodayInfoChange('exercise', e.target.value)}
-            placeholder="Např. Posilovna 45 min, běh 5 km..."
+            value={manualName}
+            onChange={(e) => setManualName(e.target.value)}
+            placeholder="Např. Posilovna, kolo, běh..."
           />
         </div>
 
+        <div className="exercise-manual-grid">
+          <div className="form-group">
+            <label className="label">Množství / délka</label>
+            <input
+              className="input"
+              value={manualAmount}
+              onChange={(e) => setManualAmount(e.target.value)}
+              placeholder="Např. 45 min, 30 km"
+            />
+          </div>
+          <div className="form-group">
+            <label className="label">Kcal</label>
+            <input
+              className="input"
+              type="number"
+              min="0"
+              step="1"
+              value={manualKcal}
+              onChange={(e) => setManualKcal(e.target.value)}
+              placeholder="Např. 250"
+            />
+          </div>
+        </div>
+
         <div className="form-group">
-          <label className="label">Odhad spálené energie (kcal)</label>
+          <label className="label">Poznámka</label>
           <input
             className="input"
-            type="number"
-            min="0"
-            step="1"
-            value={todayInfo.exerciseKcal || ''}
-            onChange={(e) => onTodayInfoChange('exerciseKcal', e.target.value)}
-            placeholder="Např. 250"
+            value={manualNote}
+            onChange={(e) => setManualNote(e.target.value)}
+            placeholder="Např. Apple Watch, vyšší tep, kopce..."
           />
         </div>
+
+        {manualError ? <div className="inline-error">{manualError}</div> : null}
+
+        <button className="button button-full" onClick={addManualExercise}>
+          Přidat ruční záznam
+        </button>
+      </InnerSection>
+
+      <InnerSection
+        title="Dnešní cvičení"
+        subtitle={`${exerciseEntries.length} položek • ${Math.round(getExerciseEntriesKcal(exerciseEntries))} kcal`}
+        isOpen={Boolean(openParts.entries)}
+        onToggle={() => togglePart('entries')}
+      >
+        {exerciseEntries.length === 0 ? (
+          <div className="empty-box">Zatím tu není žádné cvičení.</div>
+        ) : (
+          <>
+            <div className="list">
+              {exerciseEntries.map((entry) => (
+                <div key={entry.id} className="exercise-entry editable-meal-item">
+                  <div>
+                    <div className="list-title">{entry.name}</div>
+                    <div className="list-subtitle">
+                      {entry.amount ? `${entry.amount}${entry.unit ? ` ${entry.unit}` : ''}` : 'Bez množství'}
+                      {entry.category ? ` • ${entry.category}` : ''}
+                      {entry.source === 'database' ? ' • databáze' : ' • ručně'}
+                    </div>
+                  </div>
+
+                  <div className="exercise-entry-grid">
+                    <input
+                      className="input"
+                      value={entry.name || ''}
+                      onChange={(e) => updateExerciseEntry(entry.id, { name: e.target.value })}
+                      aria-label="Název aktivity"
+                    />
+                    <input
+                      className="input"
+                      value={entry.amount || ''}
+                      onChange={(e) => updateExerciseEntry(entry.id, { amount: e.target.value })}
+                      aria-label="Množství"
+                      placeholder="Množství"
+                    />
+                    <input
+                      className="input"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={entry.kcal || ''}
+                      onChange={(e) => updateExerciseEntry(entry.id, { kcal: e.target.value })}
+                      aria-label="Kcal"
+                      placeholder="kcal"
+                    />
+                    <input
+                      className="input"
+                      value={entry.note || ''}
+                      onChange={(e) => updateExerciseEntry(entry.id, { note: e.target.value })}
+                      aria-label="Poznámka"
+                      placeholder="Poznámka"
+                    />
+                    <button className="delete-button" onClick={() => deleteExerciseEntry(entry.id)}>
+                      Smazat
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="exercise-total">
+              <span>Celkový výdej</span>
+              <strong>{Math.round(getExerciseEntriesKcal(exerciseEntries))} kcal</strong>
+            </div>
+          </>
+        )}
       </InnerSection>
     </div>
   )
