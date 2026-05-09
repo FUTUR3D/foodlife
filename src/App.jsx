@@ -1540,11 +1540,28 @@ const EMPTY_RECIPE_FORM = {
   id: null,
   title: '',
   note: '',
+  instructions: '',
+  prep_minutes: '',
+  cook_minutes: '',
+  servings: '1',
+  difficulty: 'easy',
+  goal_type: 'none',
+  carb_level: 'unknown',
+  ai_prompt: '',
   meal_types: ['snidane'],
   items: [],
 }
 
-function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEditRecipe }) {
+function RecipeLibrary({
+  recipes,
+  isLoading,
+  isOpen,
+  onToggle,
+  onUseRecipe,
+  onSaveRecipe,
+  onDeleteRecipe,
+  editRecipeRequest,
+}) {
   const [mealFilter, setMealFilter] = useState('all')
   const [goalFilter, setGoalFilter] = useState('all')
   const [query, setQuery] = useState('')
@@ -1553,6 +1570,18 @@ function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEd
   const [editChoiceRecipeId, setEditChoiceRecipeId] = useState(null)
   const [usingRecipeId, setUsingRecipeId] = useState(null)
   const [message, setMessage] = useState('')
+  const [recipeForm, setRecipeForm] = useState(EMPTY_RECIPE_FORM)
+  const [recipeSearchQuery, setRecipeSearchQuery] = useState('')
+  const [recipeSearchResults, setRecipeSearchResults] = useState([])
+  const [selectedRecipeFood, setSelectedRecipeFood] = useState(null)
+  const [recipeAmount, setRecipeAmount] = useState('')
+  const [recipeUnit, setRecipeUnit] = useState('g')
+  const [recipeItemNote, setRecipeItemNote] = useState('')
+  const [isRecipeSearching, setIsRecipeSearching] = useState(false)
+  const [isRecipeSaving, setIsRecipeSaving] = useState(false)
+  const [recipeError, setRecipeError] = useState('')
+  const [openParts, setOpenParts] = useState({ form: false, list: true, ai: false })
+  const isRecipeFormOpen = recipeForm.id !== null || recipeForm.title.trim() !== '' || recipeForm.note.trim() !== '' || recipeForm.items.length > 0 || Boolean(openParts.form)
 
   const goalLabels = {
     none: 'bez cíle',
@@ -1573,6 +1602,206 @@ function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEd
     return matchesMeal && matchesGoal && matchesQuery && recipe.items?.length
   })
 
+  useEffect(() => {
+    const q = recipeSearchQuery.trim()
+    setRecipeError('')
+
+    if (selectedRecipeFood?.name_cs === q) {
+      setRecipeSearchResults([])
+      setIsRecipeSearching(false)
+      return undefined
+    }
+
+    if (q.length < 2) {
+      setRecipeSearchResults([])
+      setIsRecipeSearching(false)
+      return undefined
+    }
+
+    const controller = new AbortController()
+    const timeout = window.setTimeout(async () => {
+      setIsRecipeSearching(true)
+      try {
+        const response = await fetch(`foods-search.php?q=${encodeURIComponent(q)}&type=food`, {
+          credentials: 'same-origin',
+          signal: controller.signal,
+        })
+        if (!response.ok) throw new Error('food_search_failed')
+        const data = await response.json()
+        setRecipeSearchResults(data.foods || [])
+      } catch (err) {
+        if (err.name !== 'AbortError') setRecipeError('Potraviny se nepodařilo načíst.')
+      } finally {
+        setIsRecipeSearching(false)
+      }
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [recipeSearchQuery, selectedRecipeFood])
+
+  function togglePart(part) {
+    setOpenParts((prev) => ({ ...prev, [part]: !prev[part] }))
+  }
+
+  function openPart(part) {
+    setOpenParts((prev) => ({ ...prev, [part]: true }))
+  }
+
+  function recipeFormFromRecipe(recipe, { asCopy = false } = {}) {
+    return {
+      id: asCopy ? null : recipe.id,
+      title: recipe.title || '',
+      note: recipe.description || '',
+      instructions: recipe.instructions || '',
+      prep_minutes: recipe.prep_minutes ?? '',
+      cook_minutes: recipe.cook_minutes ?? '',
+      servings: recipe.servings ?? '1',
+      difficulty: recipe.difficulty || 'easy',
+      goal_type: recipe.goal_type || 'none',
+      carb_level: recipe.carb_level || 'unknown',
+      ai_prompt: recipe.ai_prompt || '',
+      meal_types: recipe.meal_types?.length ? recipe.meal_types : [recipe.meal_type || 'ostatni'],
+      items: draftItemsFromRecipe(recipe),
+    }
+  }
+
+  function editRecipe(recipe, options = {}) {
+    const shouldCopy = options.asCopy || recipe.source !== 'user'
+    setRecipeForm(recipeFormFromRecipe(recipe, { asCopy: shouldCopy }))
+    setRecipeError('')
+    openPart('form')
+  }
+
+  useEffect(() => {
+    if (!editRecipeRequest?.recipe) return
+    editRecipe(editRecipeRequest.recipe, { asCopy: editRecipeRequest.asCopy })
+  }, [editRecipeRequest])
+
+  function resetRecipeForm() {
+    setRecipeForm(EMPTY_RECIPE_FORM)
+    setRecipeError('')
+    setRecipeSearchQuery('')
+    setRecipeSearchResults([])
+    setSelectedRecipeFood(null)
+    setRecipeAmount('')
+    setRecipeUnit('g')
+    setRecipeItemNote('')
+  }
+
+  function toggleRecipeType(type) {
+    setRecipeForm((prev) => {
+      const hasType = prev.meal_types.includes(type)
+      const nextTypes = hasType
+        ? prev.meal_types.filter((item) => item !== type)
+        : [...prev.meal_types, type]
+
+      return {
+        ...prev,
+        meal_types: nextTypes.length ? nextTypes : [type],
+      }
+    })
+  }
+
+  function updateRecipeItem(itemId, patch) {
+    setRecipeForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => {
+        if (item.id !== itemId) return item
+        const next = { ...item, ...patch }
+        next.grams = gramsFromAmount(next.amount, next.unit, next.serving_grams)
+        return next
+      }),
+    }))
+  }
+
+  function handleSelectRecipeFood(food) {
+    setSelectedRecipeFood(food)
+    setRecipeSearchQuery(food.name_cs)
+    setRecipeUnit(food.default_unit || 'g')
+    setRecipeAmount(food.serving_grams ? '1' : '')
+    setRecipeSearchResults([])
+  }
+
+  function handleAddRecipeItem() {
+    const parsedAmount = parseAmount(recipeAmount)
+    const name = selectedRecipeFood?.name_cs || recipeSearchQuery.trim()
+
+    if (!name || !parsedAmount) {
+      setRecipeError('Vyber surovinu a doplň množství.')
+      return
+    }
+
+    const grams = gramsFromAmount(parsedAmount, recipeUnit, selectedRecipeFood?.serving_grams)
+    setRecipeForm((prev) => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        {
+          id: createId(),
+          food_id: selectedRecipeFood?.id || null,
+          name,
+          custom_name: selectedRecipeFood ? null : name,
+          amount: parsedAmount,
+          unit: recipeUnit,
+          grams,
+          serving_grams: selectedRecipeFood?.serving_grams ?? null,
+          note: recipeItemNote.trim(),
+          kcal_100g: selectedRecipeFood?.kcal_100g ?? null,
+          protein_100g: selectedRecipeFood?.protein_100g ?? null,
+          carbs_100g: selectedRecipeFood?.carbs_100g ?? null,
+          fat_100g: selectedRecipeFood?.fat_100g ?? null,
+          fiber_100g: selectedRecipeFood?.fiber_100g ?? null,
+          ...sighiFieldsFromFood(selectedRecipeFood),
+        },
+      ],
+    }))
+
+    setRecipeSearchQuery('')
+    setRecipeSearchResults([])
+    setSelectedRecipeFood(null)
+    setRecipeAmount('')
+    setRecipeUnit('g')
+    setRecipeItemNote('')
+    setRecipeError('')
+  }
+
+  async function handleRecipeSubmit(e) {
+    e.preventDefault()
+    if (!recipeForm.title.trim()) {
+      setRecipeError('Doplň název receptu.')
+      return
+    }
+    if (recipeForm.items.length === 0) {
+      setRecipeError('Recept musí mít aspoň jednu surovinu.')
+      return
+    }
+
+    setIsRecipeSaving(true)
+    setRecipeError('')
+    try {
+      await onSaveRecipe(recipeForm)
+      setRecipeForm(EMPTY_RECIPE_FORM)
+      setMessage('Recept je uložený.')
+      openPart('list')
+    } catch {
+      setRecipeError('Recept se nepodařilo uložit.')
+    } finally {
+      setIsRecipeSaving(false)
+    }
+  }
+
+  async function handleRecipeDelete(recipeId) {
+    try {
+      await onDeleteRecipe(recipeId)
+      if (recipeForm.id === recipeId) setRecipeForm(EMPTY_RECIPE_FORM)
+    } catch {
+      setRecipeError('Recept se nepodařilo smazat.')
+    }
+  }
+
   async function handleUse(recipe, mealType) {
     setUsingRecipeId(`${recipe.id}_${mealType}`)
     setMessage('')
@@ -1588,7 +1817,7 @@ function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEd
 
   function handleEditRequest(recipe) {
     if (recipe.source !== 'user') {
-      onEditRecipe(recipe, { asCopy: true })
+      editRecipe(recipe, { asCopy: true })
       return
     }
 
@@ -1626,6 +1855,285 @@ function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEd
             </div>
           </div>
         </div>
+
+        <InnerSection
+          title={recipeForm.id ? 'Upravit recept' : 'Vytvořit recept'}
+          subtitle={`${recipeForm.items.length} surovin`}
+          isOpen={isRecipeFormOpen}
+          onToggle={() => togglePart('form')}
+        >
+          <form onSubmit={handleRecipeSubmit}>
+            <div className="recipe-form-grid">
+              <div className="form-group">
+                <label className="label">Název receptu</label>
+                <input
+                  className="input"
+                  value={recipeForm.title}
+                  onChange={(e) => setRecipeForm((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Např. jogurt s banánem a vločkami"
+                />
+              </div>
+              <div className="form-group">
+                <label className="label">Počet porcí</label>
+                <input
+                  className="input"
+                  value={recipeForm.servings}
+                  onChange={(e) => setRecipeForm((prev) => ({ ...prev, servings: e.target.value }))}
+                  placeholder="1"
+                />
+              </div>
+              <div className="form-group">
+                <label className="label">Příprava min</label>
+                <input
+                  className="input"
+                  value={recipeForm.prep_minutes}
+                  onChange={(e) => setRecipeForm((prev) => ({ ...prev, prep_minutes: e.target.value }))}
+                  placeholder="10"
+                />
+              </div>
+              <div className="form-group">
+                <label className="label">Vaření min</label>
+                <input
+                  className="input"
+                  value={recipeForm.cook_minutes}
+                  onChange={(e) => setRecipeForm((prev) => ({ ...prev, cook_minutes: e.target.value }))}
+                  placeholder="20"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="label">Tagy jídla</label>
+              <div className="recipe-tag-grid">
+                {RECIPE_MEAL_TAGS.map((tag) => (
+                  <label key={tag.key} className="recipe-tag-option">
+                    <input
+                      type="checkbox"
+                      checked={recipeForm.meal_types.includes(tag.key)}
+                      onChange={() => toggleRecipeType(tag.key)}
+                    />
+                    <span>{tag.title}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="recipe-form-grid">
+              <div className="form-group">
+                <label className="label">Zaměření</label>
+                <select
+                  className="input"
+                  value={recipeForm.goal_type}
+                  onChange={(e) => setRecipeForm((prev) => ({ ...prev, goal_type: e.target.value }))}
+                >
+                  <option value="none">Bez cíle</option>
+                  <option value="lose_weight">Hubnutí</option>
+                  <option value="maintain_weight">Udržení</option>
+                  <option value="gain_weight">Nabírání</option>
+                  <option value="digestive_comfort">Šetřit trávení</option>
+                  <option value="low_fodmap">Low FODMAP</option>
+                  <option value="low_histamine">Low histamin</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="label">Sacharidy</label>
+                <select
+                  className="input"
+                  value={recipeForm.carb_level}
+                  onChange={(e) => setRecipeForm((prev) => ({ ...prev, carb_level: e.target.value }))}
+                >
+                  <option value="unknown">Neurčeno</option>
+                  <option value="low">Nízké</option>
+                  <option value="medium">Střední</option>
+                  <option value="high">Vyšší</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="label">Obtížnost</label>
+                <select
+                  className="input"
+                  value={recipeForm.difficulty}
+                  onChange={(e) => setRecipeForm((prev) => ({ ...prev, difficulty: e.target.value }))}
+                >
+                  <option value="easy">Snadné</option>
+                  <option value="medium">Střední</option>
+                  <option value="hard">Náročné</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="label">Popis receptu</label>
+              <input
+                className="input"
+                value={recipeForm.note}
+                onChange={(e) => setRecipeForm((prev) => ({ ...prev, note: e.target.value }))}
+                placeholder="Krátký popis, pro koho se hodí, co na něm ladit..."
+              />
+            </div>
+
+            <div className="form-group food-search-wrap">
+              <label className="label">Přidat surovinu z databáze nebo vlastní potraviny</label>
+              <input
+                className="input"
+                value={recipeSearchQuery}
+                onChange={(e) => setRecipeSearchQuery(e.target.value)}
+                placeholder="Např. banán, tvaroh, vejce, moje potravina..."
+              />
+              {recipeSearchResults.length > 0 ? (
+                <div className="food-search-results">
+                  {recipeSearchResults.map((food) => (
+                    <button type="button" key={food.id} onClick={() => handleSelectRecipeFood(food)}>
+                      <span>{food.name_cs}</span>
+                      <small>
+                        <FoodKindBadge food={food} />
+                        <SighiBadge item={food} />
+                        {hasServingSize(food.default_unit, food.serving_grams)
+                          ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) •`
+                          : ''}
+                        {' '}
+                        {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
+                      </small>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {isRecipeSearching ? <div className="form-hint">Hledám...</div> : null}
+            </div>
+
+            <div className="draft-edit-grid">
+              <input
+                className="input"
+                value={recipeAmount}
+                onChange={(e) => setRecipeAmount(e.target.value)}
+                placeholder="Množství"
+                aria-label="Množství nové suroviny"
+              />
+              <select
+                className="input"
+                value={recipeUnit}
+                onChange={(e) => setRecipeUnit(e.target.value)}
+                aria-label="Jednotka nové suroviny"
+              >
+                <option value="g">g</option>
+                <option value="ml">ml</option>
+                <option value="ks">ks</option>
+                <option value="plátek">plátek</option>
+                <option value="porce">porce</option>
+                <option value="lžička">lžička</option>
+                <option value="lžíce">lžíce</option>
+              </select>
+              <input
+                className="input"
+                value={recipeItemNote}
+                onChange={(e) => setRecipeItemNote(e.target.value)}
+                placeholder="Úprava suroviny"
+                aria-label="Poznámka k nové surovině"
+              />
+              <button type="button" className="button button-light button-small" onClick={handleAddRecipeItem}>
+                Přidat
+              </button>
+            </div>
+
+            {recipeForm.items.length === 0 ? (
+              <div className="empty-box">Přidej první surovinu z databáze, nebo napiš vlastní název a množství.</div>
+            ) : (
+              <>
+                <div className="list">
+                  {recipeForm.items.map((item) => (
+                    <div key={item.id} className="editable-meal-item">
+                      <div className="list-title">{item.name}</div>
+                      <FoodValueDetails item={item} />
+                      <div className="draft-edit-grid">
+                        <input
+                          className="input"
+                          value={item.amount}
+                          onChange={(e) => updateRecipeItem(item.id, { amount: e.target.value })}
+                          aria-label="Množství"
+                        />
+                        <select
+                          className="input"
+                          value={item.unit || 'g'}
+                          onChange={(e) => updateRecipeItem(item.id, { unit: e.target.value })}
+                          aria-label="Jednotka"
+                        >
+                          <option value="g">g</option>
+                          <option value="ml">ml</option>
+                          <option value="ks">ks</option>
+                          <option value="plátek">plátek</option>
+                          <option value="porce">porce</option>
+                          <option value="lžička">lžička</option>
+                          <option value="lžíce">lžíce</option>
+                        </select>
+                        <input
+                          className="input"
+                          value={item.note || ''}
+                          onChange={(e) => updateRecipeItem(item.id, { note: e.target.value })}
+                          placeholder="Úprava suroviny"
+                          aria-label="Poznámka"
+                        />
+                        <button
+                          type="button"
+                          className="delete-button"
+                          onClick={() => setRecipeForm((prev) => ({
+                            ...prev,
+                            items: prev.items.filter((recipeItem) => recipeItem.id !== item.id),
+                          }))}
+                        >
+                          Smazat
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <MealTotals items={recipeForm.items} />
+              </>
+            )}
+
+            <div className="form-group">
+              <label className="label">Postup přípravy</label>
+              <textarea
+                className="textarea"
+                value={recipeForm.instructions}
+                onChange={(e) => setRecipeForm((prev) => ({ ...prev, instructions: e.target.value }))}
+                placeholder="1. Připrav suroviny&#10;2. Uvař / orestuj / promíchej&#10;3. Dochuť a podávej"
+              />
+            </div>
+
+            <InnerSection
+              title="AI / Google příprava"
+              subtitle="Zadání pro automatické vytvoření receptu"
+              isOpen={Boolean(openParts.ai)}
+              onToggle={() => togglePart('ai')}
+            >
+              <div className="form-group">
+                <label className="label">Co má recept splnit</label>
+                <textarea
+                  className="textarea"
+                  value={recipeForm.ai_prompt}
+                  onChange={(e) => setRecipeForm((prev) => ({ ...prev, ai_prompt: e.target.value }))}
+                  placeholder="Např. chci večeři do 20 minut, bez cibule, low histamin, hodně bílkovin, ne moc sacharidů..."
+                />
+              </div>
+              <div className="form-hint">
+                Tohle je připravené jako strukturované zadání. Další krok bude napojení na AI nebo vyhledávání receptů a automatické doplnění surovin z databáze.
+              </div>
+            </InnerSection>
+
+            {recipeError ? <div className="inline-error">{recipeError}</div> : null}
+
+            <div className="inner-action-row">
+              <button className="button button-full" type="submit" disabled={isRecipeSaving}>
+                {isRecipeSaving ? 'Ukládám...' : recipeForm.id ? 'Uložit změny receptu' : 'Uložit recept'}
+              </button>
+              {recipeForm.id || recipeForm.items.length ? (
+                <button className="button button-light" type="button" onClick={resetRecipeForm}>
+                  Nový recept
+                </button>
+              ) : null}
+            </div>
+          </form>
+        </InnerSection>
 
         <div className="recipe-filter-grid">
           <div className="form-group">
@@ -1735,6 +2243,15 @@ function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEd
                         >
                           {isSystemRecipe ? 'Upravit kopii' : 'Upravit'}
                         </button>
+                        {!isSystemRecipe ? (
+                          <button
+                            className="delete-button"
+                            type="button"
+                            onClick={() => handleRecipeDelete(recipe.id)}
+                          >
+                            Smazat
+                          </button>
+                        ) : null}
                       </div>
                       {editChoiceRecipeId === recipe.id ? (
                         <div className="recipe-edit-choice">
@@ -1745,7 +2262,7 @@ function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEd
                               type="button"
                               onClick={() => {
                                 setEditChoiceRecipeId(null)
-                                onEditRecipe(recipe, { asCopy: false })
+                                editRecipe(recipe, { asCopy: false })
                               }}
                             >
                               Upravit stávající
@@ -1755,7 +2272,7 @@ function RecipeLibrary({ recipes, isLoading, isOpen, onToggle, onUseRecipe, onEd
                               type="button"
                               onClick={() => {
                                 setEditChoiceRecipeId(null)
-                                onEditRecipe(recipe, { asCopy: true })
+                                editRecipe(recipe, { asCopy: true })
                               }}
                             >
                               Vytvořit kopii
@@ -2109,7 +2626,7 @@ function CustomFoodsManager({
   return (
     <AccordionSection
       title="Moje potraviny"
-      subtitle={`${foods.length} vlastních položek • ${recipes.length} jídel`}
+      subtitle={`${foods.length} vlastních položek`}
       colorClass="panel-violet"
       isOpen={isOpen}
       onToggle={onToggle}
@@ -2284,6 +2801,7 @@ function CustomFoodsManager({
         )}
       </InnerSection>
 
+      {false ? (
       <InnerSection
         title={isRecipeFormOpen ? (recipeForm.id ? 'Upravit uložené jídlo' : 'Upravit kopii jídla') : 'Uložená jídla'}
         subtitle={`${recipes.length} jídel`}
@@ -2489,6 +3007,7 @@ function CustomFoodsManager({
           </div>
         )}
       </InnerSection>
+      ) : null}
     </AccordionSection>
   )
 }
@@ -3998,7 +4517,7 @@ export default function App() {
 
   function openRecipeEditor(recipe, options = {}) {
     setOpenMain('food')
-    setOpenMeal('custom-foods')
+    setOpenMeal('recipes')
     setRecipeEditRequest({ recipe, asCopy: Boolean(options.asCopy), token: Date.now() })
   }
 
@@ -4117,6 +4636,15 @@ export default function App() {
         title: recipe.title,
         meal_types: recipe.meal_types,
         note: recipe.note,
+        description: recipe.note,
+        instructions: recipe.instructions,
+        prep_minutes: recipe.prep_minutes,
+        cook_minutes: recipe.cook_minutes,
+        servings: recipe.servings,
+        difficulty: recipe.difficulty,
+        goal_type: recipe.goal_type,
+        carb_level: recipe.carb_level,
+        ai_prompt: recipe.ai_prompt,
         items: recipe.items,
       }),
     })
@@ -4364,15 +4892,6 @@ export default function App() {
             <div className="accordion-stack">
               {isMealsLoading ? <div className="empty-box">Načítám dnešní jídla...</div> : null}
 
-              <RecipeLibrary
-                recipes={recipes}
-                isLoading={isRecipesLoading}
-                isOpen={openMeal === 'recipes'}
-                onToggle={() => setOpenMeal(openMeal === 'recipes' ? null : 'recipes')}
-                onUseRecipe={useRecipeForMeal}
-                onEditRecipe={openRecipeEditor}
-              />
-
               {FOOD_MEAL_SECTIONS.map((section) => (
                 <MealSection
                   key={section.key}
@@ -4387,6 +4906,17 @@ export default function App() {
                   onSaveRecipe={saveRecipe}
                 />
               ))}
+
+              <RecipeLibrary
+                recipes={recipes}
+                isLoading={isRecipesLoading}
+                isOpen={openMeal === 'recipes'}
+                onToggle={() => setOpenMeal(openMeal === 'recipes' ? null : 'recipes')}
+                onUseRecipe={useRecipeForMeal}
+                onSaveRecipe={saveRecipe}
+                onDeleteRecipe={deleteRecipe}
+                editRecipeRequest={recipeEditRequest}
+              />
 
               <CustomFoodsManager
                 foods={customFoods}

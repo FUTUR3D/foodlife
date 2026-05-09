@@ -10,7 +10,15 @@ if (!$mealTypes) {
     $mealTypes = [valid_meal_type($data['meal_type'] ?? '')];
 }
 $mealType = $mealTypes[0];
-$note = trim($data['note'] ?? '');
+$note = trim($data['description'] ?? $data['note'] ?? '');
+$instructions = trim($data['instructions'] ?? '');
+$prepMinutes = isset($data['prep_minutes']) && $data['prep_minutes'] !== '' ? max(0, (int) $data['prep_minutes']) : null;
+$cookMinutes = isset($data['cook_minutes']) && $data['cook_minutes'] !== '' ? max(0, (int) $data['cook_minutes']) : null;
+$servings = isset($data['servings']) && $data['servings'] !== '' ? max(0.1, (float) $data['servings']) : 1;
+$difficulty = in_array(($data['difficulty'] ?? 'easy'), ['easy', 'medium', 'hard'], true) ? $data['difficulty'] : 'easy';
+$goalType = in_array(($data['goal_type'] ?? 'none'), ['none', 'lose_weight', 'maintain_weight', 'gain_weight', 'digestive_comfort', 'low_fodmap', 'low_histamine'], true) ? $data['goal_type'] : 'none';
+$carbLevel = in_array(($data['carb_level'] ?? 'unknown'), ['unknown', 'low', 'medium', 'high'], true) ? $data['carb_level'] : 'unknown';
+$aiPrompt = trim($data['ai_prompt'] ?? '');
 $items = $data['items'] ?? [];
 $recipeId = isset($data['recipe_id']) && $data['recipe_id'] !== '' ? (int) $data['recipe_id'] : 0;
 
@@ -29,13 +37,21 @@ try {
     if ($recipeId > 0) {
         $stmt = $pdo->prepare('
             UPDATE recipes
-            SET title = ?, description = ?, meal_type = ?
+            SET title = ?, description = ?, meal_type = ?, servings = ?, prep_minutes = ?, cook_minutes = ?, instructions = ?, difficulty = ?, goal_type = ?, carb_level = ?, ai_prompt = ?
             WHERE id = ? AND user_id = ?
         ');
         $stmt->execute([
             $title,
             $note === '' ? null : $note,
             $mealType,
+            $servings,
+            $prepMinutes,
+            $cookMinutes,
+            $instructions === '' ? null : $instructions,
+            $difficulty,
+            $goalType,
+            $carbLevel,
+            $aiPrompt === '' ? null : $aiPrompt,
             $recipeId,
             $userId,
         ]);
@@ -53,14 +69,22 @@ try {
         $deleteTypeStmt->execute([$recipeId]);
     } else {
         $stmt = $pdo->prepare('
-            INSERT INTO recipes (user_id, title, description, meal_type, servings, is_public, goal_type)
-            VALUES (?, ?, ?, ?, 1, 0, "none")
+            INSERT INTO recipes (user_id, title, description, meal_type, servings, prep_minutes, cook_minutes, instructions, difficulty, is_public, goal_type, carb_level, ai_prompt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
         ');
         $stmt->execute([
             $userId,
             $title,
             $note === '' ? null : $note,
             $mealType,
+            $servings,
+            $prepMinutes,
+            $cookMinutes,
+            $instructions === '' ? null : $instructions,
+            $difficulty,
+            $goalType,
+            $carbLevel,
+            $aiPrompt === '' ? null : $aiPrompt,
         ]);
         $recipeId = (int) $pdo->lastInsertId();
     }

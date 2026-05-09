@@ -1536,6 +1536,12 @@ textarea {
   gap: 10px;
 }
 
+.recipe-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 120px));
+  gap: 10px;
+}
+
 .recipe-card-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1911,6 +1917,7 @@ textarea {
   .custom-food-grid,
   .profile-grid,
   .recipe-smart-box,
+  .recipe-form-grid,
   .recipe-filter-grid,
   .recipe-card-grid,
   .recipe-compact-list,
