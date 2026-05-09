@@ -503,43 +503,123 @@ function FoodKindBadge({ food }) {
   return <span className="food-badge">{label}</span>
 }
 
+function hasSighiInfo(item) {
+  return item?.sighi_score_raw !== null && item?.sighi_score_raw !== undefined
+}
+
+function SighiBadge({ item }) {
+  if (!hasSighiInfo(item)) return null
+
+  const raw = item.sighi_score_raw ?? '?'
+  const score = item.sighi_score
+  const className = score === null || score === undefined
+    ? 'sighi-badge sighi-unknown'
+    : `sighi-badge sighi-${score}`
+
+  return <span className={className}>SIGHI {raw}</span>
+}
+
+function getSighiMarkers(item) {
+  return [
+    item.histamine_marker ? `H: histamin ${item.histamine_marker}` : '',
+    item.other_amines_marker ? `A: aminy ${item.other_amines_marker}` : '',
+    item.liberator_marker ? `L: liberátor ${item.liberator_marker}` : '',
+    item.inhibitor_marker ? `B: DAO blokátor ${item.inhibitor_marker}` : '',
+    item.uncertain_marker ? `?: ${item.uncertain_marker}` : '',
+    item.other_marker ? item.other_marker : '',
+  ].filter(Boolean)
+}
+
+function SighiDetails({ item }) {
+  if (!hasSighiInfo(item)) return null
+  const markers = getSighiMarkers(item)
+
+  return (
+    <div className="sighi-details">
+      <div>
+        <span>Histamin</span>
+        <strong><SighiBadge item={item} /></strong>
+      </div>
+      {item.sighi_food ? (
+        <div>
+          <span>SIGHI shoda</span>
+          <strong>{item.sighi_food}</strong>
+        </div>
+      ) : null}
+      {markers.length ? (
+        <div>
+          <span>Markery</span>
+          <strong>{markers.join(' • ')}</strong>
+        </div>
+      ) : null}
+      {item.sighi_notes ? (
+        <div>
+          <span>Poznámka</span>
+          <strong>{item.sighi_notes}</strong>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function sighiFieldsFromFood(food) {
+  return {
+    sighi_id: food?.sighi_id ?? null,
+    sighi_food: food?.sighi_food ?? null,
+    sighi_score_raw: food?.sighi_score_raw ?? null,
+    sighi_score: food?.sighi_score ?? null,
+    histamine_marker: food?.histamine_marker ?? null,
+    other_amines_marker: food?.other_amines_marker ?? null,
+    liberator_marker: food?.liberator_marker ?? null,
+    inhibitor_marker: food?.inhibitor_marker ?? null,
+    uncertain_marker: food?.uncertain_marker ?? null,
+    other_marker: food?.other_marker ?? null,
+    sighi_notes: food?.sighi_notes ?? null,
+    sighi_confidence: food?.sighi_confidence ?? null,
+    sighi_match_method: food?.sighi_match_method ?? null,
+  }
+}
+
 function FoodValueDetails({ item }) {
   const totals = getItemTotals(item)
   const hasValues = totals.knownItems > 0
 
   return (
-    <div className="food-value-details">
-      <div>
-        <span>Přepočet</span>
-        <strong>{formatItemMeasure(item, totals.grams)}</strong>
-      </div>
-      <div>
-        <span>Energie</span>
-        <strong>{hasValues ? `${Math.round(totals.kcal)} kcal` : '-'}</strong>
-      </div>
-      <div>
-        <span>Bílkoviny</span>
-        <strong>{hasValues ? formatMacro(totals.protein) : '-'}</strong>
-      </div>
-      <div>
-        <span>Sacharidy</span>
-        <strong>{hasValues ? formatMacro(totals.carbs) : '-'}</strong>
-      </div>
-      <div>
-        <span>Tuky</span>
-        <strong>{hasValues ? formatMacro(totals.fat) : '-'}</strong>
-      </div>
-      <div>
-        <span>Vláknina</span>
-        <strong>{hasValues ? formatMacro(totals.fiber) : '-'}</strong>
-      </div>
-      {hasServingSize(item.unit, item.serving_grams) ? (
+    <>
+      <div className="food-value-details">
         <div>
-          <span>Porce</span>
-          <strong>1 {formatUnitWithServing(item.unit, item.serving_grams)}</strong>
+          <span>Přepočet</span>
+          <strong>{formatItemMeasure(item, totals.grams)}</strong>
         </div>
-      ) : null}
-    </div>
+        <div>
+          <span>Energie</span>
+          <strong>{hasValues ? `${Math.round(totals.kcal)} kcal` : '-'}</strong>
+        </div>
+        <div>
+          <span>Bílkoviny</span>
+          <strong>{hasValues ? formatMacro(totals.protein) : '-'}</strong>
+        </div>
+        <div>
+          <span>Sacharidy</span>
+          <strong>{hasValues ? formatMacro(totals.carbs) : '-'}</strong>
+        </div>
+        <div>
+          <span>Tuky</span>
+          <strong>{hasValues ? formatMacro(totals.fat) : '-'}</strong>
+        </div>
+        <div>
+          <span>Vláknina</span>
+          <strong>{hasValues ? formatMacro(totals.fiber) : '-'}</strong>
+        </div>
+        {hasServingSize(item.unit, item.serving_grams) ? (
+          <div>
+            <span>Porce</span>
+            <strong>1 {formatUnitWithServing(item.unit, item.serving_grams)}</strong>
+          </div>
+        ) : null}
+      </div>
+      <SighiDetails item={item} />
+    </>
   )
 }
 
@@ -1123,6 +1203,7 @@ function draftItemsFromRecipe(recipe) {
     carbs_100g: item.carbs_100g,
     fat_100g: item.fat_100g,
     fiber_100g: item.fiber_100g,
+    ...sighiFieldsFromFood(item),
   }))
 }
 
@@ -1788,6 +1869,7 @@ function CustomFoodsManager({
           carbs_100g: selectedRecipeFood?.carbs_100g ?? null,
           fat_100g: selectedRecipeFood?.fat_100g ?? null,
           fiber_100g: selectedRecipeFood?.fiber_100g ?? null,
+          ...sighiFieldsFromFood(selectedRecipeFood),
         },
       ],
     }))
@@ -1898,6 +1980,7 @@ function CustomFoodsManager({
                   <span>{food.name_cs}</span>
                   <small>
                     <FoodKindBadge food={food} />
+                    <SighiBadge item={food} />
                     {hasServingSize(food.default_unit, food.serving_grams)
                       ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) •`
                       : ''}
@@ -2018,6 +2101,7 @@ function CustomFoodsManager({
                   <div className="list-title">{food.name_cs}</div>
                   <div className="list-subtitle">
                     <FoodKindBadge food={food} />
+                    <SighiBadge item={food} />
                     {' '}
                     {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
                     {hasServingSize(food.default_unit, food.serving_grams) ? ` • 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g)` : ''}
@@ -2104,6 +2188,7 @@ function CustomFoodsManager({
                       <span>{food.name_cs}</span>
                       <small>
                         <FoodKindBadge food={food} />
+                        <SighiBadge item={food} />
                         {hasServingSize(food.default_unit, food.serving_grams)
                           ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) -`
                           : ''}
@@ -2363,6 +2448,7 @@ function MealSection({
         carbs_100g: selectedFood?.carbs_100g ?? null,
         fat_100g: selectedFood?.fat_100g ?? null,
         fiber_100g: selectedFood?.fiber_100g ?? null,
+        ...sighiFieldsFromFood(selectedFood),
       },
     ])
 
@@ -2430,6 +2516,7 @@ function MealSection({
       carbs_100g: item.carbs_100g,
       fat_100g: item.fat_100g,
       fiber_100g: item.fiber_100g,
+      ...sighiFieldsFromFood(item),
     })))
     setMealNote(meal.note || '')
     setError('')
@@ -2635,6 +2722,7 @@ function MealSection({
                   <span>{food.name_cs}</span>
                   <small>
                     <FoodKindBadge food={food} />
+                    <SighiBadge item={food} />
                     {hasServingSize(food.default_unit, food.serving_grams) ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) • ` : ' '}
                     {Math.round(Number(food.kcal_100g || 0))} kcal / 100 {section.key === 'piti' ? 'ml' : 'g'}
                   </small>
@@ -2716,6 +2804,7 @@ function MealSection({
                       <div className="list-subtitle">
                         {formatItemAmount(item)}
                         {item.note ? ` • ${item.note}` : ''}
+                        <SighiBadge item={item} />
                       </div>
                     </div>
                   </button>
@@ -2835,7 +2924,7 @@ function MealSection({
                   {meal.items.map((item) => (
                     <div key={item.id} className="saved-meal-item">
                       <button className="meal-item-toggle" onClick={() => toggleSavedItem(item.id)}>
-                        <span>{item.name || item.custom_name}</span>
+                        <span>{item.name || item.custom_name}<SighiBadge item={item} /></span>
                         <span>{formatItemAmount(item)}</span>
                       </button>
                       {expandedSavedItems[item.id] ? <FoodValueDetails item={item} /> : null}

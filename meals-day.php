@@ -3,6 +3,9 @@ require 'api-helpers.php';
 
 $userId = require_json_user();
 $date = valid_date_or_today($_GET['date'] ?? null);
+$sighiEnabled = has_sighi_tables($pdo);
+$sighiSelect = $sighiEnabled ? sighi_select_sql('f') : sighi_empty_select_sql();
+$sighiJoin = $sighiEnabled ? sighi_join_sql('f') : '';
 
 $stmt = $pdo->prepare('
     SELECT
@@ -28,9 +31,11 @@ $stmt = $pdo->prepare('
         f.carbs_100g,
         f.fat_100g,
         f.fiber_100g
+        ' . $sighiSelect . '
     FROM meals m
     LEFT JOIN meal_items mi ON mi.meal_id = m.id
     LEFT JOIN foods f ON f.id = mi.food_id
+    ' . $sighiJoin . '
     WHERE m.user_id = ? AND DATE(m.meal_time) = ?
     ORDER BY m.meal_time ASC, m.id ASC, mi.id ASC
 ');
@@ -69,7 +74,7 @@ foreach ($stmt->fetchAll() as $row) {
             'carbs_100g' => $row['carbs_100g'] === null ? null : (float) $row['carbs_100g'],
             'fat_100g' => $row['fat_100g'] === null ? null : (float) $row['fat_100g'],
             'fiber_100g' => $row['fiber_100g'] === null ? null : (float) $row['fiber_100g'],
-        ];
+        ] + sighi_payload($row);
     }
 }
 

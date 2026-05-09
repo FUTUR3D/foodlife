@@ -1020,6 +1020,72 @@ textarea {
   font-weight: 600;
 }
 
+.sighi-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  border: 1px solid #e4e7ec;
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #f2f4f7;
+  color: #475467;
+  font-size: 11px;
+  font-weight: 560;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.sighi-0 {
+  border-color: #abefc6;
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.sighi-1 {
+  border-color: #fedf89;
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.sighi-2,
+.sighi-3 {
+  border-color: #fecdd6;
+  background: #fff1f3;
+  color: #c01048;
+}
+
+.sighi-details {
+  display: grid;
+  gap: 0;
+  margin: 8px 0;
+  border: 1px solid #e7edf5;
+  border-radius: 8px;
+  background: #f9fbfd;
+}
+
+.sighi-details div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 10px;
+  padding: 7px 9px;
+  border-top: 1px solid #e7edf5;
+}
+
+.sighi-details div:first-child {
+  border-top: 0;
+}
+
+.sighi-details span {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.sighi-details strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 560;
+}
+
 .food-edit-notice {
   margin-bottom: 14px;
   border: 1px solid #bfdbfe;
@@ -1808,7 +1874,8 @@ strong,
 .dashboard-progress-row span,
 .dashboard-macros span,
 .side-progress span,
-.side-metric-grid span {
+.side-metric-grid span,
+.sighi-details span {
   font-weight: 400;
   color: #667085;
 }
@@ -1846,6 +1913,7 @@ strong,
 .empty-box,
 .meal-totals div,
 .food-value-details,
+.sighi-details,
 .dashboard-progress-row div,
 .dashboard-macros div,
 .side-progress div,
@@ -1883,6 +1951,7 @@ strong,
 .exercise-total,
 .meal-totals div,
 .food-value-details,
+.sighi-details,
 .dashboard-progress-row div,
 .dashboard-macros div,
 .side-progress div,
@@ -1925,7 +1994,8 @@ strong,
 .recipe-save-box,
 .hydration-top div,
 .exercise-estimate,
-.exercise-total {
+.exercise-total,
+.sighi-details {
   background: #fbfcfd;
 }
 
@@ -2247,6 +2317,7 @@ h4,
 .side-metric-grid div,
 .meal-totals div,
 .food-value-details,
+.sighi-details,
 .recipe-smart-box,
 .recipe-edit-choice,
 .food-chip,
@@ -2266,7 +2337,8 @@ h4,
 .side-progress strong,
 .side-metric-grid strong,
 .meal-totals strong,
-.food-value-details strong {
+.food-value-details strong,
+.sighi-details strong {
   color: #101828;
   font-weight: 560;
 }
@@ -2308,6 +2380,7 @@ h4,
 
 .recipe-source,
 .food-value-details span,
+.sighi-details span,
 .meal-totals span,
 .list-subtitle,
 .form-hint,
@@ -2317,10 +2390,30 @@ h4,
 
 .recipe-meta-row span,
 .recipe-chip-list span,
-.food-badge {
+.food-badge,
+.sighi-badge {
   background: #f2f4f7;
   color: #475467;
   font-weight: 500;
+}
+
+.sighi-0 {
+  border-color: #abefc6;
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.sighi-1 {
+  border-color: #fedf89;
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.sighi-2,
+.sighi-3 {
+  border-color: #fecdd6;
+  background: #fff1f3;
+  color: #c01048;
 }
 
 .side-menu {

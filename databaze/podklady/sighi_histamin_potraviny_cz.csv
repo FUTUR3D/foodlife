@@ -1,0 +1,715 @@
+﻿page;category;subcategory;food;sighi_score;histamine_marker;other_amines_marker;liberator_marker;inhibitor_marker;uncertain_marker;other_marker;notes
+3;Potraviny živočišného původu;Vejce;vaječný bílek;2;;;L;;;;Aktivuje žírné buňky (především v syrovém stavu, ale i po uvaření).
+3;Potraviny živočišného původu;Vejce;vaječný žloutek;0;;;;;;;
+3;Potraviny živočišného původu;Vejce;vejce křepelčí;0;;;;;;;
+3;Potraviny živočišného původu;Vejce;vejce, vejce slepičí;2;;;L;;;;Žloutek je kompatibilní, bílek aktivuje žírné buňky (především v syrovém stavu, ale i po uvaření)
+3;Potraviny živočišného původu;Mléčné produkty;hotové sýrové přípravky (s dalšími ingrediencemi);2;;;;;"histamin?; amines?; liberator?";;Záleží na ingrediencích a čerstvosti.
+3;Potraviny živočišného původu;Mléčné produkty;jogurt (neochucený);1;H;;;;amines?;;Produkty se mohou lišit.
+3;Potraviny živočišného původu;Mléčné produkty;kefír;1;H;A;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;máslo (ošetřené mléčnou kulturou);1;H;A;;;;;Může obsahovat malé množství histaminu, obvykle dobře tolerováno.
+3;Potraviny živočišného původu;Mléčné produkty;máslo čerstvé, máslo (smetanové);0;;;;;;;Nefermentované máslo.
+3;Potraviny živočišného původu;Mléčné produkty;mléčné produkty z neošetřeného mléka;2;H;A;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;mléko kozí;0;;;;;liberator?;;
+3;Potraviny živočišného původu;Mléčné produkty;mléko ovčí;0;;;;;liberator?;;
+3;Potraviny živočišného původu;Mléčné produkty;mléko, bezlaktózové;1;H;;;;liberator?;;Někdy dobře tolerováno, někdy tolerováno hůře než klasické mléko.
+3;Potraviny živočišného původu;Mléčné produkty;mléko, nepasterizované, tepelně neošetřené;0;H!;;;;"amines?; liberator?";;Rychle se kazící díky obsahu bakterií. Používat pouze čerstvé.
+3;Potraviny živočišného původu;Mléčné produkty;mléko, pasterizované;0;;;;;liberator?;;Mléko může vadit, pokud je střevo stále rozdrážděné.
+3;Potraviny živočišného původu;Mléčné produkty;mléko, sušené;1;;;;;"histamin?; liberator?";;Tolerance je individuální.
+3;Potraviny živočišného původu;Mléčné produkty;mléko, UHT;0;;;;;liberator?;;UHT příprava
+3;Potraviny živočišného původu;Mléčné produkty;podmáslí (mírně kyselé, na začátku fermentace);1;H;;;;;;Fermentace bakteriemi mléčného kvašení.
+3;Potraviny živočišného původu;Mléčné produkty;smetana sladká (bez aditiv, neochucená);0;;;;;;;Tolerována (bez fermentace). Vždy kontrolovat aditiva (často se používají ztužovače či stabilizátory E410, E407).
+3;Potraviny živočišného původu;Mléčné produkty;smetana zakysaná;1;H;;;;;;Fermentace bakteriemi mléčného kvašení. Mírně zvýšený obsah histaminu.
+3;Potraviny živočišného původu;Mléčné produkty;sýr z nepasterizovaného mléka;2;H;A;;;;;Riziko zvýšeného obsahu bakterií z tepelně neošetřeného mléka.
+3;Potraviny živočišného původu;Mléčné produkty;sýr: Butterkäse;0;;;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: čedar;2;H;A;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: dlouho zrající, vyzrálý;3;H;A;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: feta;1;H;A;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: fontina;2;H;A;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: Geheimratskäse;0;;;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: gouda (mladý);0;;;;;;;Doporučeno pouze malé množství.
+3;Potraviny živočišného původu;Mléčné produkty;sýr: gouda (vyzrálý);2;;;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: mascarpone;0;;;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: mozzarella;0;;;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: nezrající (bez aditiv, neochucený);0;;;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: plísňový;2;H;A;;;liberator?;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: raclette;2;H;A;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: ricotta;0;;;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: roquefort;2;H;A;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;sýr: tavený;2;H;A;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;syrovátka;0;;;;;;;
+3;Potraviny živočišného původu;Mléčné produkty;tvaroh;0;;;;;;;
+3;Potraviny živočišného původu;Maso;klobásy;3;H;;;;"amines?; liberator?";;Několik přípustných výjimek.
+3;Potraviny živočišného původu;Maso;maso drůbeží;0;H!;;;;;;
+3;Potraviny živočišného původu;Maso;maso hovězí (čerstvé);0;H!;;;;;;
+3;Potraviny živočišného původu;Maso;maso kachní;0;H!;;;;;;
+3;Potraviny živočišného původu;Maso;maso křepelčí;0;H!;;;;;;
+3;Potraviny živočišného původu;Maso;maso krůtí;0;H!;;;;;;
+3;Potraviny živočišného původu;Maso;maso kuřecí;0;H!;;;;;;
+3;Potraviny živočišného původu;Maso;maso mleté (balené, dříve připravené, neznámé stáří);2;H;A;;;;;Vysoce závislé na čerstvosti.
+3;Potraviny živočišného původu;Maso;maso mleté (ihned po umletí);0;;;;;;;Vysoce závislé na čerstvosti.
+3;Potraviny živočišného původu;Maso;maso pštrosí;0;H!;;;;;;
+3;Potraviny živočišného původu;Maso;maso sušené;3;H;A;;;liberator?;;
+4;Potraviny živočišného původu;Maso;ryba uzená;3;H;;;;"amines?; liberator?";;
+4;Potraviny živočišného původu;Maso;salám;3;H;A;;;liberator?;;
+4;Potraviny živočišného původu;Maso;šunka (sušená, ošetřená);3;H;A;;;liberator?;;
+4;Potraviny živočišného původu;Maso;vnitřnosti: jazyk (telecí, hovězí);0;;;;;;;Zkontrolovat přítomnost netolerovaných surovin, pokud bylo zakoupeno jako hotové jídlo. Pouze neuzené.
+4;Potraviny živočišného původu;Ryby;ančovičky;3;H;A;;;;;
+4;Potraviny živočišného původu;Ryby;pstruh;0;H!;;;;;;Rychle se kazící. Rychlé hromadění histaminu.
+4;Potraviny živočišného původu;Ryby;ryba (čerstvě ulovená, hluboce mražená);0;H!;A;;;;;Velmi závislé na čerstvosti a druhu.
+4;Potraviny živočišného původu;Ryby;ryba (kupovaná chlazená);3;H!;A;;;;;Velmi závislé na čerstvosti a druhu.
+4;Potraviny živočišného původu;Ryby;tuňák;3;H;A;;;;;
+4;Potraviny živočišného původu;Mořské plody;humr;2;H!;;L;;;;
+4;Potraviny živočišného původu;Mořské plody;krab;2;H!;;L;;;;
+4;Potraviny živočišného původu;Mořské plody;krevety;2;H!;;L;;;;
+4;Potraviny živočišného původu;Mořské plody;langusta;2;H!;;L;;;;
+4;Potraviny živočišného původu;Mořské plody;měkkýši;2;H!;;L;;;;(mušle, ústřice, krab, humr, krevety)
+4;Potraviny živočišného původu;Mořské plody;mlži (mušle, ústřice, hřebenatky, slávky);2;H!;;L;;;;
+4;Potraviny živočišného původu;Mořské plody;mořské plody;2;H!;;L;;;;
+4;Potraviny živočišného původu;Mořské plody;rak;2;H!;;L;;;;
+4;Potraviny živočišného původu;Mořské plody;ústřice;2;H!;;L;;;;
+4;Potraviny živočišného původu;Ostatní;sádlo;0;;;;;;;
+4;Potraviny rostlinného původu;Zdroje škrobů;amarant;0;;;;;;;Může způsobovat průjmy u některých lidí. Jedná se o pseudoobilninu, nezaměňovat s barvivem amaranth.
+4;Potraviny rostlinného původu;Zdroje škrobů;batáty, sladké brambory;0;;;;;;;
+4;Potraviny rostlinného původu;Zdroje škrobů;brambory neloupané;0;;;;;;;Uchovávejte v temnu. Zelené skrvny jsou jedovaté. Vysoký obsah salicylátů (snížená tolerance při salicylátové intoleranci).
+4;Potraviny rostlinného původu;Zdroje škrobů;brambory, loupané;0;;;;;;;Uchovávejte v temnu. Zelené skrvny jsou jedovaté. Vysoký obsah salicylátů (snížená tolerance při salicylátové intoleranci).
+4;Potraviny rostlinného původu;Zdroje škrobů;brambory, nové, neloupané;0;;;;;;;Uchovávejte v temnu. Zelené skrvny jsou jedovaté. Vysoký obsah salicylátů (snížená tolerance při salicylátové intoleranci).
+4;Potraviny rostlinného původu;Zdroje škrobů;chléb;1;;;;;histamin?;;Problémy často způsobené přítomností: sladu, jódu, fermentaci, přítomností ATIs (inhibitory amyláz/tryptáz) z obilnin.
+4;Potraviny rostlinného původu;Zdroje škrobů;jáhly;0;;;;;;;
+4;Potraviny rostlinného původu;Zdroje škrobů;jam, sladké brambory, batáty;0;;;;;;;
+4;Potraviny rostlinného původu;Zdroje škrobů;ječmen;1;;;;;;;
+4;Potraviny rostlinného původu;Zdroje škrobů;ječný slad, slad;2;;;;;"histamin?; amines?; liberator?";;
+4;Potraviny rostlinného původu;Zdroje škrobů;kamut, pšenice khorasan;0;;;;;;;Vybírejte původní staré odrůdy, moderní odrůdy mohou obsahovat více ATI (inhibitory amyláz/tryptáz)
+4;Potraviny rostlinného původu;Zdroje škrobů;kaštany (jedlé);0;;;;;;;
+4;Potraviny rostlinného původu;Zdroje škrobů;konopné semínko (Cannabis sativa);0;;;;;;;Nehalucinogenní odrůdy.
+4;Potraviny rostlinného původu;Zdroje škrobů;kukuřice sladká, klas;0;;;;;;;Těžko stravitelná.
+4;Potraviny rostlinného původu;Zdroje škrobů;kukuřice sladká, z konzervy;0;;;;;;;Těžko stravitelná. Pravděpodobně nevhodná po dlouhém skladování či ve větším množství.
+4;Potraviny rostlinného původu;Zdroje škrobů;kukuřice, sušená (mouka, kaše);0;;;;;;;
+4;Potraviny rostlinného původu;Zdroje škrobů;kukuřičné lupínky;0;;;;;;!;Dávat si pozor na přítomnost sladu, kyseliny folové.
+4;Potraviny rostlinného původu;Zdroje škrobů;laskavec;0;;;;;;;Může způsobovat průjmy u některých lidí. Jedná se o pseudoobilninu, nezaměňovat s barvivem amaranth.
+4;Potraviny rostlinného původu;Zdroje škrobů;maltodextrin;0;;;;;;;
+4;Potraviny rostlinného původu;Zdroje škrobů;oves;0;;;;;;;Některé odrůdy mohou být méně tolerovány (nadýmání).
+4;Potraviny rostlinného původu;Zdroje škrobů;pečivo;1;;;;;histamin?;;Problémy často způsobené přítomností: sladu, jódu, fermentaci, přítomností ATIs (inhibitory amyláz/tryptáz) z obilnin.
+4;Potraviny rostlinného původu;Zdroje škrobů;pohanka;2;;;;;"amines?; liberator?";;Nekompatibilní pouze neloupaná pohanka?
+4;Potraviny rostlinného původu;Zdroje škrobů;proso;0;;;;;;;
+4;Potraviny rostlinného původu;Zdroje škrobů;pšenice;1;;;;;"histamin?; liberator?";;Sporná. Nejčastěji zažívací potíže jako nadýmání.
+4;Potraviny rostlinného původu;Zdroje škrobů;pšenice khorasan, kamut;0;;;;;;;Vybírejte původní staré odrůdy, moderní odrůdy mohou obsahovat více ATI (inhibitory amyláz/tryptáz)
+4;Potraviny rostlinného původu;Zdroje škrobů;pšenice špalda;0;;;;;liberator?;;Vybírejte původní staré odrůdy, moderní odrůdy mohou obsahovat více ATI (inhibitory amyláz/tryptáz)
+5;Potraviny rostlinného původu;Zdroje škrobů;ságo;0;;;;;;;
+5;Potraviny rostlinného původu;Zdroje škrobů;škrobovitá moučka ságo;0;;;;;;;
+5;Potraviny rostlinného původu;Zdroje škrobů;slad, slad ječný;2;;;;;"histamin?; amines?; liberator?";;
+5;Potraviny rostlinného původu;Zdroje škrobů;sladké brambory (Povijnice batátová), batáty;0;;;;;;;
+5;Potraviny rostlinného původu;Zdroje škrobů;slunečnicová semínka;2;;;L;;;;
+5;Potraviny rostlinného původu;Zdroje škrobů;špalda;0;;;;;liberator?;;Vybírejte původní staré odrůdy, moderní odrůdy mohou obsahovat více ATI (inhibitory amyláz/tryptáz)
+5;Potraviny rostlinného původu;Zdroje škrobů;žito;1;;;;;;;Špatně tolerováno.
+5;Potraviny rostlinného původu;Ořechy;arašídy;2;;;;;;;
+5;Potraviny rostlinného původu;Ořechy;chufa;0;;;;;;;Nejedná se o ořech, ale o hlízu.
+5;Potraviny rostlinného původu;Ořechy;chufa, šáchor jedlý, zemní mandle: pražené;2;;;;;liberator?;;Nejedná se o ořech, ale o hlízu.
+5;Potraviny rostlinného původu;Ořechy;kešu;1;;A;L;;;;
+5;Potraviny rostlinného původu;Ořechy;lískové ořechy;1;;;L;;;;
+5;Potraviny rostlinného původu;Ořechy;makademia ořechy;0;;;;;;;
+5;Potraviny rostlinného původu;Ořechy;mandle;1;;;;;;;Malé množství dobře tolerováno. Může způsobovat problémy se spánkem.
+5;Potraviny rostlinného původu;Ořechy;ořechy;3;;;;;;;Sporné. V závislosti na druhu.
+5;Potraviny rostlinného původu;Ořechy;para ořechy;0;;;;;;;Max. 1-2 ks denně jako zdroj selenia.
+5;Potraviny rostlinného původu;Ořechy;piniová semínka;1;;;;;liberator?;;Více druhů, některé mohou být hůře tolerovány?
+5;Potraviny rostlinného původu;Ořechy;pistácie;0;;;;;;;
+5;Potraviny rostlinného původu;Ořechy;šáchor jedlý;0;;;;;;;Nejedná se o ořech, ale o hlízu.
+5;Potraviny rostlinného původu;Ořechy;šáchor jedlý, zemní mandle: pražené;2;;;;;liberator?;;Nejedná se o ořech, ale o hlízu.
+5;Potraviny rostlinného původu;Ořechy;vlašské ořechy;3;;A;L;;;;
+5;Potraviny rostlinného původu;Ořechy;zemní mandle;0;;;;;;;Nejedná se o ořech, ale o hlízu.
+5;Potraviny rostlinného původu;Ořechy;zemní mandle, šáchor jedlý: pražené;2;;;;;liberator?;;Nejedná se o ořech, ale o hlízu.
+5;Potraviny rostlinného původu;Tuky a oleje;kokosový olej;0;;;;;;;Velmi doporučovaný.
+5;Potraviny rostlinného původu;Tuky a oleje;margarín (bez aditiv);0;;;;;;;Zkontrolovat možná aditiva.
+5;Potraviny rostlinného původu;Tuky a oleje;olej dýňový;0;;;;;;;Za studena výraběný olej z pražených dýňových semínek.
+5;Potraviny rostlinného původu;Tuky a oleje;olej kokosový;0;;;;;;;Velmi doporučovaný.
+5;Potraviny rostlinného původu;Tuky a oleje;olej olivový;0;;;;;;;Nevhodné pro osoby se salicylátovou intolerancí.
+5;Potraviny rostlinného původu;Tuky a oleje;olej palmový;0;;;;;;;Nedoporučován pro ekologický dopad, jinak je dobře tolerován.
+5;Potraviny rostlinného původu;Tuky a oleje;olej řepkový;0;;;;;;;
+5;Potraviny rostlinného původu;Tuky a oleje;olej slunečnicový;1;;;;;;;Jednorázově je bezproblémový, nedoporučován dlouhodobě pro jeho zánětlivé působení.
+5;Potraviny rostlinného původu;Tuky a oleje;olej z černuchy seté (Nigella sativa);0;;;;;;;protilargický
+5;Potraviny rostlinného původu;Tuky a oleje;olej z vlašských ořechů;2;;;;;liberator?;;
+5;Potraviny rostlinného původu;Tuky a oleje;olej ze světlice;0;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;artyčoky;0;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;avokádo;2;H;;L;;;;
+5;Potraviny rostlinného původu;Zelenina;bambusové výhonky;?;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;bob obecný;2;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;bok choi;0;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;brokolice;0;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;čajot;?;;;;;;;Pravděpodobně špatná tolerance.
+5;Potraviny rostlinného původu;Zelenina;čekanka (Cichorium intybus);0;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;čekanka listová;0;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;celer;0;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;česnek;1;;;;;;;V menších dávkách po uvaření obvykle velmi dobře tolerován.
+5;Potraviny rostlinného původu;Zelenina;chřest;0;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;cibule;1;;;L;;;;Nevhodná ve větších množství.
+5;Potraviny rostlinného původu;Zelenina;cibule bílá;0;;;;;;;Jedná se o druh cibule.
+5;Potraviny rostlinného původu;Zelenina;čili paprička, červená, čerstvá;2;;;;;liberator?;;Nedoporučováno pro možnou dráždivost.
+5;Potraviny rostlinného původu;Zelenina;cizrna;2;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;čočka;2;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;cuketa;0;;;;;;;
+5;Potraviny rostlinného původu;Zelenina;dýně (různé druhy);0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;hrách žlutý (sušený);1;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;hrášek;1;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;kapusta;1;;;;;liberator?;;
+6;Potraviny rostlinného původu;Zelenina;kapusta růžičková;1;;;L;;;;
+6;Potraviny rostlinného původu;Zelenina;kedluben;1;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;kelp (řasa);2;;;L;;;;např. jako ingredience bylinkových solí
+6;Potraviny rostlinného původu;Zelenina;kopřiva;2;H;;;;"amines?; liberator?";;
+6;Potraviny rostlinného původu;Zelenina;křen;1;;;L;;;;
+6;Potraviny rostlinného původu;Zelenina;květák;0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;lilek;2;H;;;;"amines?; liberator?; inhibitor?";;
+6;Potraviny rostlinného původu;Zelenina;luštěniny, strukoviny (sója, fazole, hrách, čočka);2;;A;L;;;;
+6;Potraviny rostlinného původu;Zelenina;mangold;1;;;;;liberator?;;
+6;Potraviny rostlinného původu;Zelenina;mrkev;0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;nakládaná zelenina;2;H;;;;amines?;;
+6;Potraviny rostlinného původu;Zelenina;nakládané okurky;2;H;;;;amines?;;
+6;Potraviny rostlinného původu;Zelenina;okurka;0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;olivy;2;;;;;"histamin?; amines?";;Obvykle fermentované, často s dalšími aditivy.
+6;Potraviny rostlinného původu;Zelenina;pak choi;0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;paprika (pálivá);2;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;paprika (sladká);0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;pastinák;0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;pór;1;;;;;liberator?;;V malých dávkách obvykle velmi dobře tolerován.
+6;Potraviny rostlinného původu;Zelenina;rajče;2;H;;L;;;;
+6;Potraviny rostlinného původu;Zelenina;ředkvička bílá;0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;ředkvička červená;0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;řepa červená;0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;řeřicha (Lepidium sativum);?;;;;;liberator?;;
+6;Potraviny rostlinného původu;Zelenina;rukola (Diplotaxis tenuifolia);2;;;L;;;;
+6;Potraviny rostlinného původu;Zelenina;salát;0;;;;;;;Jedná se o rostlinu, ne hotový produkt.
+6;Potraviny rostlinného původu;Zelenina;salát ledový;0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;salát polníček (kozlíček polní);0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;sója (sušená, sójová mouka);2;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;špenát;2;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;tykev;0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;vodnice;?;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;zelené fazolky;1;;;;;;;Někdy mohou být dobře tolerovány.
+6;Potraviny rostlinného původu;Zelenina;zelenina nakládaná;2;H;;;;amines?;;
+6;Potraviny rostlinného původu;Zelenina;zelí;0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;zelí bílé;0;;;;;;;
+6;Potraviny rostlinného původu;Zelenina;zelí červené;0;;;;;liberator?;;
+6;Potraviny rostlinného původu;Zelenina;zelí kvašené;3;H;;;;;;
+6;Potraviny rostlinného původu;Zelenina;zelí nakládané;3;H;;;;;;
+6;Potraviny rostlinného původu;Zelenina;zelí pekingské;0;;;;;;;
+6;Potraviny rostlinného původu;Bylinky;bazalka;0;;;;;;;
+6;Potraviny rostlinného původu;Bylinky;česnek medvědí;1;;;L;;;;Malé množství je velmi dobře tolerováno.
+6;Potraviny rostlinného původu;Bylinky;kopr;1;;;;;;;Malé množství není obvykle problém, nevhodné při salicylátové intoleranci.
+6;Potraviny rostlinného původu;Bylinky;máta;0;;;;;;;Nevhodné pro osoby se salicylátovou intolerancí.
+6;Potraviny rostlinného původu;Bylinky;oregáno;0;;;;;;;
+6;Potraviny rostlinného původu;Bylinky;pažitka;1;;;;;;;Nevhodné ve větším množství.
+6;Potraviny rostlinného původu;Bylinky;petržel;0;;;;;;;
+6;Potraviny rostlinného původu;Bylinky;pískavice (Trigonella caerulea);2;;;;;;;
+6;Potraviny rostlinného původu;Bylinky;pískavice řecké seno (Trigonella foenum-graecum);2;;;;;;;
+6;Potraviny rostlinného původu;Bylinky;rostliny rodu trigonella a trifolium;2;;;;;;;např. pískavice
+6;Potraviny rostlinného původu;Bylinky;rozmarýn;0;;;;;;;
+6;Potraviny rostlinného původu;Bylinky;šalvěj;0;;;;;;;
+6;Potraviny rostlinného původu;Bylinky;saturejka;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;bez černý;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;borůvky;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;boysenberry, ostružinomaliník;?;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;broskev;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;brusinka kanadská, klikva;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;brusinka, brusnice brusinka;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;citrón;2;;A;L;;;;
+7;Potraviny rostlinného původu;Ovoce;citrónová kůra;2;;;L;;amines?;;
+7;Potraviny rostlinného původu;Ovoce;citrusy;2;;A;L;;;;
+7;Potraviny rostlinného původu;Ovoce;datle (sušené);0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;fíky (čerstvé nebo sušené);1;;;;;;;Mohou mít mírné projímací účinky.
+7;Potraviny rostlinného původu;Ovoce;goji;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;granátové jablko;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;grapefruit, grep;2;;A;L;;;;
+7;Potraviny rostlinného původu;Ovoce;guave;2;;;;;liberator?;;
+7;Potraviny rostlinného původu;Ovoce;hrozinky;0;;;;;;;Pokud nejsou sířené. Nevhodné při intoleranci salicylátů.
+7;Potraviny rostlinného původu;Ovoce;hrozny;0;;;;;amines?;;
+7;Potraviny rostlinného původu;Ovoce;hruška;1;;A;;;;;
+7;Potraviny rostlinného původu;Ovoce;hruška nashi;?;;;;;amines?;;
+7;Potraviny rostlinného původu;Ovoce;hruška, loupaná, naložená v sirupu;1;;A;;;;;
+7;Potraviny rostlinného původu;Ovoce;jablko;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;jablko: golden delicious;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;jahoda;2;;A;L;;;;
+7;Potraviny rostlinného původu;Ovoce;josta;0;;;;;;;Hybrid angreštu a černého rybízu.
+7;Potraviny rostlinného původu;Ovoce;kakao, kakaový prášek (čokoláda atd.);2;;A;L;;;;
+7;Potraviny rostlinného původu;Ovoce;kakaové máslo;0;;;;;amines?;;Převážně dobře tolerováno.
+7;Potraviny rostlinného původu;Ovoce;kaki;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;karambola;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;kdoule;0;;;;;amines?;;
+7;Potraviny rostlinného původu;Ovoce;kiwi;2;;;L;;amines?;;
+7;Potraviny rostlinného původu;Ovoce;kokos, kokosové mléko;0;;;;;;;Dobrý zdroj selenu.
+7;Potraviny rostlinného původu;Ovoce;kustovnice;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;liči;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;limetka;3;;A;L;;;;
+7;Potraviny rostlinného původu;Ovoce;loganberry;?;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;maliny;2;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;mandarinka;2;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;mango;1;;;;;liberator?;;K diskuzi. Velmi často dobře tolerováno.
+7;Potraviny rostlinného původu;Ovoce;marakuja;?;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;meloun (mimo vodního melounu);0;;;;;liberator?;;Podezření na možné liberační účinky (při přítomnosti postřiků na slupce?)
+7;Potraviny rostlinného původu;Ovoce;meloun vodní;1;;;;;liberator?;;Podezření na liberační účinky (při přítomnosti postřiků na slupce?).
+7;Potraviny rostlinného původu;Ovoce;meruňka;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;moruše;?;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;mučenka;?;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;muďoul, pawpaw;?;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;nektarinka;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;opuncie;?;;;;;;;Vyhněte se kontaktu kůže s trny.
+7;Potraviny rostlinného původu;Ovoce;ostružina;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;papája;2;;A;L;;;;
+7;Potraviny rostlinného původu;Ovoce;pitaya, dračí ovoce;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;pomeranč;3;;A;L;;;;
+7;Potraviny rostlinného původu;Ovoce;pomerančová kůra;3;;;L;;amines?;;
+7;Potraviny rostlinného původu;Ovoce;rakytník;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;rebarbora;1;;;;;;;Sporné. Velmi často dobře tolerované. Obsahuje oxaláty.
+7;Potraviny rostlinného původu;Ovoce;rozinky;0;;;;;;;Pokud nejsou sířené. Nevhodné při intoleranci salicylátů.
+7;Potraviny rostlinného původu;Ovoce;rybíz černý;0;;;;;;;
+7;Potraviny rostlinného původu;Ovoce;rybíz červený;0;;;;;;;
+8;Potraviny rostlinného původu;Ovoce;chia (Salvia hispanice);0;;;;;;;
+8;Potraviny rostlinného původu;Ovoce;psyllium;0;;;;;;;Může být užitečné jak při průjmu, tak při zácpě.
+8;Potraviny rostlinného původu;Ovoce;semínka dýňová;0;;;;;;;
+8;Potraviny rostlinného původu;Ovoce;sezam;1;;;;;;;U někoho může vyvolávat průjem.
+8;Potraviny rostlinného původu;Houby;hnědé řasy;3;;;L;;;;Extrémně bohaté na jód.
+8;Potraviny rostlinného původu;Houby;houby;2;;;;;;;
+8;Potraviny rostlinného původu;Houby;hřib smrkový;2;;;;;;;
+8;Potraviny rostlinného původu;Houby;kelp;3;;;L;;;;Extrémně bohaté na jód.
+8;Potraviny rostlinného původu;Houby;kvasnice (čerstvé, sušené);1;;;;;;;Dobře tolerováno, pokud jsou vyráběny za přísných hygienických podmínek. Netolerováno v pečivu (obzvláště při dlouhém kvašení). Vysoký obsah glutamátů.
+8;Potraviny rostlinného původu;Houby;mořské řasy;3;;;L;;;;Extrémně bohaté na jód.
+8;Potraviny rostlinného původu;Houby;smrž;2;;;;;;;
+8;Potraviny rostlinného původu;Houby;wakame;3;;;L;;;;Extrémně bohaté na jód.
+8;Potraviny rostlinného původu;Houby;wakame;3;;;L;;;;Extrémně bohaté na jód.
+8;Potraviny rostlinného původu;Houby;žampiony;1;;A;;;;;
+8;Potraviny rostlinného původu;Sladidla;agáve nektar, agáve sirup;0;;;;;;;Vysoký obsah fruktózy.
+8;Potraviny rostlinného původu;Sladidla;březový cukr, xylitol, xylit, E967;0;;;;;;;
+8;Potraviny rostlinného původu;Sladidla;cukr (řepný, třtinový);0;;;;;;;Používat pouze šetrně, omezit.
+8;Potraviny rostlinného původu;Sladidla;dextróza;0;;;;;;;Glukózový sirup může obsahovat vysoký obsah fruktózy, glukóza je bez obsahu fruktózy.
+8;Potraviny rostlinného původu;Sladidla;E420, sorbitol, glucitol, sorbit;0;;;;;;;Projímadlo, diuretikum. Neslučitelné s intolerancí sorbitolu a dědičnou fruktózovou intolerancí.
+8;Potraviny rostlinného původu;Sladidla;E967, xylitol, xylit, březový cukr;0;;;;;;;
+8;Potraviny rostlinného původu;Sladidla;fruktóza;0;;;;;;;Velké množství může vyvolat zažívací potíže.
+8;Potraviny rostlinného původu;Sladidla;glukóza;0;;;;;;;Glukózový sirup může obsahovat vysoký obsah fruktózy, glukóza je bez obsahu fruktózy.
+8;Potraviny rostlinného původu;Sladidla;invertní cukr, invertovaný cukr;0;;;;;;;
+8;Potraviny rostlinného původu;Sladidla;javorový sirup;0;;;;;;;
+8;Potraviny rostlinného původu;Sladidla;karamel (zkaramelizovaný cukr);0;;;;;;;
+8;Potraviny rostlinného původu;Sladidla;kořen lékořice;2;;;;;liberator?;;
+8;Potraviny rostlinného původu;Sladidla;laktóza (mléčný cukr);0;;;;;;;
+8;Potraviny rostlinného původu;Sladidla;maltóza, sladový cukr;0;;;;;;;
+8;Potraviny rostlinného původu;Sladidla;med;0;;;;;;;K diskuzi. Sporné. Obsahuje přirozené vysoký obsah kyseliny benzoové.
+8;Potraviny rostlinného původu;Sladidla;palmový cukr;?;;;;;liberator?;;
+8;Potraviny rostlinného původu;Sladidla;sacharóza;0;;;;;;;Používat pouze šetrně, omezit.
+8;Potraviny rostlinného původu;Sladidla;sladový extrakt;2;;;;;;;
+8;Potraviny rostlinného původu;Sladidla;sorbitol, glucitol, sorbit, E420;0;;;;;;;Projímadlo, diuretikum. Neslučitelné s intolerancí sorbitolu a dědičnou fruktózovou intolerancí.
+8;Potraviny rostlinného původu;Sladidla;stevie (listy, prášek, tekuté sladidlo);0;;;;;;;
+8;Potraviny rostlinného původu;Sladidla;umělá sladidla;1;;;;;;;Sukralóza je tolerovaná.
+8;Potraviny rostlinného původu;Sladidla;xylitol, xylit, březový cukr, E967;0;;;;;;;
+8;Potraviny rostlinného původu;Koření, dochucovadla;anýz, bedrník anýz;?;;;;;;;
+8;Potraviny rostlinného původu;Koření, dochucovadla;badyán;?;;;;;;;
+8;Potraviny rostlinného původu;Koření, dochucovadla;bobkový list;?;;;;;;;Malé množství dobře tolerováno, žádná zkušenost s větším množstvím.
+8;Potraviny rostlinného původu;Koření, dochucovadla;bujón (kvasničný extrakt, masový extrakt, glutamát);2;;;;;;;Téměř vždy obsahuje nevhodné sloučeniny/aditiva.
+8;Potraviny rostlinného původu;Koření, dochucovadla;černucha setá (Nigella sativa);0;;;;;;;protialergický
+8;Potraviny rostlinného původu;Koření, dochucovadla;hořčičné semínko;2;;;L;;;;hořčičná semínka a výrobky z nich
+8;Potraviny rostlinného původu;Koření, dochucovadla;hřebíček;0;;;;;;;Malé množství dobře tolerováno, žádná zkušenost s větším množstvím.
+8;Potraviny rostlinného původu;Koření, dochucovadla;jalovec;0;;;;;;;
+8;Potraviny rostlinného původu;Koření, dochucovadla;kardamom;0;;;;;;;Používat střídmě. Jako koření se prodává více odrůd (různá míra tolerance?).
+8;Potraviny rostlinného původu;Koření, dochucovadla;kari koření;2;;;;;;;
+8;Potraviny rostlinného původu;Koření, dochucovadla;kmín;0;;;;;;;Pozitivní efekt: odstranění těžkých kovů. Nezaměňovat s kmínem římským.
+8;Potraviny rostlinného původu;Koření, dochucovadla;kmín černý (Nigella sativa);0;;;;;;;protialergický
+9;Potraviny rostlinného původu;Koření, dochucovadla;masový extrakt;2;;;;;"histamin?; amines?; liberator?";;
+9;Potraviny rostlinného původu;Koření, dochucovadla;muškátový oříšek;1;;;;;;;Malé množství dobře tolerováno.
+9;Potraviny rostlinného původu;Koření, dochucovadla;ocet: balzamiko;3;H;;;;amines?;;
+9;Potraviny rostlinného původu;Koření, dochucovadla;ocet: jablečný ocet;1;H;;;;amines?;;Zkontrujte obsah nevhodných aditiv.
+9;Potraviny rostlinného původu;Koření, dochucovadla;ocet: lihový ocet;0;;;;;histamin?;;Nízkohistaminový, užívat šetrně. Zkontrolujte obsah nevhodných aditiv.
+9;Potraviny rostlinného původu;Koření, dochucovadla;ocet: vinný (z červeného vína);3;H;;;;amines?;;
+9;Potraviny rostlinného původu;Koření, dochucovadla;ocet: vinný (z bílého vína);3;H;;;;amines?;;
+9;Potraviny rostlinného původu;Koření, dochucovadla;paprika pálivá, koření;2;;;;;;;Dráždivá pro střevo.
+9;Potraviny rostlinného původu;Koření, dochucovadla;paprika sladká, koření;0;;;;;;;
+9;Potraviny rostlinného původu;Koření, dochucovadla;pepř bílý;2;;;;;;;Malé množství dobře tolerováno.
+9;Potraviny rostlinného původu;Koření, dochucovadla;pepř černý;2;;;;;;;Malé množství dobře tolerováno.
+9;Potraviny rostlinného původu;Koření, dochucovadla;skořice;0;;;;;;;
+9;Potraviny rostlinného původu;Koření, dochucovadla;sójová omáčka;3;;;;;;;
+9;Potraviny rostlinného původu;Koření, dochucovadla;tymián;0;;;;;;;
+9;Potraviny rostlinného původu;Koření, dochucovadla;vanilka, vanilkový prášek;1;;;;;"histamin?; liberator?";;Tolerovaná v malých množstvích. Fermentace. Možné stopy siřičitanů (pozor na přídavek vanilinu).
+9;Potraviny rostlinného původu;Koření, dochucovadla;vanilkový cukr;1;;;;;"histamin?; liberator?";;Tolerovaná v malých množstvích. Fermentace. Možné stopy siřičitanů (pozor na přídavek vanilinu).
+9;Potraviny rostlinného původu;Koření, dochucovadla;vanilkový extrakt;1;;;;;"histamin?; liberator?";;Z fermentovaných plodů, alkohol
+9;Potraviny rostlinného původu;Koření, dochucovadla;zázvor;1;;;;;;;Malé množství dobře tolerováno.
+9;Nápoje;Voda;kohoutková voda;0;;;;;;;
+9;Nápoje;Voda;minerální voda (bez bublinek);0;;;;;;;
+9;Nápoje;Voda;termální voda (s obsahem síry, fluoru, jódu..);1;;;;;liberator?;;
+9;Nápoje;Alkoholické nápoje;alkohol;3;;;L;B;;;
+9;Nápoje;Alkoholické nápoje;alkoholické nápoje;3;H;A;L;B;;;
+9;Nápoje;Alkoholické nápoje;brandy;2;H;A;L;B;;;
+9;Nápoje;Alkoholické nápoje;etanol;3;;;L;B;;;
+9;Nápoje;Alkoholické nápoje;pálenka (čirá, bez aditiv);2;;;L;B;"histamin?; amines?";;
+9;Nápoje;Alkoholické nápoje;pálenka (přibarvená, ochucená);3;H;A;L;B;;;
+9;Nápoje;Alkoholické nápoje;pivo;2;H;A;L;B;;;
+9;Nápoje;Alkoholické nápoje;rum;2;H;A;L;B;;;
+9;Nápoje;Alkoholické nápoje;šampaňské;3;H;A;L;B;;;
+9;Nápoje;Alkoholické nápoje;šumivé víno;3;H;A;L;B;;;
+9;Nápoje;Alkoholické nápoje;víno;3;H;A;L;B;;;
+9;Nápoje;Alkoholické nápoje;víno nízkohistaminové (<0.1 mg/l);1;;;L;B;amines?;;Stále obsahuje alkohol, vhodné pro vaření, kde se alkohol vyprchá.
+9;Nápoje;Alkoholické nápoje;víno: bílé;2;H;A;L;B;;;
+9;Nápoje;Alkoholické nápoje;víno: červené;3;H;A;L;B;;;
+9;Nápoje;Alkoholické nápoje;víno: Schilcherwein;2;H;A;L;B;;;
+9;Nápoje;Čaje;čaj z verbeny;0;;;;;;;Má uklidňující efekt na trávící a nervovou soustavu.
+9;Nápoje;Čaje;čaj: bylinný (léčivé byliny, především směsi);1;;;;;liberator?;;Může obsahovat netolerovanou surovinu.
+9;Nápoje;Čaje;čaj: černý;2;H;;;B;;;
+9;Nápoje;Čaje;čaj: heřmánkový;0;;;;;;;
+9;Nápoje;Čaje;čaj: kopřivový čaj;1;H;;;;"amines?; liberator?";;
+9;Nápoje;Čaje;čaj: lipový;0;;;;;;;
+9;Nápoje;Čaje;čaj: maté;1;;;;B;;;
+9;Nápoje;Čaje;čaj: mátový;0;;;;;;;
+9;Nápoje;Čaje;čaj: roiboos;0;;;;;;;Pozor na čajové mixy, kde se k tolerovanému čaji (roiboos) pridávají netolerované složky.
+9;Nápoje;Čaje;čaj: šalvějový;0;;;;;;;
+9;Nápoje;Čaje;čaj: zelený čaj;1;;;;B;;;
+9;Nápoje;Džusy, ovocné nektary;brusinkový nektar;0;;;;;;;
+9;Nápoje;Džusy, ovocné nektary;pomerančový džus;2;;;L;;;;
+9;Nápoje;Zeleninové džusy;rajčatový džus;2;;;L;;;;
+10;Nápoje;Zeleninové džusy;kolové nápoje;1;;;;;;;viz kofein a perlivé nápoje
+10;Nápoje;Rostlinné náhrady mléka;ovesný nápoj, ovesné mléko;1;;;;;;;Může obsahovat menší množství histaminu po enzymatické fermentaci.
+10;Nápoje;Rostlinné náhrady mléka;rýžové mléko;1;;;;;;;Může obsahovat menší množství histaminu po enzymatické fermentaci.
+10;Nápoje;Rostlinné náhrady mléka;sójové mléko;2;;;;;;;
+10;Nápoje;Limonády;bezová šťáva;0;;;;;;;
+10;Nápoje;Limonády;čokoládové nápoje;2;;;;;;;
+10;Nápoje;Limonády;horká čokoláda;2;;;;;;;
+10;Nápoje;Limonády;kakaové nápoje;2;;;;;;;
+10;Nápoje;Limonády;limonády;1;;;;;;;Závisí na složení.
+10;Potravinová aditiva;;amoniakový karamel, E150c;0;;;;;;;Pravděpodobně méně tolerovaný než E150.
+10;Potravinová aditiva;;citronan vápenatý, citrát vápenatý, E333;1;;;;;liberator?;;Často dobře tolerováno.
+10;Potravinová aditiva;;E122, azorubin, karmoisin, CI potravinářská červeň 3;2;;;L;;;;
+10;Potravinová aditiva;;E227, hydrogensiřičitan vápenatý;2;;;L;;;;
+10;Potravinová aditiva;;E623, glutaman vápenatý, glutamát vápenatý;2;;;L;;;;
+10;Potravinová aditiva;;hydroxypropylmethylcelulóza, E464;0;;;;;;;
+10;Potravinová aditiva;;košenila, kyselina karmínová, karmíny, E120;2;;;L;;;;
+10;Potravinová aditiva;;kyselina vinná, E334;0;;;;;;;
+10;Potravinová aditiva;;litholrubin BK, E180;2;;;L;;;;Povolen pouze v obalech sýrů.
+10;Potravinová aditiva;;propylgallát, E310;2;;;L;;;;
+10;Potravinová aditiva;;tragant, E413;2;;;L;;;;
+10;Potravinová aditiva;;uhlík z rostlinné suroviny, E153;0;;;;;;;
+10;Potravinová aditiva;;, kyselina erythorbová, E315;0;;;;;;;
+10;Potravinová aditiva;;160b, annatto, bixin, norbixin;2;;;L;;;;
+10;Potravinová aditiva;;agar, E406;1;;;;;liberator?;;
+10;Potravinová aditiva;;alfa-tokoferol, E307;0;;;;;;;
+10;Potravinová aditiva;;alginát amonný, E403;2;;;L;;;;
+10;Potravinová aditiva;;alginát draselný, E402;2;;;L;;;;
+10;Potravinová aditiva;;alginát sodný, E401;2;;;L;;;;
+10;Potravinová aditiva;;alginát vápenatý, E404;2;;;L;;;;
+10;Potravinová aditiva;;amaranth, E123;2;;;L;;;;Barvivo, nezaměňovat s pseudoobilninou.
+10;Potravinová aditiva;;amoniak-sulfitový karamel, E150d;0;;;;;;;Pravděpodobně méně tolerovaný než E150.
+10;Potravinová aditiva;;annatto, bixin, norbixin, E160b, bixin, norbixin, E160b;2;;;L;;;;
+10;Potravinová aditiva;;anthokyany, E163;0;;;;;;;
+10;Potravinová aditiva;;arabská guma, E414;1;;;L;;;;
+10;Potravinová aditiva;;aromata, aroma;1;;;;;;;Jakákoli. Obvykle špatně tolerována.
+10;Potravinová aditiva;;askorban sodný, askorbát sodný, E301;0;;;;;;;
+10;Potravinová aditiva;;askorban vápenatý, askorbát vápenatý, E302;0;;;;;;;
+10;Potravinová aditiva;;azogeranin, E128;2;;;L;;;;
+10;Potravinová aditiva;;azorubin, karmoisin, E122;2;;;L;;;;
+10;Potravinová aditiva;;benzoan draselný, benzoát draselný, E212;2;;;L;;;;
+10;Potravinová aditiva;;benzoan sodný, benzoát sodný, E211;2;;;L;;;;
+10;Potravinová aditiva;;benzoan vápenatý, benzoát vápenatý, E213;2;;;L;;;;
+10;Potravinová aditiva;;benzoáty, E210-213;2;;;L;;;;
+10;Potravinová aditiva;;beta-apo-8-karotenal, E160e;?;;;;;;;
+10;Potravinová aditiva;;betanin, E162;0;;;;;;;
+10;Potravinová aditiva;;borax, tetraboritan sodný, E285;?;;;;;;;Velmi jedovatý, je povolen pouze v kaviáru.
+10;Potravinová aditiva;;brilantní čerň BN, E151;3;;;L;;;;
+10;Potravinová aditiva;;brilantní modř FCF, E133;?;;;;;liberator?;;
+10;Potravinová aditiva;;butylhydroxyanisol (BHA), E320;2;;;L;;;;
+10;Potravinová aditiva;;butylhydroxytoluen (BHT), E321;2;;;L;;;;
+10;Potravinová aditiva;;celulózy, E460;0;;;;;;;
+10;Potravinová aditiva;;čerň BN, E151;3;;;L;;;;
+10;Potravinová aditiva;;červeň 2G, E128;2;;;L;;;;
+10;Potravinová aditiva;;červeň Allura AC, E129;2;;;L;;;;Zákaz používání v některých zemích.
+11;Potravinová aditiva;;CI potravinářská červeň 7, E124;2;;;L;;;;
+11;Potravinová aditiva;;CI potravinářská hněď 1, E154;2;;;L;;;;
+11;Potravinová aditiva;;CI potravinářská hněď 3, E155;2;;;L;;;;
+11;Potravinová aditiva;;CI potravinářská modř 2, E133;?;;;;;liberator?;;
+11;Potravinová aditiva;;CI potravinářská modř V, E131;2;;;L;;;;
+11;Potravinová aditiva;;citronan draselný, citrát draselný, E332;1;;;;;liberator?;;Často dobře tolerováno.
+11;Potravinová aditiva;;citronan triamonný, E380;1;;;;;liberator?;;
+11;Potravinová aditiva;;citronany sodné, citráty sodné, E331;1;;;;;liberator?;;Často dobře tolerováno.
+11;Potravinová aditiva;;Cl potravinářská červeň 14, E127;3;;;L;;inhibitor?;;
+11;Potravinová aditiva;;Cl potravinářská modř 1, E132;2;;;L;;;;
+11;Potravinová aditiva;;Cl potravinářská žluť 3, E110;3;;;L;;;;
+11;Potravinová aditiva;;delta-tokoferol, E309;0;;;;;;;
+11;Potravinová aditiva;;dimethyldikarbonát, DMDC, dimethylpyrokarbonát, E242;?;;;;;;;
+11;Potravinová aditiva;;dimethylpyrokarbonát, E242;?;;;;;;;
+11;Potravinová aditiva;;dimethylsilikonový olej, E900;?;;;;;;;
+11;Potravinová aditiva;;disiřičitan draselný, E224;2;;;L;;;;
+11;Potravinová aditiva;;disiřičitan sodný, E223;2;;;L;;;;
+11;Potravinová aditiva;;dodecylgallát, E312;2;;;L;;;;
+11;Potravinová aditiva;;dusičnan draselný, ledek, E252;?;;;;;;;
+11;Potravinová aditiva;;dusičnan sodný, chilský ledek, E251;?;;;;;;;
+11;Potravinová aditiva;;dusitan draselný, E249;?;;;;;;;
+11;Potravinová aditiva;;dusitan sodný, E250;0;;;;;;;
+11;Potravinová aditiva;;E100, kurkumin;0;;;;;;;
+11;Potravinová aditiva;;E101a, riboflavin-5'-fosfát;1;;;L;;;;
+11;Potravinová aditiva;;E102, tartrazin;3;;;L;;;;
+11;Potravinová aditiva;;E104, chinolinová žluť;3;;;L;;;;
+11;Potravinová aditiva;;E110, žluť SY, Cl potravinářská žluť 3;3;;;L;;;;
+11;Potravinová aditiva;;E1103, invertasa;0;;;;;;;
+11;Potravinová aditiva;;E1105, lysozym;?;;;;;;;
+11;Potravinová aditiva;;E120, košenila, kyselina karmínová, karmíny;2;;;L;;;;
+11;Potravinová aditiva;;E1200, polydextrosy;?;;;;;;;Vě větších množstvích může mít projímavé účinky.
+11;Potravinová aditiva;;E1201, polyvinylpyrrolidon, PVP, povidon;1;;;;;liberator?;;
+11;Potravinová aditiva;;E1202, polyvinylpolypyrrolidon, síťovaný povidon, PVPP;1;;;;;liberator?;;
+11;Potravinová aditiva;;E123, amaranth;2;;;L;;;;Barvivo, nezaměňovat s pseudoobilninou.
+11;Potravinová aditiva;;E124, ponceau 4R, konšelinová červeň A, CI potravinářská červeň 7;2;;;L;;;;
+11;Potravinová aditiva;;E127, erythrosin, Cl potravinářská červeň 14;3;;;L;;inhibitor?;;
+11;Potravinová aditiva;;E128, červeň 2G, Cl potravinářská červeň 10, azogeranin;2;;;L;;;;
+11;Potravinová aditiva;;E129, červeň Allura AC, Cl potravinářská červeň 17;2;;;L;;;;Zákaz používání v některých zemích.
+11;Potravinová aditiva;;E131, patentní modř V, CI potravinářská modř V;2;;;L;;;;
+11;Potravinová aditiva;;E132, indigotin, Cl potravinářská modř 1;2;;;L;;;;
+11;Potravinová aditiva;;E133, brilantní modř FCF, Cl potravinářská modř 2;?;;;;;liberator?;;
+11;Potravinová aditiva;;E140, chlorofyly a chlorofyliny;0;;;;;;;
+11;Potravinová aditiva;;E141,měďnaté komplexy chlorofylů a chlorofylinů;0;;;;;;;
+11;Potravinová aditiva;;E142, zeleň S;?;;;;;liberator?;;
+11;Potravinová aditiva;;E150a, jednoduchý karamel (Kulér);0;;;;;;;
+11;Potravinová aditiva;;E150b, kaustický sulfitový karamel;0;;;;;;;Pravděpodobně méně tolerovaný než E150.
+11;Potravinová aditiva;;E150C, amoniakový karamel;0;;;;;;;Pravděpodobně méně tolerovaný než E150.
+11;Potravinová aditiva;;E150d, amoniak-sulfitový karamel;0;;;;;;;Pravděpodobně méně tolerovaný než E150.
+11;Potravinová aditiva;;E151, čerň BN, lesklá čerň BN, brilantní čerň BN;3;;;L;;;;
+11;Potravinová aditiva;;E153, uhlík z rostlinné suroviny;0;;;;;;;
+11;Potravinová aditiva;;E154, hněď FK, CI potravinářská hněď 1;2;;;L;;;;
+11;Potravinová aditiva;;E155, hněď HT, CI potravinářská hněď 3;2;;;L;;;;
+11;Potravinová aditiva;;E160a, karoteny;0;;;L;;;;
+11;Potravinová aditiva;;E160c, paprikový extrakt, kapsanthin, kapsorubin;0;;;;;;;
+11;Potravinová aditiva;;E160d, lykopen;?;;;;;;;
+11;Potravinová aditiva;;E160e, beta-apo-8-karotenal;?;;;;;;;
+11;Potravinová aditiva;;E160f, ethylester kyseliny beta-apo-8-karotenové;?;;;;;;;
+12;Potravinová aditiva;;E172, oxidy a hydroxidy železa;0;;;;;;;
+12;Potravinová aditiva;;E173, hliník, CI kovový pigment;?;;;;;;;Nezdravý z jiných důvodů.
+12;Potravinová aditiva;;E174, stříbro;?;;;;;;;
+12;Potravinová aditiva;;E175, zlato;0;;;;;;;
+12;Potravinová aditiva;;E180, litholrubin BK;2;;;L;;;;Povolen pouze v obalech sýrů.
+12;Potravinová aditiva;;E200, kyselina sorbová;2;;;L;;;;
+12;Potravinová aditiva;;E202, sorban draselný, sorbát draselný;2;;;L;;;;
+12;Potravinová aditiva;;E203, sorban vápenatý, sorbát vápenatý;2;;;L;;;;
+12;Potravinová aditiva;;E210, kyselina benzoová;2;;;L;;;;
+12;Potravinová aditiva;;E210-213, kyselina benzoová a její soli (benzoáty);2;;;L;;;;
+12;Potravinová aditiva;;E211, benzoan sodný, benzoát sodný;2;;;L;;;;
+12;Potravinová aditiva;;E212, benzoan draselný, benzoát draselný;2;;;L;;;;
+12;Potravinová aditiva;;E213, benzoát vápenatý, benzoan vápenatý;2;;;L;;;;
+12;Potravinová aditiva;;E214-E219, parabeny;2;;;L;;;;
+12;Potravinová aditiva;;E215, ethylparahydroxybenzoát sodná sůl;2;;;L;;;;
+12;Potravinová aditiva;;E218,E219, methylparaben a jeho sodná sůl, methylparahydroxybenzoát a jeho sodná sůl;2;;;L;;;;
+12;Potravinová aditiva;;E220 - E228, siřičitany;2;;;L;;;;
+12;Potravinová aditiva;;E220, oxid siřičitý;2;;;L;;;;
+12;Potravinová aditiva;;E221, siřičitan sodný;2;;;L;;;;
+12;Potravinová aditiva;;E222, hydrogensiřičitan sodný;2;;;L;;;;
+12;Potravinová aditiva;;E223, disiřičitan sodný;2;;;L;;;;
+12;Potravinová aditiva;;E224, disiřičitan draselný;2;;;L;;;;
+12;Potravinová aditiva;;E225, siřičitan draselný;2;;;L;;;;
+12;Potravinová aditiva;;E226, siřičitan vápenatý;2;;;L;;;;
+12;Potravinová aditiva;;E228, hydrogensiřičitan draselný;2;;;L;;;;
+12;Potravinová aditiva;;E231, orthofenylfenol;2;;;L;;;;
+12;Potravinová aditiva;;E232, orthofenylfenolát sodný;2;;;;;;;
+12;Potravinová aditiva;;E234, nisin;?;;;;;;;
+12;Potravinová aditiva;;E235, natamycin;?;;;;;;;
+12;Potravinová aditiva;;E239, hexamethylentetraamin, urotropi, methenamin, hexamin;2;;;L;;;;
+12;Potravinová aditiva;;E242, dimethyldikarbonát, DMDC, dimethylpyrokarbonát;?;;;;;;;
+12;Potravinová aditiva;;E249, dusitan draselný;?;;;;;;;
+12;Potravinová aditiva;;E250, dusitan sodný;0;;;;;;;
+12;Potravinová aditiva;;E251, dusičnan sodný, chilský ledek;?;;;;;;;
+12;Potravinová aditiva;;E252, dusičnan draselný, ledek;?;;;;;;;
+12;Potravinová aditiva;;E260, kyselina octová;0;;;;;;;
+12;Potravinová aditiva;;E261, octan draselný;0;;;;;;;
+12;Potravinová aditiva;;E262, octan sodný;0;;;;;;;
+12;Potravinová aditiva;;E263, octan vápenatý;0;;;;;;;
+12;Potravinová aditiva;;E270, kyselina mléčná;0;;;;;;;Chemicky vyráběná kyselina mléčná není problém, produkt bakteriálního mléčného kvašení může být problém.
+12;Potravinová aditiva;;E280, kyselina propionová;?;;;;;;;Při degradaci propionové kyseliny se spotřebovává B12, což může vést/zhoršovat deficienci tohoto vitamínu.
+12;Potravinová aditiva;;E281, propionan sodný;?;;;;;;;
+12;Potravinová aditiva;;E282, propionan vápenatý;?;;;;;;;
+12;Potravinová aditiva;;E283, propionan draselný;?;;;;;;;
+12;Potravinová aditiva;;E284, kyselina boritá;?;;;;;;;Velmi jedovatý, toxická látka pro reprodukční systém.
+12;Potravinová aditiva;;E285, tetraboritan sodný, borax;?;;;;;;;Velmi jedovatý, je povolen pouze v kaviáru.
+12;Potravinová aditiva;;E290, oxid uhličitý;0;;;;;;;Způsobuje pouze krátkodobé přechodné symptomy, pokud je konzumace ve větší míře.
+12;Potravinová aditiva;;E296, kyselina jablečná;0;;;;;;;
+12;Potravinová aditiva;;E297, kyselina fumarová;?;;;;;;;
+12;Potravinová aditiva;;E300, kyselina l-askorbová, vitamín C;0;;;;B;;;Snižuje hladiny histaminu, ale zřejmě je mírný inhibitor DAO. Vhodné při MCAS, nevhodné při HIT?
+12;Potravinová aditiva;;E301, askorban sodný, askorbát sodný;0;;;;;;;
+12;Potravinová aditiva;;E302, askorban vápenatý, askorbát vápenatý;0;;;;;;;
+12;Potravinová aditiva;;E304, estery mastných kyselin s kyselinou askorbovou;0;;;;;;;
+12;Potravinová aditiva;;E306, extrakt s vysokým obsahem tokoferolů;0;;;;;;;
+13;Potravinová aditiva;;E316, erythorban sodný;0;;;;;;;
+13;Potravinová aditiva;;E319, terciální butylhydrochinon (TBHQ);?;;;;;;;
+13;Potravinová aditiva;;E320, butylhydroxyanisol (BHA);2;;;L;;;;
+13;Potravinová aditiva;;E321, butylhydroxytoluen (BHT);2;;;L;;;;
+13;Potravinová aditiva;;E322, lecitiny;0;;;;;;;Nejčastěji sójový lecitin.
+13;Potravinová aditiva;;E325, mléčnan sodný;0;;;;;;;
+13;Potravinová aditiva;;E326, mléčnan draselný;0;;;;;;;
+13;Potravinová aditiva;;E327, mléčnan vápenatý;0;;;;;;;
+13;Potravinová aditiva;;E330, kyselina citrónová;1;;;;;;;K diskuzi. Vyrábí se z plísní, ne z citrusů.
+13;Potravinová aditiva;;E331, citronany sodné, citráty sodné;1;;;;;liberator?;;Často dobře tolerováno.
+13;Potravinová aditiva;;E332, citronan draselný, citrát draselný;1;;;;;liberator?;;Často dobře tolerováno.
+13;Potravinová aditiva;;E333, citronan vápenatý, citrát vápenatý;1;;;;;liberator?;;Často dobře tolerováno.
+13;Potravinová aditiva;;E334, kyselina vinná;0;;;;;;;
+13;Potravinová aditiva;;E335, vinany sodné;0;;;;;;;viz. Vinný kámen.
+13;Potravinová aditiva;;E336, vinany draselné;0;;;;;;;
+13;Potravinová aditiva;;E340, fosforečnany draselné;1;;;;;liberator?;;
+13;Potravinová aditiva;;E341, fosforečnan vápenatý;1;;;;;liberator?;;
+13;Potravinová aditiva;;E380, citronan triamonný;1;;;;;liberator?;;
+13;Potravinová aditiva;;E400, kyselina alginová;2;;;L;;;;
+13;Potravinová aditiva;;E401, alginát sodný;2;;;L;;;;
+13;Potravinová aditiva;;E402, alginát draselný;2;;;L;;;;
+13;Potravinová aditiva;;E403, alginát amonný;2;;;L;;;;
+13;Potravinová aditiva;;E404, alginát vápenatý;2;;;L;;;;
+13;Potravinová aditiva;;E405, propylenglykolalginát;2;;;L;;;;
+13;Potravinová aditiva;;E406, agar;1;;;;;liberator?;;
+13;Potravinová aditiva;;E407, E407a, karagenany;2;;;L;;;;
+13;Potravinová aditiva;;E410, karubin;2;;;L;;;;Zahušťovadlo vyráběné ze semen karobu.
+13;Potravinová aditiva;;E412, guma guar;1;;;L;;;;
+13;Potravinová aditiva;;E413, tragant;2;;;L;;;;
+13;Potravinová aditiva;;E414, arabská guma;1;;;L;;;;
+13;Potravinová aditiva;;E415, xanthan;0;;;;;;;
+13;Potravinová aditiva;;E416, guma karaya;1;;;L;;;;
+13;Potravinová aditiva;;E421, mannitol;0;;;;;;;
+13;Potravinová aditiva;;E422, glycerol;0;;;;;;;
+13;Potravinová aditiva;;E440, pektin;0;;;;;;;
+13;Potravinová aditiva;;E441, želatina;1;;;;;"histamin?; liberator?";;Sporné, může být dobře tolerována.
+13;Potravinová aditiva;;E452, polyfosforečnany ( sodný, draselný a vápenatý);2;;;;;liberator?;;
+13;Potravinová aditiva;;E460, celulózy;0;;;;;;;
+13;Potravinová aditiva;;E461, methylcelulóza;0;;;;;;;Větší množství může mít projímavé účinky.
+13;Potravinová aditiva;;E462, ethylcelulóza;0;;;;;;;
+13;Potravinová aditiva;;E463, hydroxypropylcelulóza;0;;;;;;;
+13;Potravinová aditiva;;E464, hydroxypropylmethylcelulóza;0;;;;;;;
+13;Potravinová aditiva;;E465, ethylmethylcelulóza;0;;;;;;;
+13;Potravinová aditiva;;E466, karboxymethylcelulóza;?;;;;;;;
+13;Potravinová aditiva;;E500(i), uhličitan sodný;0;;;;;;;
+13;Potravinová aditiva;;E500(ii), hydrogenuhličitan sodný;0;;;;;;;
+13;Potravinová aditiva;;E501, uhličitan draselný;0;;;;;;;
+13;Potravinová aditiva;;E503, uhličitan amonný;0;;;;;;;
+13;Potravinová aditiva;;E504, uhličitan hořečnatý;0;;;;;;;
+13;Potravinová aditiva;;E507, kyselina chlorovodíková;0;;;;;;;
+13;Potravinová aditiva;;E579, glukonan železnatý;0;;;;;;;
+13;Potravinová aditiva;;E620, kyselina L-glutamová;2;;;L;;;;
+13;Potravinová aditiva;;E620-E625, glutamáty, glutamany;2;;;L;;;;
+13;Potravinová aditiva;;E621, L-glutaman sodný, L-glutamát sodný;2;;;L;;;;
+13;Potravinová aditiva;;E622, glutaman draselný, glutamát draselný;2;;;L;;;;
+13;Potravinová aditiva;;E624, glutaman amonný, glutamát amonný;2;;;L;;;;
+13;Potravinová aditiva;;E625, glutaman hořečnatý, glutamát hořečnatý;2;;;L;;;;
+13;Potravinová aditiva;;E626, kyselina guanylová;0;;;;;;;
+14;Potravinová aditiva;;estery mastných kyselin s kyselinou askorbovou, E304;0;;;;;;;
+14;Potravinová aditiva;;ethylcelulóza, E462;0;;;;;;;
+14;Potravinová aditiva;;ethylester kyseliny beta-apo-8-karotenové, E160f;?;;;;;;;
+14;Potravinová aditiva;;ethylmethylcelulóza, E465;0;;;;;;;
+14;Potravinová aditiva;;ethylparahydroxybenzoát sodná sůl, E215;2;;;L;;;;
+14;Potravinová aditiva;;extrakt s vysokým obsahem tokoferolů, E306;0;;;;;;;
+14;Potravinová aditiva;;fosforečnan vápenatý, E341;1;;;;;liberator?;;
+14;Potravinová aditiva;;fosforečnany draselné, E340;1;;;;;liberator?;;
+14;Potravinová aditiva;;gama-tokoferol, E308;0;;;;;;;
+14;Potravinová aditiva;;glukonan železnatý, E579;0;;;;;;;
+14;Potravinová aditiva;;glutaman amonný, glutamát amonný, E624;2;;;L;;;;
+14;Potravinová aditiva;;glutaman draselný, glutamát draselný, E622;2;;;L;;;;
+14;Potravinová aditiva;;glutaman hořečnatý, glutamát hořečnatý, E625;2;;;L;;;;
+14;Potravinová aditiva;;glutaman vápenatý, glutamát vápenatý, E623;2;;;L;;;;
+14;Potravinová aditiva;;glutamany, glutamáty, E620-E625;2;;;L;;;;
+14;Potravinová aditiva;;gluten, lepek;1;;;;;liberator?;;Tolerovaný v mnoha případech. U někoho může způsobovat nadýmání.
+14;Potravinová aditiva;;glycerol, E422;0;;;;;;;
+14;Potravinová aditiva;;guma guar, E412;1;;;L;;;;
+14;Potravinová aditiva;;guma karaya, E416;1;;;L;;;;
+14;Potravinová aditiva;;hexamethylentetraamin, E239;2;;;L;;;;
+14;Potravinová aditiva;;hexamin, E239;2;;;L;;;;
+14;Potravinová aditiva;;hliník, E173;?;;;;;;;Nezdravý z jiných důvodů.
+14;Potravinová aditiva;;hněď FK, E154;2;;;L;;;;
+14;Potravinová aditiva;;hněď HT, E155;2;;;L;;;;
+14;Potravinová aditiva;;hydrogensiřičitan draselný, E228);2;;;L;;;;
+14;Potravinová aditiva;;hydrogensiřičitan sodný, E222;2;;;L;;;;
+14;Potravinová aditiva;;hydrogensiřičitan vápenatý, E227;2;;;L;;;;
+14;Potravinová aditiva;;hydrogenuhličitan sodný, E500(ii);0;;;;;;;
+14;Potravinová aditiva;;hydroxypropylcelulóza, E463;0;;;;;;;
+14;Potravinová aditiva;;indigotin, Cl potravinářská modř 1, E132;2;;;L;;;;
+14;Potravinová aditiva;;invertasa, E1103;0;;;;;;;
+14;Potravinová aditiva;;jednoduchý karamel, E150a;0;;;;;;;
+14;Potravinová aditiva;;kanthaxanthin, E161g;?;;;;;;;
+14;Potravinová aditiva;;kapsanthin, kapsorubin, E160c;0;;;;;;;
+14;Potravinová aditiva;;karagenany, E407, E407a;2;;;L;;;;
+14;Potravinová aditiva;;karamel, E150a;0;;;;;;;
+14;Potravinová aditiva;;karboxymethylcelulóza, E466);?;;;;;;;
+14;Potravinová aditiva;;karmoisin, E122;2;;;L;;;;
+14;Potravinová aditiva;;karobový prášek;2;;;;;"amines?; liberator?";;Karob je sušený lusk, ne semínka.
+14;Potravinová aditiva;;karoteny, E160a;0;;;L;;;;
+14;Potravinová aditiva;;karubin, E410;2;;;L;;;;Zahušťovadlo vyráběné ze semen karobu.
+14;Potravinová aditiva;;kaustický sulfitový karamel, E150b;0;;;;;;;Pravděpodobně méně tolerovaný než E150.
+14;Potravinová aditiva;;košenilová červeň A, E124;2;;;L;;;;
+14;Potravinová aditiva;;kurkumin, E100;0;;;;;;;
+14;Potravinová aditiva;;kyselina alginová, E400;2;;;L;;;;
+14;Potravinová aditiva;;kyselina benzoová, E210;2;;;L;;;;
+14;Potravinová aditiva;;kyselina boritá, E284;?;;;;;;;Velmi jedovatý, toxická látka pro reprodukční systém.
+14;Potravinová aditiva;;kyselina chlorovodíková,E507;0;;;;;;;
+14;Potravinová aditiva;;kyselina citrónová, E330;1;;;;;;;K diskuzi. Vyrábí se z plísní, ne z citrusů.
+14;Potravinová aditiva;;kyselina fumarová, E297;?;;;;;;;
+14;Potravinová aditiva;;kyselina guanylová, E626;0;;;;;;;
+14;Potravinová aditiva;;kyselina jablečná, E296;0;;;;;;;
+14;Potravinová aditiva;;kyselina karmínová, karmíny, E120;2;;;L;;;;
+14;Potravinová aditiva;;kyselina l-askorbová, E300;0;;;;B;;;Snižuje hladiny histaminu, ale zřejmě je mírný inhibitor DAO. Vhodné při MCAS, nevhodné při HIT?
+14;Potravinová aditiva;;kyselina L-glutamová, E620;2;;;L;;;;
+14;Potravinová aditiva;;kyselina mléčná, E270;0;;;;;;;Chemicky vyráběná kyselina mléčná není problém, produkt bakteriálního mléčného kvašení může být problém.
+15;Potravinová aditiva;;L-glutaman sodný, L-glutamát sodný, E621;2;;;L;;;;
+15;Potravinová aditiva;;lutein, E161b;?;;;;;;;
+15;Potravinová aditiva;;lykopen, E160d;?;;;;;;;
+15;Potravinová aditiva;;lysozym, E1105;?;;;;;;;
+15;Potravinová aditiva;;mannitol, E421;0;;;;;;;
+15;Potravinová aditiva;;měďnaté komplexy chlorofylů a chlorofylinů, E141;0;;;;;;;
+15;Potravinová aditiva;;methenamin, hexamin, E239;2;;;L;;;;
+15;Potravinová aditiva;;methylcelulóza, E461;0;;;;;;;Větší množství může mít projímavé účinky.
+15;Potravinová aditiva;;methylparaben, methylparahydroxybenzoát, E218, E219;2;;;L;;;;
+15;Potravinová aditiva;;mléčnan draselný, E326;0;;;;;;;
+15;Potravinová aditiva;;mléčnan sodný, E325;0;;;;;;;
+15;Potravinová aditiva;;mléčnan vápenatý, E327;0;;;;;;;
+15;Potravinová aditiva;;natamycin, E235;?;;;;;;;
+15;Potravinová aditiva;;nisin, E234;?;;;;;;;
+15;Potravinová aditiva;;octan draselný, E261;0;;;;;;;
+15;Potravinová aditiva;;octan sodný, E262;0;;;;;;;
+15;Potravinová aditiva;;octan vápenatý, E263;0;;;;;;;
+15;Potravinová aditiva;;octan zinečnatý, E650;0;;;;;;;
+15;Potravinová aditiva;;oktylgallát, E311;2;;;L;;;;
+15;Potravinová aditiva;;orthofenylfenol, E231;2;;;L;;;;
+15;Potravinová aditiva;;orthofenylfenolát sodný, E232;2;;;;;;;
+15;Potravinová aditiva;;oxid siřičitý, E220;2;;;L;;;;
+15;Potravinová aditiva;;oxid titaničitý, E171;0;;;;;liberator?;;Pacienti se syndromem mnohočetné citlivosti na chemické látky netolerují.
+15;Potravinová aditiva;;oxid uhličitý, E290;0;;;;;;;Způsobuje pouze krátkodobé přechodné symptomy, pokud je konzumace ve větší míře.
+15;Potravinová aditiva;;oxidy a hydroxidy železa, E172;0;;;;;;;
+15;Potravinová aditiva;;paprikový extrakt, kapsanthin, kapsorubin, E160c;0;;;;;;;
+15;Potravinová aditiva;;parabeny, E214-E219;2;;;L;;;;
+15;Potravinová aditiva;;patentní modř V, E131;2;;;L;;;;
+15;Potravinová aditiva;;pektin, E440;0;;;;;;;
+15;Potravinová aditiva;;perlivé nápoje;1;;;L;;;;Pouze krátkodobý efekt, který rychle vymizí.
+15;Potravinová aditiva;;polydextrosy, E1200;?;;;;;;;Vě větších množstvích může mít projímavé účinky.
+15;Potravinová aditiva;;polyfosforečnany ( sodný, draselný a vápenatý), E452;2;;;;;liberator?;;
+15;Potravinová aditiva;;polyvinylpolypyrrolidon, PVPP, E1202;1;;;;;liberator?;;
+15;Potravinová aditiva;;polyvinylpyrrolidon, PVP, E1201;1;;;;;liberator?;;
+15;Potravinová aditiva;;ponceau 4R, E124;2;;;L;;;;
+15;Potravinová aditiva;;povidon, polyvinylpyrrolidon, PVP, E1201;1;;;;;liberator?;;
+15;Potravinová aditiva;;propionan draselný, E283;?;;;;;;;
+15;Potravinová aditiva;;propionan sodný, E281;?;;;;;;;
+15;Potravinová aditiva;;propionan vápenatý, E282;?;;;;;;;
+15;Potravinová aditiva;;propylenglykolalginát, E405;2;;;L;;;;
+15;Potravinová aditiva;;riboflavin-5'-fosfát, E101a;1;;;L;;;;
+15;Potravinová aditiva;;siřičitan draselný, E225;2;;;L;;;;
+15;Potravinová aditiva;;siřičitan sodný, E221;2;;;L;;;;
+15;Potravinová aditiva;;siřičitan vápenatý, E226;2;;;L;;;;
+15;Potravinová aditiva;;siřičitany, E220 - E228;2;;;L;;;;
+15;Potravinová aditiva;;škrob;0;;;;;;;
+15;Potravinová aditiva;;sorban draselný, sorbát draselný, E202;2;;;L;;;;
+15;Potravinová aditiva;;sorban vápenatý, sorbát vápenatý, E203;2;;;L;;;;
+15;Potravinová aditiva;;sorbany, sorbáty (soli kyseliny sorbové): sorban draselný E202, sorban vápenatý E203;2;;;L;;;;
+15;Potravinová aditiva;;steviol-glykosidy, E960;0;;;;;;;
+15;Potravinová aditiva;;stříbro, E174;?;;;;;;;
+15;Potravinová aditiva;;sukralóza, sukralosa, E955;0;;;;;;;
+15;Potravinová aditiva;;tartrazin, E102;3;;;L;;;;
+15;Potravinová aditiva;;terciální butylhydrochinon (TBHQ), E319;?;;;;;;;
+15;Potravinová aditiva;;tetraboritan sodný, borax, E285;?;;;;;;;Velmi jedovatý, je povolen pouze v kaviáru.
+15;Potravinová aditiva;;uhličitan amonný, E503;0;;;;;;;
+16;Potravinová aditiva;;vinany sodné, E335;0;;;;;;;viz. Vinný kámen.
+16;Potravinová aditiva;;vinný kámen, E336;0;;;;;;;
+16;Potravinová aditiva;;"vitamín C, E300;";0;;;;B;;;Snižuje hladiny histaminu, ale zřejmě je mírný inhibitor DAO. Vhodné při MCAS, nevhodné při HIT?
+16;Potravinová aditiva;;xanthan, E415;0;;;;;;;
+16;Potravinová aditiva;;želatina, E441;1;;;;;"histamin?; liberator?";;Sporné, může být dobře tolerována.
+16;Potravinová aditiva;;zeleň S, E142;?;;;;;liberator?;;
+16;Potravinová aditiva;;zlato, E175;0;;;;;;;
+16;Potravinová aditiva;;žluť SY, Cl potravinářská žluť 3, E110;3;;;L;;;;
+16;Vitamíny, minerály, stopové prvky;;jód;3;;;L;;;;
+16;Vitamíny, minerály, stopové prvky;;jodid draselný (aditivum v soli);3;;;L;;;;
+16;Vitamíny, minerály, stopové prvky;;jodizovaná stolní sůl;2;;;L;;;;
+16;Vitamíny, minerály, stopové prvky;;kyselina folová, vitamín B9, folát;2;;;L;;;;K diskuzi. Jiné jméno: pteroyl-L-glutamová kyselina (podobné kyselině glutamové/ glutamátu?)
+16;Vitamíny, minerály, stopové prvky;;theobromin;2;;;;B;;;
+16;Vitamíny, minerály, stopové prvky;;vitamín B9, folát, kyselina folová;2;;;L;;;;K diskuzi. Jiné jméno: pteroyl-L-glutamová kyselina (podobné kyselině glutamové/ glutamátu?)
+16;Vitamíny, minerály, stopové prvky;Směsi;pendrek;2;;;L;;;;
+16;Vitamíny, minerály, stopové prvky;Směsi;marcipán;1;;;;;;;Malé množství dobře tolerováno, pokud je bez nepovolených aditiv.
+16;Vitamíny, minerály, stopové prvky;Směsi;čokoláda mléčná, hořká;2;;A;;;;;tyramin, fenylethylamin
+16;Vitamíny, minerály, stopové prvky;Směsi;čokoláda bílá;1;;;;;amines?;;Většinou dobře tolerována.
+16;Vitamíny, minerály, stopové prvky;Směsi;hořčice;2;H;;L;;;;Připravená z hořčičného semínka, octu atd.
+16;Vitamíny, minerály, stopové prvky;Směsi;tofu;2;;;;;;;

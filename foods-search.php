@@ -31,6 +31,9 @@ if ($type === 'drink') {
 
 $params[] = $query;
 $params[] = $prefix;
+$sighiEnabled = has_sighi_tables($pdo);
+$sighiSelect = $sighiEnabled ? sighi_select_sql('foods') : sighi_empty_select_sql();
+$sighiJoin = $sighiEnabled ? sighi_join_sql('foods') : '';
 
 $stmt = $pdo->prepare("
     SELECT
@@ -52,7 +55,9 @@ $stmt = $pdo->prepare("
         note,
         fodmap_level,
         histamine_level
+        {$sighiSelect}
     FROM foods
+    {$sighiJoin}
     WHERE
         (user_id IS NULL OR user_id = ?)
         AND (name_cs LIKE ? OR name_en LIKE ? OR external_code LIKE ?)
