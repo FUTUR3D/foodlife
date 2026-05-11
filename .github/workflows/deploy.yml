@@ -34,6 +34,7 @@ jobs:
           cp api-helpers.php deploy/
           cp app.css deploy/
           cp auth-status.php deploy/
+          cp day-health.php deploy/
           cp day-journal.php deploy/
           cp exercises-search.php deploy/
           cp food-delete.php deploy/

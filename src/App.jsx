@@ -5431,6 +5431,9 @@ export default function App() {
   const [isJournalLoading, setIsJournalLoading] = useState(false)
   const [journalLoadedDate, setJournalLoadedDate] = useState('')
   const [journalSaveState, setJournalSaveState] = useState('')
+  const [isHealthLogLoading, setIsHealthLogLoading] = useState(false)
+  const [healthLogLoadedDate, setHealthLogLoadedDate] = useState('')
+  const [healthLogSaveState, setHealthLogSaveState] = useState('')
   const [reactions, setReactions] = useState({})
   const [openMain, setOpenMain] = useState(null)
   const [openMeal, setOpenMeal] = useState(null)
@@ -5442,11 +5445,12 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState(formatToday())
   const calendarInputRef = useRef(null)
   const journalSaveTimerRef = useRef(null)
+  const healthLogSaveTimerRef = useRef(null)
 
   const today = selectedDate
   const todayEntries = entries[today] || {}
   const todayInfo = dayInfo[today] || DEFAULT_DAY_INFO
-  const todayReactions = reactions[today] || []
+  const todayReactions = useMemo(() => reactions[today] || [], [reactions, today])
   const mealsByType = useMemo(() => {
     return dayMeals.reduce((groups, meal) => {
       const key = meal.meal_type || 'ostatni'
@@ -5572,6 +5576,11 @@ export default function App() {
 
   useEffect(() => {
     if (!isHydrated || !auth.loggedIn) return
+    loadDayHealth(today)
+  }, [auth.loggedIn, isHydrated, today])
+
+  useEffect(() => {
+    if (!isHydrated || !auth.loggedIn) return
     loadUserProfile()
   }, [auth.loggedIn, isHydrated])
 
@@ -5614,6 +5623,36 @@ export default function App() {
     todayInfo.dayJournalTitle,
     todayInfo.dayJournalHtml,
     todayInfo.dayNote,
+  ])
+
+  useEffect(() => {
+    if (!isHydrated || !auth.loggedIn || healthLogLoadedDate !== today || isHealthLogLoading) return
+
+    const toiletEntries = normalizeToiletEntries(todayInfo)
+    const moodEntries = normalizeMoodEntries(todayInfo)
+
+    window.clearTimeout(healthLogSaveTimerRef.current)
+    setHealthLogSaveState('Ukládám...')
+
+    healthLogSaveTimerRef.current = window.setTimeout(async () => {
+      try {
+        await saveDayHealth(today, toiletEntries, moodEntries, todayReactions)
+        setHealthLogSaveState('Uloženo')
+      } catch {
+        setHealthLogSaveState('Nepodařilo se uložit')
+      }
+    }, 700)
+
+    return () => window.clearTimeout(healthLogSaveTimerRef.current)
+  }, [
+    auth.loggedIn,
+    healthLogLoadedDate,
+    isHealthLogLoading,
+    isHydrated,
+    today,
+    todayInfo.toiletEntries,
+    todayInfo.moodEntries,
+    todayReactions,
   ])
 
   function handleLogin(e) {
@@ -5792,6 +5831,96 @@ export default function App() {
     })
 
     if (!response.ok) throw new Error('journal_save_failed')
+    return response.json()
+  }
+
+  async function loadDayHealth(date = today) {
+    setIsHealthLogLoading(true)
+    setHealthLogSaveState('Načítám...')
+    setHealthLogLoadedDate('')
+
+    try {
+      const response = await fetch(`day-health.php?date=${encodeURIComponent(date)}`, {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('day_health_load_failed')
+
+      const data = await response.json()
+      const health = data.health || {}
+      const hasServerHealth = Boolean(health.exists)
+
+      if (hasServerHealth) {
+        const toiletEntries = Array.isArray(health.toiletEntries) ? health.toiletEntries : []
+        const moodEntries = Array.isArray(health.moodEntries) ? health.moodEntries : []
+        const healthReactions = Array.isArray(health.reactions) ? health.reactions : []
+
+        setDayInfo((prev) => {
+          const current = prev[date] || DEFAULT_DAY_INFO
+          return {
+            ...prev,
+            [date]: {
+              ...current,
+              toiletEntries,
+              toiletCount: String(toiletEntries.length),
+              toiletType: toiletEntries[0]?.consistency || current.toiletType || 'Normální',
+              moodEntries,
+              mood: moodEntries[0]?.mood || current.mood || 'Dobře',
+              moodNote: moodEntries[0]?.note || current.moodNote || '',
+            },
+          }
+        })
+
+        setReactions((prev) => ({
+          ...prev,
+          [date]: healthReactions,
+        }))
+      } else {
+        setDayInfo((prev) => {
+          const current = prev[date] || DEFAULT_DAY_INFO
+          return {
+            ...prev,
+            [date]: {
+              ...current,
+              toiletEntries: normalizeToiletEntries(current),
+              moodEntries: normalizeMoodEntries(current),
+            },
+          }
+        })
+
+        setReactions((prev) => ({
+          ...prev,
+          [date]: prev[date] || [],
+        }))
+      }
+
+      setHealthLogLoadedDate(date)
+      setHealthLogSaveState(hasServerHealth ? 'Načteno ze serveru' : '')
+    } catch {
+      setHealthLogLoadedDate(date)
+      setHealthLogSaveState('Záznamy se nepodařilo načíst')
+    } finally {
+      setIsHealthLogLoading(false)
+    }
+  }
+
+  async function saveDayHealth(date, toiletEntries, moodEntries, dayReactions) {
+    const response = await fetch('day-health.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        date,
+        toiletEntries,
+        moodEntries,
+        reactions: dayReactions,
+      }),
+    })
+
+    if (!response.ok) throw new Error('day_health_save_failed')
     return response.json()
   }
 
