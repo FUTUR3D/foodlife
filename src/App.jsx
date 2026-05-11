@@ -82,6 +82,7 @@ const DEFAULT_DAY_INFO = {
   exercise: '',
   exerciseEntries: [],
   exerciseKcal: '',
+  toiletEntries: [],
   toiletCount: '',
   toiletType: 'Normální',
   mood: 'Dobře',
@@ -401,12 +402,22 @@ function formatShortDate(dateValue) {
   return date.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })
 }
 
+function getCurrentTimeValue() {
+  const date = new Date()
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
 function getDefaultMealTime(mealKey) {
   return DEFAULT_MEAL_TIMES[mealKey] || '12:00'
 }
 
 function getMealTimeValue(meal) {
   return meal?.meal_time?.slice(11, 16) || getDefaultMealTime(meal?.meal_type)
+}
+
+function normalizeToiletEntries(todayInfo) {
+  if (Array.isArray(todayInfo.toiletEntries)) return todayInfo.toiletEntries
+  return []
 }
 
 function getWeightNumber(log) {
@@ -4551,6 +4562,146 @@ function ExercisePanel({ todayInfo, onTodayInfoChange, profile }) {
   )
 }
 
+function ToiletPanel({ todayInfo, onTodayInfoChange }) {
+  const entries = useMemo(() => normalizeToiletEntries(todayInfo), [todayInfo])
+  const [time, setTime] = useState(getCurrentTimeValue)
+  const [consistency, setConsistency] = useState('Normální')
+  const [note, setNote] = useState('')
+
+  function saveEntries(nextEntries) {
+    onTodayInfoChange('toiletEntries', nextEntries)
+    onTodayInfoChange('toiletCount', String(nextEntries.length))
+    onTodayInfoChange('toiletType', nextEntries[0]?.consistency || 'Normální')
+  }
+
+  function handleAdd() {
+    const nextEntry = {
+      id: createId(),
+      time: time || getCurrentTimeValue(),
+      consistency,
+      note: note.trim(),
+      createdAt: new Date().toISOString(),
+    }
+    saveEntries([...entries, nextEntry].sort((a, b) => String(a.time).localeCompare(String(b.time))))
+    setTime(getCurrentTimeValue())
+    setConsistency('Normální')
+    setNote('')
+  }
+
+  function updateEntry(entryId, patch) {
+    const nextEntries = entries
+      .map((entry) => (entry.id === entryId ? { ...entry, ...patch } : entry))
+      .sort((a, b) => String(a.time).localeCompare(String(b.time)))
+    saveEntries(nextEntries)
+  }
+
+  function deleteEntry(entryId) {
+    saveEntries(entries.filter((entry) => entry.id !== entryId))
+  }
+
+  return (
+    <div className="toilet-panel">
+      <div className="card">
+        <h3 className="card-title">Přidat toaletu</h3>
+
+        <div className="toilet-form-grid">
+          <div className="form-group">
+            <label className="label">Čas</label>
+            <input
+              className="input"
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="label">Konzistence</label>
+            <select
+              className="input"
+              value={consistency}
+              onChange={(e) => setConsistency(e.target.value)}
+            >
+              <option>Tvrdá</option>
+              <option>Tvrdší</option>
+              <option>Normální</option>
+              <option>Měkčí</option>
+              <option>Řidší</option>
+              <option>Průjem</option>
+              <option>Zácpa</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="label">Poznámka</label>
+          <input
+            className="input"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Např. bolest břicha, nadýmání, po jídle..."
+          />
+        </div>
+
+        <button className="button button-full" type="button" onClick={handleAdd}>
+          Přidat záznam
+        </button>
+      </div>
+
+      <div className="card">
+        <h3 className="card-title">Dnešní záznamy</h3>
+        {entries.length === 0 ? (
+          <div className="empty-box">Dnes zatím není žádný záznam.</div>
+        ) : (
+          <div className="list">
+            {entries.map((entry) => (
+              <div key={entry.id} className="toilet-entry">
+                <div className="toilet-entry-head">
+                  <strong>{entry.time || '-'}</strong>
+                  <span>{entry.consistency}</span>
+                </div>
+                <div className="toilet-entry-grid">
+                  <input
+                    className="input"
+                    type="time"
+                    value={entry.time || ''}
+                    onChange={(e) => updateEntry(entry.id, { time: e.target.value })}
+                    aria-label="Čas záznamu toalety"
+                  />
+                  <select
+                    className="input"
+                    value={entry.consistency || 'Normální'}
+                    onChange={(e) => updateEntry(entry.id, { consistency: e.target.value })}
+                    aria-label="Konzistence"
+                  >
+                    <option>Tvrdá</option>
+                    <option>Tvrdší</option>
+                    <option>Normální</option>
+                    <option>Měkčí</option>
+                    <option>Řidší</option>
+                    <option>Průjem</option>
+                    <option>Zácpa</option>
+                  </select>
+                  <input
+                    className="input"
+                    value={entry.note || ''}
+                    onChange={(e) => updateEntry(entry.id, { note: e.target.value })}
+                    placeholder="Poznámka"
+                    aria-label="Poznámka"
+                  />
+                  <button className="delete-button" type="button" onClick={() => deleteEntry(entry.id)}>
+                    Smazat
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function HistaminePanel({ histamineSummary, reactions }) {
   const topItems = histamineSummary.riskyItems.slice(0, 6)
   const insight = getHistamineReactionInsight(histamineSummary, reactions)
@@ -5609,39 +5760,15 @@ export default function App() {
 
           <AccordionSection
             title="Toaleta"
-            subtitle="Počet a konzistence"
+            subtitle={`${normalizeToiletEntries(todayInfo).length} záznamů`}
             colorClass="panel-blue"
             isOpen={openMain === 'toilet'}
             onToggle={() => setOpenMain(openMain === 'toilet' ? null : 'toilet')}
           >
-            <div className="card">
-              <h3 className="card-title">Toaleta / trávení</h3>
-
-              <div className="form-group">
-                <label className="label">Kolikrát dnes</label>
-                <input
-                  className="input"
-                  value={todayInfo.toiletCount || ''}
-                  onChange={(e) => updateTodayInfo('toiletCount', e.target.value)}
-                  placeholder="Např. 2"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="label">Konzistence</label>
-                <select
-                  className="input"
-                  value={todayInfo.toiletType || 'Normální'}
-                  onChange={(e) => updateTodayInfo('toiletType', e.target.value)}
-                >
-                  <option>Normální</option>
-                  <option>Řidší</option>
-                  <option>Tvrdší</option>
-                  <option>Průjem</option>
-                  <option>Zácpa</option>
-                </select>
-              </div>
-            </div>
+            <ToiletPanel
+              todayInfo={todayInfo}
+              onTodayInfoChange={updateTodayInfo}
+            />
           </AccordionSection>
 
           <AccordionSection
