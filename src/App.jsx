@@ -89,6 +89,8 @@ const DEFAULT_DAY_INFO = {
   mood: 'Dobře',
   moodNote: '',
   dayNote: '',
+  dayJournalHtml: '',
+  dayJournalTitle: '',
   drinks: '',
 }
 
@@ -5134,6 +5136,185 @@ function MoodPanel({ todayInfo, onTodayInfoChange }) {
   )
 }
 
+function textToDiaryHtml(text) {
+  const escaped = String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+
+  return escaped
+    .split(/\n{2,}/)
+    .map((part) => `<p>${part.replace(/\n/g, '<br />') || '<br />'}</p>`)
+    .join('')
+}
+
+function DiaryPanel({ todayInfo, onTodayInfoChange }) {
+  const editorRef = useRef(null)
+  const imageInputRef = useRef(null)
+  const fallbackHtml = todayInfo.dayNote ? textToDiaryHtml(todayInfo.dayNote) : '<p></p>'
+  const journalHtml = todayInfo.dayJournalHtml || fallbackHtml
+
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor || document.activeElement === editor) return
+    if (editor.innerHTML !== journalHtml) editor.innerHTML = journalHtml
+  }, [journalHtml])
+
+  function saveEditorContent() {
+    const editor = editorRef.current
+    if (!editor) return
+    onTodayInfoChange('dayJournalHtml', editor.innerHTML)
+    onTodayInfoChange('dayNote', editor.innerText.trim())
+  }
+
+  function runEditorCommand(command, value = null) {
+    const editor = editorRef.current
+    if (!editor) return
+    editor.focus()
+    document.execCommand(command, false, value)
+    saveEditorContent()
+  }
+
+  function insertTemplate(html) {
+    runEditorCommand('insertHTML', html)
+  }
+
+  function insertTimeStamp() {
+    insertTemplate(`<p><strong>${getCurrentTimeValue()}</strong> - </p>`)
+  }
+
+  function handleImageSelect(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const alt = file.name.replace(/[<>"']/g, '')
+      insertTemplate(`
+        <figure>
+          <img src="${reader.result}" alt="${alt}" />
+          <figcaption>${alt}</figcaption>
+        </figure>
+      `)
+      e.target.value = ''
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const toolbarButtons = [
+    { label: 'B', title: 'Tučně', command: 'bold' },
+    { label: 'I', title: 'Kurzíva', command: 'italic' },
+    { label: 'U', title: 'Podtržení', command: 'underline' },
+    { label: 'H', title: 'Nadpis', command: 'formatBlock', value: 'h3' },
+    { label: '•', title: 'Odrážky', command: 'insertUnorderedList' },
+    { label: '1.', title: 'Číslování', command: 'insertOrderedList' },
+    { label: '”', title: 'Citace', command: 'formatBlock', value: 'blockquote' },
+  ]
+
+  return (
+    <div className="diary-panel">
+      <div className="card diary-card">
+        <div className="diary-head">
+          <div>
+            <h3 className="card-title">Deník dne</h3>
+            <p className="card-subtitle">Zápisky, souvislosti, fotky a poznámky k tělu.</p>
+          </div>
+          <button className="soft-button" type="button" onClick={insertTimeStamp}>
+            Vložit čas
+          </button>
+        </div>
+
+        <input
+          className="input diary-title-input"
+          value={todayInfo.dayJournalTitle || ''}
+          onChange={(e) => onTodayInfoChange('dayJournalTitle', e.target.value)}
+          placeholder="Nadpis dne"
+        />
+
+        <div className="diary-toolbar" aria-label="Formátování deníku">
+          {toolbarButtons.map((button) => (
+            <button
+              key={button.title}
+              className="diary-tool"
+              type="button"
+              title={button.title}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                runEditorCommand(button.command, button.value)
+              }}
+            >
+              {button.label}
+            </button>
+          ))}
+          <button
+            className="diary-tool diary-tool-wide"
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              runEditorCommand('removeFormat')
+            }}
+          >
+            Vyčistit
+          </button>
+          <button
+            className="diary-tool diary-tool-wide"
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+          >
+            Fotka
+          </button>
+          <input
+            ref={imageInputRef}
+            className="visually-hidden"
+            type="file"
+            accept="image/*"
+            onChange={handleImageSelect}
+          />
+        </div>
+
+        <div className="diary-prompts">
+          <button
+            className="time-chip"
+            type="button"
+            onClick={() => insertTemplate('<h3>Ranní zápis</h3><ul><li>Spánek: </li><li>Energie: </li><li>Plán dne: </li></ul>')}
+          >
+            Ráno
+          </button>
+          <button
+            className="time-chip"
+            type="button"
+            onClick={() => insertTemplate('<h3>Tělo a trávení</h3><ul><li>Břicho: </li><li>Reakce: </li><li>Možný spouštěč: </li></ul>')}
+          >
+            Tělo
+          </button>
+          <button
+            className="time-chip"
+            type="button"
+            onClick={() => insertTemplate('<h3>Večerní rekapitulace</h3><ul><li>Co pomohlo: </li><li>Co zhoršilo den: </li><li>Zítra zkusím: </li></ul>')}
+          >
+            Večer
+          </button>
+        </div>
+
+        <div
+          ref={editorRef}
+          className="diary-editor"
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          aria-label="Deníkový zápis"
+          data-placeholder="Začni psát deník dne..."
+          onInput={saveEditorContent}
+          onBlur={saveEditorContent}
+          dangerouslySetInnerHTML={{ __html: journalHtml }}
+        />
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [isHydrated, setIsHydrated] = useState(false)
   const [auth, setAuth] = useState({ loggedIn: false, email: '' })
@@ -6022,23 +6203,15 @@ export default function App() {
 
           <AccordionSection
             title="Popis dne"
-            subtitle="Stres, spánek, poznámky"
+            subtitle={todayInfo.dayJournalTitle || 'Deník, fotky a poznámky'}
             colorClass="panel-violet"
             isOpen={openMain === 'notes'}
             onToggle={() => setOpenMain(openMain === 'notes' ? null : 'notes')}
           >
-            <div className="card">
-              <h3 className="card-title">Popis dne</h3>
-              <div className="form-group">
-                <label className="label">Poznámka k dni</label>
-                <textarea
-                  className="textarea"
-                  value={todayInfo.dayNote || ''}
-                  onChange={(e) => updateTodayInfo('dayNote', e.target.value)}
-                  placeholder="Jaký byl den, stres, spánek, poznámky..."
-                />
-              </div>
-            </div>
+            <DiaryPanel
+              todayInfo={todayInfo}
+              onTodayInfoChange={updateTodayInfo}
+            />
           </AccordionSection>
 
 
