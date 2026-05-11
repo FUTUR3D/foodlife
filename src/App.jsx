@@ -1578,6 +1578,8 @@ function RecipeLibrary({
   onSaveRecipe,
   onDeleteRecipe,
   editRecipeRequest,
+  createRecipeRequest,
+  onCreateFood,
 }) {
   const [mealFilter, setMealFilter] = useState('all')
   const [goalFilter, setGoalFilter] = useState('all')
@@ -1598,6 +1600,7 @@ function RecipeLibrary({
   const [isRecipeSaving, setIsRecipeSaving] = useState(false)
   const [recipeError, setRecipeError] = useState('')
   const [openParts, setOpenParts] = useState({ form: false, list: true, ai: false })
+  const [lastIngredientSearchQuery, setLastIngredientSearchQuery] = useState('')
   const isRecipeFormOpen = recipeForm.id !== null || recipeForm.title.trim() !== '' || recipeForm.note.trim() !== '' || recipeForm.items.length > 0 || Boolean(openParts.form)
 
   const goalLabels = {
@@ -1632,6 +1635,7 @@ function RecipeLibrary({
     if (q.length < 2) {
       setRecipeSearchResults([])
       setIsRecipeSearching(false)
+      setLastIngredientSearchQuery('')
       return undefined
     }
 
@@ -1646,6 +1650,7 @@ function RecipeLibrary({
         if (!response.ok) throw new Error('food_search_failed')
         const data = await response.json()
         setRecipeSearchResults(data.foods || [])
+        setLastIngredientSearchQuery(q)
       } catch (err) {
         if (err.name !== 'AbortError') setRecipeError('Potraviny se nepodařilo načíst.')
       } finally {
@@ -1696,6 +1701,17 @@ function RecipeLibrary({
     if (!editRecipeRequest?.recipe) return
     editRecipe(editRecipeRequest.recipe, { asCopy: editRecipeRequest.asCopy })
   }, [editRecipeRequest])
+
+  useEffect(() => {
+    if (!createRecipeRequest?.token) return
+    setRecipeForm({
+      ...EMPTY_RECIPE_FORM,
+      title: createRecipeRequest.title || '',
+      meal_types: createRecipeRequest.mealType ? [createRecipeRequest.mealType] : EMPTY_RECIPE_FORM.meal_types,
+    })
+    setRecipeError('')
+    openPart('form')
+  }, [createRecipeRequest])
 
   function resetRecipeForm() {
     setRecipeForm(EMPTY_RECIPE_FORM)
@@ -1830,6 +1846,21 @@ function RecipeLibrary({
     } finally {
       setUsingRecipeId(null)
     }
+  }
+
+  function handleCreateIngredient() {
+    if (!onCreateFood) return
+    onCreateFood(recipeSearchQuery.trim())
+  }
+
+  function handleCreateRecipeFromFilter() {
+    setRecipeForm({
+      ...EMPTY_RECIPE_FORM,
+      title: query.trim(),
+      meal_types: mealFilter !== 'all' ? [mealFilter] : EMPTY_RECIPE_FORM.meal_types,
+    })
+    setRecipeError('')
+    openPart('form')
   }
 
   function handleEditRequest(recipe) {
@@ -2016,6 +2047,19 @@ function RecipeLibrary({
                 </div>
               ) : null}
               {isRecipeSearching ? <div className="form-hint">Hledám...</div> : null}
+              {recipeSearchQuery.trim().length >= 2
+                && !isRecipeSearching
+                && lastIngredientSearchQuery === recipeSearchQuery.trim()
+                && recipeSearchResults.length === 0
+                && !selectedRecipeFood ? (
+                <div className="not-found-box">
+                  <strong>Potravina nenalezena.</strong>
+                  <span>Chceš ji založit jako vlastní potravinu?</span>
+                  <button type="button" className="button button-light button-small" onClick={handleCreateIngredient}>
+                    Vytvořit potravinu
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <div className="draft-edit-grid">
@@ -2189,7 +2233,12 @@ function RecipeLibrary({
         {isLoading ? <div className="empty-box">Načítám recepty...</div> : null}
 
         {!isLoading && filteredRecipes.length === 0 ? (
-          <div className="empty-box">Zatím tu není recept pro vybraný filtr. Po importu SQL se objeví systémové recepty.</div>
+          <div className="empty-box">
+            Recept nenalezen.
+            <button type="button" className="button button-light button-small" onClick={handleCreateRecipeFromFilter}>
+              Vytvořit recept
+            </button>
+          </div>
         ) : (
           <div className="recipe-compact-list">
             {filteredRecipes.map((recipe) => {
@@ -2316,6 +2365,7 @@ function CustomFoodsManager({
   isOpen,
   onToggle,
   editRecipeRequest,
+  createFoodRequest,
   onSaveFood,
   onDeleteFood,
   onSaveRecipe,
@@ -2491,6 +2541,18 @@ function CustomFoodsManager({
     if (!editRecipeRequest?.recipe) return
     editRecipe(editRecipeRequest.recipe, { asCopy: editRecipeRequest.asCopy })
   }, [editRecipeRequest])
+
+  useEffect(() => {
+    if (!createFoodRequest?.token) return
+    setForm({
+      ...EMPTY_CUSTOM_FOOD,
+      name_cs: createFoodRequest.name || '',
+    })
+    setSearchQuery('')
+    setSearchResults([])
+    setError('')
+    openPart('foodForm')
+  }, [createFoodRequest])
 
   function resetRecipeForm() {
     setRecipeForm(EMPTY_RECIPE_FORM)
@@ -3044,6 +3106,8 @@ function MealQuickAdd({
   recipesByType,
   isRecipesLoading,
   onSaveMeal,
+  onCreateFood,
+  onCreateRecipe,
 }) {
   const [mealKey, setMealKey] = useState(getDefaultFoodMealKey)
   const [mealTime, setMealTime] = useState(() => getDefaultMealTime(getDefaultFoodMealKey()))
@@ -3054,16 +3118,30 @@ function MealQuickAdd({
   const [unit, setUnit] = useState('g')
   const [note, setNote] = useState('')
   const [selectedRecipeId, setSelectedRecipeId] = useState('')
+  const [recipeQuery, setRecipeQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [isOpen, setIsOpen] = useState(true)
+  const [lastFoodSearchQuery, setLastFoodSearchQuery] = useState('')
 
   const section = FOOD_MEAL_SECTIONS.find((item) => item.key === mealKey) || FOOD_MEAL_SECTIONS[0]
   const savedMeals = mealsByType[section.key] || []
   const recipes = recipesByType[section.key] || []
+  const recipeNeedle = recipeQuery.trim().toLowerCase()
+  const filteredRecipes = recipes.filter((recipe) => {
+    if (!recipeNeedle) return true
+    const haystack = [
+      recipe.title,
+      recipe.description,
+      recipe.note,
+      ...(recipe.items || []).map((item) => item.name || item.custom_name),
+    ].filter(Boolean).join(' ').toLowerCase()
+    return haystack.includes(recipeNeedle)
+  })
   const selectedRecipe = recipes.find((recipe) => String(recipe.id) === String(selectedRecipeId))
+  const recipeNotFound = recipeQuery.trim().length >= 2 && !isRecipesLoading && filteredRecipes.length === 0
   const timePresets = ['07:00', '10:00', '12:00', '15:00', '18:00']
 
   useEffect(() => {
@@ -3079,6 +3157,7 @@ function MealQuickAdd({
     if (q.length < 2) {
       setResults([])
       setIsSearching(false)
+      setLastFoodSearchQuery('')
       return undefined
     }
 
@@ -3093,6 +3172,7 @@ function MealQuickAdd({
         if (!response.ok) throw new Error('search_failed')
         const data = await response.json()
         setResults(data.foods || [])
+        setLastFoodSearchQuery(q)
       } catch (err) {
         if (err.name !== 'AbortError') setError('Potraviny se nepodařilo načíst.')
       } finally {
@@ -3192,6 +3272,16 @@ function MealQuickAdd({
     }
   }
 
+  function handleCreateFood() {
+    if (!onCreateFood) return
+    onCreateFood(query.trim())
+  }
+
+  function handleCreateRecipe() {
+    if (!onCreateRecipe) return
+    onCreateRecipe(recipeQuery.trim(), section.key)
+  }
+
   return (
     <InnerSection
       title="Přidat jídlo"
@@ -3210,6 +3300,7 @@ function MealQuickAdd({
               setMealKey(nextMealKey)
               setMealTime(getDefaultMealTime(nextMealKey))
               setSelectedRecipeId('')
+              setRecipeQuery('')
               setMessage('')
             }}
           >
@@ -3274,6 +3365,19 @@ function MealQuickAdd({
                 </div>
               ) : null}
               {isSearching ? <div className="form-hint">Hledám...</div> : null}
+              {query.trim().length >= 2
+                && !isSearching
+                && lastFoodSearchQuery === query.trim()
+                && results.length === 0
+                && !selectedFood ? (
+                <div className="not-found-box">
+                  <strong>Potravina nenalezena.</strong>
+                  <span>Chceš vytvořit svoji potravinu?</span>
+                  <button type="button" className="button button-light button-small" onClick={handleCreateFood}>
+                    Vytvořit potravinu
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <div className="meal-input-grid">
@@ -3318,9 +3422,27 @@ function MealQuickAdd({
             {isRecipesLoading ? (
               <div className="empty-box">Načítám uložená jídla...</div>
             ) : recipes.length === 0 ? (
-              <div className="empty-box">Pro {section.title.toLowerCase()} zatím nemáš uložené jídlo.</div>
+              <div className="empty-box">
+                Pro {section.title.toLowerCase()} zatím nemáš uložené jídlo.
+                <button type="button" className="button button-light button-small" onClick={handleCreateRecipe}>
+                  Vytvořit recept
+                </button>
+              </div>
             ) : (
               <>
+                <div className="form-group">
+                  <label className="label">Hledat uložené jídlo</label>
+                  <input
+                    className="input"
+                    value={recipeQuery}
+                    onChange={(e) => {
+                      setRecipeQuery(e.target.value)
+                      setSelectedRecipeId('')
+                      setMessage('')
+                    }}
+                    placeholder="Např. vajíčka, jogurt, kuře..."
+                  />
+                </div>
                 <div className="recipe-picker-row">
                   <select
                     className="input"
@@ -3331,7 +3453,7 @@ function MealQuickAdd({
                     }}
                   >
                     <option value="">Vyber uložené jídlo</option>
-                    {recipes.map((recipe) => (
+                    {filteredRecipes.map((recipe) => (
                       <option key={recipe.id} value={recipe.id}>
                         {recipe.title} ({recipe.items.length} surovin)
                       </option>
@@ -3341,6 +3463,15 @@ function MealQuickAdd({
                     Vložit
                   </button>
                 </div>
+                {recipeNotFound ? (
+                  <div className="not-found-box">
+                    <strong>Recept nenalezen.</strong>
+                    <span>Chceš ho vytvořit jako nový recept?</span>
+                    <button type="button" className="button button-light button-small" onClick={handleCreateRecipe}>
+                      Vytvořit recept
+                    </button>
+                  </div>
+                ) : null}
                 {selectedRecipe ? (
                   <div className="form-hint recipe-hint">
                     {selectedRecipe.items.map((item) => item.name || item.custom_name).join(', ')}
@@ -4663,6 +4794,8 @@ export default function App() {
   const [openMain, setOpenMain] = useState(null)
   const [openMeal, setOpenMeal] = useState(null)
   const [recipeEditRequest, setRecipeEditRequest] = useState(null)
+  const [recipeCreateRequest, setRecipeCreateRequest] = useState(null)
+  const [customFoodCreateRequest, setCustomFoodCreateRequest] = useState(null)
   const [openMenu, setOpenMenu] = useState(false)
   const [openCalendar, setOpenCalendar] = useState(false)
   const [selectedDate, setSelectedDate] = useState(formatToday())
@@ -4943,6 +5076,18 @@ export default function App() {
     setOpenMain('food')
     setOpenMeal('recipes')
     setRecipeEditRequest({ recipe, asCopy: Boolean(options.asCopy), token: Date.now() })
+  }
+
+  function openRecipeCreator(title = '', mealType = 'snidane') {
+    setOpenMain('food')
+    setOpenMeal('recipes')
+    setRecipeCreateRequest({ title, mealType, token: Date.now() })
+  }
+
+  function openCustomFoodCreator(name = '') {
+    setOpenMain('food')
+    setOpenMeal('custom-foods')
+    setCustomFoodCreateRequest({ name, token: Date.now() })
   }
 
   async function saveMeal(section, items, note, mealId = null, time = null) {
@@ -5342,6 +5487,8 @@ export default function App() {
                 recipesByType={recipesByType}
                 isRecipesLoading={isRecipesLoading}
                 onSaveMeal={saveMeal}
+                onCreateFood={openCustomFoodCreator}
+                onCreateRecipe={openRecipeCreator}
               />
 
               {FOOD_MEAL_SECTIONS.map((section) => (
@@ -5369,6 +5516,8 @@ export default function App() {
                 onSaveRecipe={saveRecipe}
                 onDeleteRecipe={deleteRecipe}
                 editRecipeRequest={recipeEditRequest}
+                createRecipeRequest={recipeCreateRequest}
+                onCreateFood={openCustomFoodCreator}
               />
 
               <CustomFoodsManager
@@ -5379,6 +5528,7 @@ export default function App() {
                 isOpen={openMeal === 'custom-foods'}
                 onToggle={() => setOpenMeal(openMeal === 'custom-foods' ? null : 'custom-foods')}
                 editRecipeRequest={recipeEditRequest}
+                createFoodRequest={customFoodCreateRequest}
                 onSaveFood={saveCustomFood}
                 onDeleteFood={deleteCustomFood}
                 onSaveRecipe={saveRecipe}

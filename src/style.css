@@ -3025,6 +3025,26 @@ h4,
   font-size: 14px;
 }
 
+.not-found-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e6eaf0;
+  background: #fbfcfe;
+  color: #475467;
+  padding: 10px;
+  font-size: 14px;
+}
+
+.not-found-box strong {
+  color: #101828;
+}
+
+.not-found-box .button {
+  margin-left: auto;
+}
+
 @media (max-width: 760px) {
   .quick-meal-columns {
     grid-template-columns: 1fr;
@@ -3036,5 +3056,14 @@ h4,
 
   .time-picker-panel {
     grid-template-columns: 1fr;
+  }
+
+  .not-found-box {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .not-found-box .button {
+    margin-left: 0;
   }
 }
