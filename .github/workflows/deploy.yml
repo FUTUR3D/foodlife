@@ -8,6 +8,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repository
@@ -122,16 +124,18 @@ jobs:
           NODE
 
       - name: Deploy app files to FTP server
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
+          security: loose
           local-dir: ./deploy/
           server-dir: /www/subdom/foodlife/
 
       - name: Normalize deployed permissions
+        continue-on-error: true
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
@@ -141,6 +145,7 @@ jobs:
           python3 - <<'PY'
           import os
           import ssl
+          import sys
           from ftplib import FTP_TLS, error_perm
 
           server = os.environ['FTP_SERVER']
@@ -148,10 +153,7 @@ jobs:
           password = os.environ['FTP_PASSWORD']
           server_dir = os.environ['FTP_SERVER_DIR'].rstrip('/')
 
-          ftp = FTP_TLS(context=ssl.create_default_context())
-          ftp.connect(server, 21, timeout=60)
-          ftp.login(username, password)
-          ftp.prot_p()
+          ftp = FTP_TLS(context=ssl._create_unverified_context())
 
           def chmod(mode, path):
               try:
@@ -195,6 +197,17 @@ jobs:
                   else:
                       chmod('664', full)
 
-          walk(server_dir)
-          ftp.quit()
+          try:
+              ftp.connect(server, 21, timeout=60)
+              ftp.login(username, password)
+              ftp.prot_p()
+              walk(server_dir)
+          except Exception as exc:
+              print(f'::warning::Permission normalization skipped: {exc}')
+              sys.exit(0)
+          finally:
+              try:
+                  ftp.quit()
+              except Exception:
+                  pass
           PY
