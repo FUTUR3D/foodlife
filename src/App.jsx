@@ -162,7 +162,20 @@ function readStorage(key, fallback) {
 }
 
 function writeStorage(key, value) {
-  localStorage.setItem(key, JSON.stringify(value))
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Server-backed fields such as the journal can be too large for localStorage.
+  }
+}
+
+function dayInfoStorageValue(infoByDate) {
+  return Object.fromEntries(
+    Object.entries(infoByDate || {}).map(([date, info]) => {
+      const { dayJournalHtml, ...lightInfo } = info || {}
+      return [date, lightInfo]
+    }),
+  )
 }
 
 function readNumber(value) {
@@ -5150,7 +5163,7 @@ function textToDiaryHtml(text) {
     .join('')
 }
 
-function DiaryPanel({ todayInfo, onTodayInfoChange }) {
+function DiaryPanel({ todayInfo, onTodayInfoChange, saveState }) {
   const editorRef = useRef(null)
   const imageInputRef = useRef(null)
   const fallbackHtml = todayInfo.dayNote ? textToDiaryHtml(todayInfo.dayNote) : '<p></p>'
@@ -5219,7 +5232,10 @@ function DiaryPanel({ todayInfo, onTodayInfoChange }) {
         <div className="diary-head">
           <div>
             <h3 className="card-title">Deník dne</h3>
-            <p className="card-subtitle">Zápisky, souvislosti, fotky a poznámky k tělu.</p>
+            <p className="card-subtitle">
+              Zápisky, souvislosti, fotky a poznámky k tělu.
+              {saveState ? ` ${saveState}` : ''}
+            </p>
           </div>
           <button className="soft-button" type="button" onClick={insertTimeStamp}>
             Vložit čas
@@ -5336,6 +5352,9 @@ export default function App() {
   const [isRecipesLoading, setIsRecipesLoading] = useState(false)
   const [weightLogs, setWeightLogs] = useState([])
   const [isWeightLoading, setIsWeightLoading] = useState(false)
+  const [isJournalLoading, setIsJournalLoading] = useState(false)
+  const [journalLoadedDate, setJournalLoadedDate] = useState('')
+  const [journalSaveState, setJournalSaveState] = useState('')
   const [reactions, setReactions] = useState({})
   const [openMain, setOpenMain] = useState(null)
   const [openMeal, setOpenMeal] = useState(null)
@@ -5346,6 +5365,7 @@ export default function App() {
   const [openCalendar, setOpenCalendar] = useState(false)
   const [selectedDate, setSelectedDate] = useState(formatToday())
   const calendarInputRef = useRef(null)
+  const journalSaveTimerRef = useRef(null)
 
   const today = selectedDate
   const todayEntries = entries[today] || {}
@@ -5441,7 +5461,7 @@ export default function App() {
 
   useEffect(() => {
     if (!isHydrated) return
-    writeStorage(STORAGE_KEYS.dayInfo, dayInfo)
+    writeStorage(STORAGE_KEYS.dayInfo, dayInfoStorageValue(dayInfo))
   }, [dayInfo, isHydrated])
 
   useEffect(() => {
@@ -5471,6 +5491,11 @@ export default function App() {
 
   useEffect(() => {
     if (!isHydrated || !auth.loggedIn) return
+    loadDayJournal(today)
+  }, [auth.loggedIn, isHydrated, today])
+
+  useEffect(() => {
+    if (!isHydrated || !auth.loggedIn) return
     loadUserProfile()
   }, [auth.loggedIn, isHydrated])
 
@@ -5483,6 +5508,37 @@ export default function App() {
     if (!isHydrated || !auth.loggedIn) return
     loadRecipes()
   }, [auth.loggedIn, isHydrated])
+
+  useEffect(() => {
+    if (!isHydrated || !auth.loggedIn || journalLoadedDate !== today || isJournalLoading) return
+
+    const title = todayInfo.dayJournalTitle || ''
+    const html = todayInfo.dayJournalHtml || ''
+    const text = todayInfo.dayNote || ''
+
+    window.clearTimeout(journalSaveTimerRef.current)
+    setJournalSaveState('Ukládám...')
+
+    journalSaveTimerRef.current = window.setTimeout(async () => {
+      try {
+        await saveDayJournal(today, title, html, text)
+        setJournalSaveState('Uloženo')
+      } catch {
+        setJournalSaveState('Nepodařilo se uložit')
+      }
+    }, 700)
+
+    return () => window.clearTimeout(journalSaveTimerRef.current)
+  }, [
+    auth.loggedIn,
+    isHydrated,
+    isJournalLoading,
+    journalLoadedDate,
+    today,
+    todayInfo.dayJournalTitle,
+    todayInfo.dayJournalHtml,
+    todayInfo.dayNote,
+  ])
 
   function handleLogin(e) {
     e.preventDefault()
@@ -5595,6 +5651,72 @@ export default function App() {
     } finally {
       setIsWeightLoading(false)
     }
+  }
+
+  async function loadDayJournal(date = today) {
+    setIsJournalLoading(true)
+    setJournalSaveState('Načítám...')
+    setJournalLoadedDate('')
+
+    try {
+      const response = await fetch(`day-journal.php?date=${encodeURIComponent(date)}`, {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      })
+      if (!response.ok) throw new Error('journal_load_failed')
+
+      const data = await response.json()
+      const journal = data.journal || {}
+      const hasServerJournal = Boolean(journal.title || journal.html || journal.text)
+
+      setDayInfo((prev) => {
+        const current = prev[date] || DEFAULT_DAY_INFO
+        if (!hasServerJournal) {
+          return {
+            ...prev,
+            [date]: {
+              ...current,
+              dayJournalTitle: current.dayJournalTitle || '',
+              dayJournalHtml: current.dayJournalHtml || '',
+              dayNote: current.dayNote || '',
+            },
+          }
+        }
+
+        return {
+          ...prev,
+          [date]: {
+            ...current,
+            dayJournalTitle: journal.title || '',
+            dayJournalHtml: journal.html || '',
+            dayNote: journal.text || '',
+          },
+        }
+      })
+
+      setJournalLoadedDate(date)
+      setJournalSaveState(hasServerJournal ? 'Načteno ze serveru' : '')
+    } catch {
+      setJournalLoadedDate(date)
+      setJournalSaveState('Deník se nepodařilo načíst')
+    } finally {
+      setIsJournalLoading(false)
+    }
+  }
+
+  async function saveDayJournal(date, title, html, text) {
+    const response = await fetch('day-journal.php', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ date, title, html, text }),
+    })
+
+    if (!response.ok) throw new Error('journal_save_failed')
+    return response.json()
   }
 
   async function saveWeightLog(entry) {
@@ -6211,6 +6333,7 @@ export default function App() {
             <DiaryPanel
               todayInfo={todayInfo}
               onTodayInfoChange={updateTodayInfo}
+              saveState={journalSaveState}
             />
           </AccordionSection>
 
