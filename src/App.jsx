@@ -3103,7 +3103,7 @@ function getDefaultFoodMealKey() {
 
 function MealQuickAdd({
   mealsByType,
-  recipesByType,
+  recipes,
   isRecipesLoading,
   onSaveMeal,
   onCreateFood,
@@ -3128,9 +3128,9 @@ function MealQuickAdd({
 
   const section = FOOD_MEAL_SECTIONS.find((item) => item.key === mealKey) || FOOD_MEAL_SECTIONS[0]
   const savedMeals = mealsByType[section.key] || []
-  const recipes = recipesByType[section.key] || []
+  const allRecipes = recipes || []
   const recipeNeedle = recipeQuery.trim().toLowerCase()
-  const filteredRecipes = recipes.filter((recipe) => {
+  const filteredRecipes = allRecipes.filter((recipe) => {
     if (!recipeNeedle) return true
     const haystack = [
       recipe.title,
@@ -3140,7 +3140,7 @@ function MealQuickAdd({
     ].filter(Boolean).join(' ').toLowerCase()
     return haystack.includes(recipeNeedle)
   })
-  const selectedRecipe = recipes.find((recipe) => String(recipe.id) === String(selectedRecipeId))
+  const selectedRecipe = allRecipes.find((recipe) => String(recipe.id) === String(selectedRecipeId))
   const recipeNotFound = recipeQuery.trim().length >= 2 && !isRecipesLoading && filteredRecipes.length === 0
   const timePresets = ['07:00', '10:00', '12:00', '15:00', '18:00']
 
@@ -5487,7 +5487,7 @@ export default function App() {
 
               <MealQuickAdd
                 mealsByType={mealsByType}
-                recipesByType={recipesByType}
+                recipes={recipes}
                 isRecipesLoading={isRecipesLoading}
                 onSaveMeal={saveMeal}
                 onCreateFood={openCustomFoodCreator}
