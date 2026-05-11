@@ -83,6 +83,7 @@ const DEFAULT_DAY_INFO = {
   exerciseEntries: [],
   exerciseKcal: '',
   toiletEntries: [],
+  moodEntries: [],
   toiletCount: '',
   toiletType: 'Normální',
   mood: 'Dobře',
@@ -418,6 +419,17 @@ function getMealTimeValue(meal) {
 function normalizeToiletEntries(todayInfo) {
   if (Array.isArray(todayInfo.toiletEntries)) return todayInfo.toiletEntries
   return []
+}
+
+function normalizeMoodEntries(todayInfo) {
+  if (Array.isArray(todayInfo.moodEntries)) return todayInfo.moodEntries
+  return []
+}
+
+function getReactionTimeValue(reaction) {
+  if (reaction?.time) return reaction.time
+  if (reaction?.onsetTime) return String(reaction.onsetTime).slice(11, 16) || String(reaction.onsetTime).slice(0, 5)
+  return ''
 }
 
 function getWeightNumber(log) {
@@ -4798,10 +4810,10 @@ function HistaminePanel({ histamineSummary, reactions }) {
   )
 }
 
-function ReactionsPanel({ reactions, histamineSummary, onAddReaction, onDeleteReaction }) {
+function ReactionsPanel({ reactions, histamineSummary, onAddReaction, onUpdateReaction, onDeleteReaction }) {
   const [type, setType] = useState(REACTION_TYPES[0])
   const [intensity, setIntensity] = useState('5')
-  const [onsetTime, setOnsetTime] = useState('')
+  const [time, setTime] = useState(getCurrentTimeValue)
   const [onsetSpeed, setOnsetSpeed] = useState(ONSET_SPEEDS[0])
   const [note, setNote] = useState('')
 
@@ -4811,30 +4823,55 @@ function ReactionsPanel({ reactions, histamineSummary, onAddReaction, onDeleteRe
     onAddReaction({
       type,
       intensity: Number(intensity),
-      onsetTime,
+      time: time || getCurrentTimeValue(),
       onsetSpeed,
       note: note.trim(),
     })
 
     setType(REACTION_TYPES[0])
     setIntensity('5')
-    setOnsetTime('')
+    setTime(getCurrentTimeValue())
     setOnsetSpeed(ONSET_SPEEDS[0])
     setNote('')
   }
 
   return (
-    <>
+    <div className="event-panel">
       <form className="card" onSubmit={handleSubmit}>
-        <h3 className="card-title">Zadat symptom</h3>
+        <h3 className="card-title">Přidat reakci těla</h3>
 
-        <div className="form-group">
-          <label className="label">Typ reakce</label>
-          <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-            {REACTION_TYPES.map((reactionType) => (
-              <option key={reactionType}>{reactionType}</option>
-            ))}
-          </select>
+        <div className="event-form-grid">
+          <div className="form-group">
+            <label className="label">Čas</label>
+            <input
+              className="input"
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="label">Typ reakce</label>
+            <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
+              {REACTION_TYPES.map((reactionType) => (
+                <option key={reactionType}>{reactionType}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="label">Nástup</label>
+            <select
+              className="input"
+              value={onsetSpeed}
+              onChange={(e) => setOnsetSpeed(e.target.value)}
+            >
+              {ONSET_SPEEDS.map((speed) => (
+                <option key={speed}>{speed}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="form-group">
@@ -4847,29 +4884,6 @@ function ReactionsPanel({ reactions, histamineSummary, onAddReaction, onDeleteRe
             value={intensity}
             onChange={(e) => setIntensity(e.target.value)}
           />
-        </div>
-
-        <div className="form-group">
-          <label className="label">Čas vzniku</label>
-          <input
-            className="input"
-            type="datetime-local"
-            value={onsetTime}
-            onChange={(e) => setOnsetTime(e.target.value)}
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="label">Rychlost nástupu</label>
-          <select
-            className="input"
-            value={onsetSpeed}
-            onChange={(e) => setOnsetSpeed(e.target.value)}
-          >
-            {ONSET_SPEEDS.map((speed) => (
-              <option key={speed}>{speed}</option>
-            ))}
-          </select>
         </div>
 
         <div className="form-group">
@@ -4902,24 +4916,221 @@ function ReactionsPanel({ reactions, histamineSummary, onAddReaction, onDeleteRe
         ) : (
           <div className="list">
             {reactions.map((reaction) => (
-              <div key={reaction.id} className="list-item">
-                <div>
-                  <div className="list-title">{reaction.type}</div>
-                  <div className="list-subtitle">
-                    Intenzita: {reaction.intensity}/10 • Nástup: {reaction.onsetSpeed}
-                    {reaction.onsetTime ? ` • Čas: ${reaction.onsetTime}` : ''}
-                    {reaction.note ? ` • ${reaction.note}` : ''}
-                  </div>
+              <div key={reaction.id} className="event-entry">
+                <div className="event-entry-head">
+                  <strong>{getReactionTimeValue(reaction) || '-'}</strong>
+                  <span>{reaction.type}</span>
                 </div>
-                <button className="delete-button" onClick={() => onDeleteReaction(reaction.id)}>
-                  Smazat
-                </button>
+                <div className="event-entry-grid">
+                  <input
+                    className="input"
+                    type="time"
+                    value={getReactionTimeValue(reaction)}
+                    onChange={(e) => onUpdateReaction(reaction.id, { time: e.target.value, onsetTime: '' })}
+                    aria-label="Čas reakce"
+                  />
+                  <select
+                    className="input"
+                    value={reaction.type || REACTION_TYPES[0]}
+                    onChange={(e) => onUpdateReaction(reaction.id, { type: e.target.value })}
+                    aria-label="Typ reakce"
+                  >
+                    {REACTION_TYPES.map((reactionType) => (
+                      <option key={reactionType}>{reactionType}</option>
+                    ))}
+                  </select>
+                  <select
+                    className="input"
+                    value={reaction.onsetSpeed || ONSET_SPEEDS[0]}
+                    onChange={(e) => onUpdateReaction(reaction.id, { onsetSpeed: e.target.value })}
+                    aria-label="Nástup reakce"
+                  >
+                    {ONSET_SPEEDS.map((speed) => (
+                      <option key={speed}>{speed}</option>
+                    ))}
+                  </select>
+                  <input
+                    className="input"
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={reaction.intensity ?? ''}
+                    onChange={(e) => onUpdateReaction(reaction.id, { intensity: Number(e.target.value) })}
+                    aria-label="Intenzita"
+                  />
+                  <input
+                    className="input"
+                    value={reaction.note || ''}
+                    onChange={(e) => onUpdateReaction(reaction.id, { note: e.target.value })}
+                    placeholder="Poznámka"
+                    aria-label="Poznámka"
+                  />
+                  <button className="delete-button" onClick={() => onDeleteReaction(reaction.id)}>
+                    Smazat
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
-    </>
+    </div>
+  )
+}
+
+function MoodPanel({ todayInfo, onTodayInfoChange }) {
+  const entries = useMemo(() => normalizeMoodEntries(todayInfo), [todayInfo])
+  const [time, setTime] = useState(getCurrentTimeValue)
+  const [mood, setMood] = useState(todayInfo.mood || 'Dobře')
+  const [energy, setEnergy] = useState('5')
+  const [note, setNote] = useState('')
+
+  function saveEntries(nextEntries) {
+    onTodayInfoChange('moodEntries', nextEntries)
+    onTodayInfoChange('mood', nextEntries[0]?.mood || mood || 'Dobře')
+    onTodayInfoChange('moodNote', nextEntries[0]?.note || '')
+  }
+
+  function handleAdd() {
+    const nextEntry = {
+      id: createId(),
+      time: time || getCurrentTimeValue(),
+      mood,
+      energy: Number(energy),
+      note: note.trim(),
+      createdAt: new Date().toISOString(),
+    }
+    saveEntries([...entries, nextEntry].sort((a, b) => String(a.time).localeCompare(String(b.time))))
+    setTime(getCurrentTimeValue())
+    setMood('Dobře')
+    setEnergy('5')
+    setNote('')
+  }
+
+  function updateEntry(entryId, patch) {
+    const nextEntries = entries
+      .map((entry) => (entry.id === entryId ? { ...entry, ...patch } : entry))
+      .sort((a, b) => String(a.time).localeCompare(String(b.time)))
+    saveEntries(nextEntries)
+  }
+
+  function deleteEntry(entryId) {
+    saveEntries(entries.filter((entry) => entry.id !== entryId))
+  }
+
+  return (
+    <div className="event-panel">
+      <div className="card">
+        <h3 className="card-title">Přidat pocit</h3>
+
+        <div className="event-form-grid">
+          <div className="form-group">
+            <label className="label">Čas</label>
+            <input
+              className="input"
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="label">Nálada</label>
+            <select className="input" value={mood} onChange={(e) => setMood(e.target.value)}>
+              <option>Skvěle</option>
+              <option>Dobře</option>
+              <option>Normálně</option>
+              <option>Unaveně</option>
+              <option>Špatně</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="label">Energie: {energy}/10</label>
+            <input
+              className="input"
+              type="range"
+              min="0"
+              max="10"
+              value={energy}
+              onChange={(e) => setEnergy(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="label">Poznámka</label>
+          <input
+            className="input"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Např. nafouklý, bez energie, soustředěný..."
+          />
+        </div>
+
+        <button className="button button-full" type="button" onClick={handleAdd}>
+          Přidat záznam
+        </button>
+      </div>
+
+      <div className="card">
+        <h3 className="card-title">Dnešní pocity</h3>
+        {entries.length === 0 ? (
+          <div className="empty-box">Dnes zatím není žádný záznam.</div>
+        ) : (
+          <div className="list">
+            {entries.map((entry) => (
+              <div key={entry.id} className="event-entry">
+                <div className="event-entry-head">
+                  <strong>{entry.time || '-'}</strong>
+                  <span>{entry.mood} • energie {entry.energy ?? '-'}/10</span>
+                </div>
+                <div className="event-entry-grid mood-entry-grid">
+                  <input
+                    className="input"
+                    type="time"
+                    value={entry.time || ''}
+                    onChange={(e) => updateEntry(entry.id, { time: e.target.value })}
+                    aria-label="Čas pocitu"
+                  />
+                  <select
+                    className="input"
+                    value={entry.mood || 'Dobře'}
+                    onChange={(e) => updateEntry(entry.id, { mood: e.target.value })}
+                    aria-label="Nálada"
+                  >
+                    <option>Skvěle</option>
+                    <option>Dobře</option>
+                    <option>Normálně</option>
+                    <option>Unaveně</option>
+                    <option>Špatně</option>
+                  </select>
+                  <input
+                    className="input"
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={entry.energy ?? ''}
+                    onChange={(e) => updateEntry(entry.id, { energy: Number(e.target.value) })}
+                    aria-label="Energie"
+                  />
+                  <input
+                    className="input"
+                    value={entry.note || ''}
+                    onChange={(e) => updateEntry(entry.id, { note: e.target.value })}
+                    placeholder="Poznámka"
+                    aria-label="Poznámka"
+                  />
+                  <button className="delete-button" type="button" onClick={() => deleteEntry(entry.id)}>
+                    Smazat
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -5450,6 +5661,15 @@ export default function App() {
     }))
   }
 
+  function updateReaction(reactionId, patch) {
+    setReactions((prev) => ({
+      ...prev,
+      [today]: ((prev[today] || []).map((reaction) => (
+        reaction.id === reactionId ? { ...reaction, ...patch } : reaction
+      ))),
+    }))
+  }
+
   const totalItemsToday = MEAL_SECTIONS.reduce((sum, section) => {
     return sum + (mealsByType[section.key] || []).reduce((mealSum, meal) => mealSum + meal.items.length, 0)
   }, 0)
@@ -5773,7 +5993,7 @@ export default function App() {
 
           <AccordionSection
             title="Reakce těla"
-            subtitle="Symptomy, intolerance a čas nástupu"
+            subtitle={`${todayReactions.length} záznamů`}
             colorClass="panel-indigo"
             isOpen={openMain === 'reactions'}
             onToggle={() => setOpenMain(openMain === 'reactions' ? null : 'reactions')}
@@ -5782,45 +6002,22 @@ export default function App() {
               reactions={todayReactions}
               histamineSummary={histamineSummary}
               onAddReaction={addReaction}
+              onUpdateReaction={updateReaction}
               onDeleteReaction={deleteReaction}
             />
           </AccordionSection>
 
           <AccordionSection
             title="Jak se cítím"
-            subtitle="Nálada, energie, symptomy"
+            subtitle={`${normalizeMoodEntries(todayInfo).length} záznamů`}
             colorClass="panel-indigo"
             isOpen={openMain === 'mood'}
             onToggle={() => setOpenMain(openMain === 'mood' ? null : 'mood')}
           >
-            <div className="card">
-              <h3 className="card-title">Jak se cítím</h3>
-
-              <div className="form-group">
-                <label className="label">Nálada</label>
-                <select
-                  className="input"
-                  value={todayInfo.mood || 'Dobře'}
-                  onChange={(e) => updateTodayInfo('mood', e.target.value)}
-                >
-                  <option>Skvěle</option>
-                  <option>Dobře</option>
-                  <option>Normálně</option>
-                  <option>Unaveně</option>
-                  <option>Špatně</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="label">Poznámka</label>
-                <input
-                  className="input"
-                  value={todayInfo.moodNote || ''}
-                  onChange={(e) => updateTodayInfo('moodNote', e.target.value)}
-                  placeholder="Např. nafouklý, bez energie, soustředěný..."
-                />
-              </div>
-            </div>
+            <MoodPanel
+              todayInfo={todayInfo}
+              onTodayInfoChange={updateTodayInfo}
+            />
           </AccordionSection>
 
           <AccordionSection
