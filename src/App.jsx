@@ -5166,18 +5166,27 @@ function textToDiaryHtml(text) {
 function DiaryPanel({ todayInfo, onTodayInfoChange, saveState }) {
   const editorRef = useRef(null)
   const imageInputRef = useRef(null)
+  const appliedHtmlRef = useRef('')
   const fallbackHtml = todayInfo.dayNote ? textToDiaryHtml(todayInfo.dayNote) : '<p></p>'
   const journalHtml = todayInfo.dayJournalHtml || fallbackHtml
 
   useEffect(() => {
     const editor = editorRef.current
-    if (!editor || document.activeElement === editor) return
-    if (editor.innerHTML !== journalHtml) editor.innerHTML = journalHtml
+    if (!editor) return
+
+    const shouldKeepTypingPosition = document.activeElement === editor && appliedHtmlRef.current !== ''
+    if (shouldKeepTypingPosition) return
+
+    if (editor.innerHTML !== journalHtml) {
+      editor.innerHTML = journalHtml
+      appliedHtmlRef.current = journalHtml
+    }
   }, [journalHtml])
 
   function saveEditorContent() {
     const editor = editorRef.current
     if (!editor) return
+    appliedHtmlRef.current = editor.innerHTML
     onTodayInfoChange('dayJournalHtml', editor.innerHTML)
     onTodayInfoChange('dayNote', editor.innerText.trim())
   }
@@ -5392,7 +5401,6 @@ function DiaryPanel({ todayInfo, onTodayInfoChange, saveState }) {
           data-placeholder="Začni psát deník dne..."
           onInput={saveEditorContent}
           onBlur={saveEditorContent}
-          dangerouslySetInnerHTML={{ __html: journalHtml }}
         />
       </div>
     </div>
