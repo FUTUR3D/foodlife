@@ -2955,3 +2955,47 @@ h4,
     transform: none;
   }
 }
+
+.quick-meal-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quick-meal-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.8fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.quick-meal-card {
+  border: 1px solid #e6eaf0;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.quick-meal-card-title {
+  margin-bottom: 10px;
+  color: #101828;
+  font-size: 15px;
+  font-weight: 560;
+}
+
+.save-message {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+@media (max-width: 760px) {
+  .quick-meal-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-meal-card {
+    padding: 10px;
+  }
+}

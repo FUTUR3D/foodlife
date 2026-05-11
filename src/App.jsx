@@ -3012,6 +3012,307 @@ function CustomFoodsManager({
   )
 }
 
+function getDefaultFoodMealKey() {
+  const hour = new Date().getHours()
+  if (hour < 10) return 'snidane'
+  if (hour < 12) return 'svacina1'
+  if (hour < 15) return 'obed'
+  if (hour < 18) return 'svacina2'
+  if (hour < 22) return 'vecere'
+  return 'ostatni'
+}
+
+function MealQuickAdd({
+  mealsByType,
+  recipesByType,
+  isRecipesLoading,
+  onSaveMeal,
+}) {
+  const [mealKey, setMealKey] = useState(getDefaultFoodMealKey)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [selectedFood, setSelectedFood] = useState(null)
+  const [amount, setAmount] = useState('')
+  const [unit, setUnit] = useState('g')
+  const [note, setNote] = useState('')
+  const [selectedRecipeId, setSelectedRecipeId] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  const [isOpen, setIsOpen] = useState(true)
+
+  const section = FOOD_MEAL_SECTIONS.find((item) => item.key === mealKey) || FOOD_MEAL_SECTIONS[0]
+  const savedMeals = mealsByType[section.key] || []
+  const recipes = recipesByType[section.key] || []
+  const selectedRecipe = recipes.find((recipe) => String(recipe.id) === String(selectedRecipeId))
+
+  useEffect(() => {
+    const q = query.trim()
+    setError('')
+
+    if (selectedFood?.name_cs === q) {
+      setResults([])
+      setIsSearching(false)
+      return undefined
+    }
+
+    if (q.length < 2) {
+      setResults([])
+      setIsSearching(false)
+      return undefined
+    }
+
+    const controller = new AbortController()
+    const timeout = window.setTimeout(async () => {
+      setIsSearching(true)
+      try {
+        const response = await fetch(`foods-search.php?q=${encodeURIComponent(q)}&type=food`, {
+          credentials: 'same-origin',
+          signal: controller.signal,
+        })
+        if (!response.ok) throw new Error('search_failed')
+        const data = await response.json()
+        setResults(data.foods || [])
+      } catch (err) {
+        if (err.name !== 'AbortError') setError('Potraviny se nepodařilo načíst.')
+      } finally {
+        setIsSearching(false)
+      }
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [query, selectedFood])
+
+  function handleSelectFood(food) {
+    const nextUnit = food.default_unit || 'g'
+    setSelectedFood(food)
+    setQuery(food.name_cs)
+    setUnit(nextUnit)
+    setAmount(hasServingSize(nextUnit, food.serving_grams) ? '1' : '')
+    setResults([])
+    setMessage('')
+  }
+
+  function resetFoodForm() {
+    setQuery('')
+    setSelectedFood(null)
+    setResults([])
+    setAmount('')
+    setNote('')
+  }
+
+  function buildItem(parsedAmount, name) {
+    return {
+      id: createId(),
+      food_id: selectedFood?.id || null,
+      name,
+      custom_name: selectedFood ? null : name,
+      amount: parsedAmount,
+      unit,
+      grams: gramsFromAmount(parsedAmount, unit, selectedFood?.serving_grams),
+      serving_grams: selectedFood?.serving_grams ?? null,
+      note: note.trim(),
+      kcal_100g: selectedFood?.kcal_100g ?? null,
+      protein_100g: selectedFood?.protein_100g ?? null,
+      carbs_100g: selectedFood?.carbs_100g ?? null,
+      fat_100g: selectedFood?.fat_100g ?? null,
+      fiber_100g: selectedFood?.fiber_100g ?? null,
+      ...sighiFieldsFromFood(selectedFood),
+    }
+  }
+
+  async function saveItems(items, mealNote = '') {
+    const targetMeal = savedMeals[0] || null
+    const nextItems = [...(targetMeal?.items || []), ...items]
+    await onSaveMeal(section, nextItems, targetMeal?.note || mealNote, targetMeal?.id || null)
+    setMessage(`Přidáno do: ${section.title}`)
+  }
+
+  async function handleAddFood() {
+    const parsedAmount = parseAmount(amount)
+    const name = selectedFood?.name_cs || query.trim()
+
+    if (!name || !parsedAmount) {
+      setError('Vyber potravinu a doplň množství.')
+      return
+    }
+
+    setIsSaving(true)
+    setError('')
+    setMessage('')
+    try {
+      await saveItems([buildItem(parsedAmount, name)])
+      resetFoodForm()
+    } catch {
+      setError('Položku se nepodařilo uložit.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleInsertRecipe() {
+    if (!selectedRecipe) {
+      setError('Vyber uložené jídlo.')
+      return
+    }
+
+    setIsSaving(true)
+    setError('')
+    setMessage('')
+    try {
+      await saveItems(draftItemsFromRecipe(selectedRecipe), selectedRecipe.title)
+      setSelectedRecipeId('')
+    } catch {
+      setError('Uložené jídlo se nepodařilo vložit.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <InnerSection
+      title="Přidat jídlo"
+      subtitle={`${section.title} • jedna akce pro celý den`}
+      isOpen={isOpen}
+      onToggle={() => setIsOpen((value) => !value)}
+    >
+      <div className="quick-meal-entry">
+        <div className="form-group">
+          <label className="label">Co to je za jídlo</label>
+          <select
+            className="input"
+            value={mealKey}
+            onChange={(e) => {
+              setMealKey(e.target.value)
+              setSelectedRecipeId('')
+              setMessage('')
+            }}
+          >
+            {FOOD_MEAL_SECTIONS.map((item) => (
+              <option key={item.key} value={item.key}>{item.title}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="quick-meal-columns">
+          <div className="quick-meal-card">
+            <div className="quick-meal-card-title">Potravina nebo ruční položka</div>
+            <div className="form-group food-search-wrap">
+              <label className="label">Potravina</label>
+              <input
+                className="input"
+                value={query}
+                onChange={(e) => {
+                  setSelectedFood(null)
+                  setQuery(e.target.value)
+                  setMessage('')
+                }}
+                placeholder="Např. banán, rýže, jogurt..."
+              />
+              {results.length > 0 ? (
+                <div className="food-search-results">
+                  {results.map((food) => (
+                    <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
+                      <span>{food.name_cs}</span>
+                      <small>
+                        <FoodKindBadge food={food} />
+                        <SighiBadge item={food} />
+                        {hasServingSize(food.default_unit, food.serving_grams) ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) • ` : ' '}
+                        {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
+                      </small>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {isSearching ? <div className="form-hint">Hledám...</div> : null}
+            </div>
+
+            <div className="meal-input-grid">
+              <div className="form-group">
+                <label className="label">Množství</label>
+                <input className="input" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="150" />
+              </div>
+              <div className="form-group">
+                <label className="label">Jednotka</label>
+                <select className="input" value={unit} onChange={(e) => setUnit(e.target.value)}>
+                  <option value="g">g</option>
+                  <option value="ml">ml</option>
+                  <option value="ks">ks</option>
+                  <option value="plátek">plátek</option>
+                  <option value="porce">porce</option>
+                  <option value="lžička">lžička</option>
+                  <option value="lžíce">lžíce</option>
+                </select>
+                {hasServingSize(unit, selectedFood?.serving_grams) ? (
+                  <div className="form-hint">1 {unit} ({Math.round(Number(selectedFood.serving_grams))} g)</div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="label">Poznámka</label>
+              <input
+                className="input"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Např. vařené, bez cukru, větší porce"
+              />
+            </div>
+
+            <button className="button button-full" onClick={handleAddFood} disabled={isSaving}>
+              {isSaving ? 'Ukládám...' : `Přidat do ${section.title.toLowerCase()}`}
+            </button>
+          </div>
+
+          <div className="quick-meal-card">
+            <div className="quick-meal-card-title">Uložené jídlo</div>
+            {isRecipesLoading ? (
+              <div className="empty-box">Načítám uložená jídla...</div>
+            ) : recipes.length === 0 ? (
+              <div className="empty-box">Pro {section.title.toLowerCase()} zatím nemáš uložené jídlo.</div>
+            ) : (
+              <>
+                <div className="recipe-picker-row">
+                  <select
+                    className="input"
+                    value={selectedRecipeId}
+                    onChange={(e) => {
+                      setSelectedRecipeId(e.target.value)
+                      setMessage('')
+                    }}
+                  >
+                    <option value="">Vyber uložené jídlo</option>
+                    {recipes.map((recipe) => (
+                      <option key={recipe.id} value={recipe.id}>
+                        {recipe.title} ({recipe.items.length} surovin)
+                      </option>
+                    ))}
+                  </select>
+                  <button className="button" onClick={handleInsertRecipe} disabled={!selectedRecipeId || isSaving}>
+                    Vložit
+                  </button>
+                </div>
+                {selectedRecipe ? (
+                  <div className="form-hint recipe-hint">
+                    {selectedRecipe.items.map((item) => item.name || item.custom_name).join(', ')}
+                  </div>
+                ) : null}
+              </>
+            )}
+          </div>
+        </div>
+
+        {error ? <div className="inline-error">{error}</div> : null}
+        {message ? <div className="save-message">{message}</div> : null}
+      </div>
+    </InnerSection>
+  )
+}
+
 function MealSection({
   section,
   savedMeals,
@@ -3019,6 +3320,7 @@ function MealSection({
   isRecipesLoading,
   profile,
   embedded = false,
+  hideEntry = false,
   isOpen,
   onToggle,
   onSaveMeal,
@@ -3359,6 +3661,7 @@ function MealSection({
   const sectionSubtitle = isDrinkSection
     ? `${formatFluidMl(fluidCurrentMl)} / ${formatFluidMl(fluidTargetMl)} • ${savedCount} položek`
     : `${savedMeals.length} uložených jídel • ${savedCount} položek`
+  const showEntryTools = !hideEntry || editingMealId || isDrinkSection
 
   const sectionContent = (
     <>
@@ -3406,87 +3709,89 @@ function MealSection({
         </InnerSection>
       ) : null}
 
-      <InnerSection
-        title={`Skládání ${section.title.toLowerCase()}`}
-        subtitle={selectedFood ? selectedFood.name_cs : section.key === 'piti' ? 'Přidat nápoj' : 'Přidat surovinu'}
-        isOpen={Boolean(openParts.builder)}
-        onToggle={() => togglePart('builder')}
-      >
-        <div className="form-group food-search-wrap">
-          <label className="label">{section.key === 'piti' ? 'Nápoj' : 'Potravina'}</label>
-          <input
-            className="input"
-            value={query}
-            onChange={(e) => {
-              setSelectedFood(null)
-              setQuery(e.target.value)
-            }}
-            placeholder={section.key === 'piti' ? 'Např. voda, káva, džus...' : 'Např. banán, rýže, jogurt...'}
-          />
-          {results.length > 0 ? (
-            <div className="food-search-results">
-              {results.map((food) => (
-                <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
-                  <span>{food.name_cs}</span>
-                  <small>
-                    <FoodKindBadge food={food} />
-                    <SighiBadge item={food} />
-                    {hasServingSize(food.default_unit, food.serving_grams) ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) • ` : ' '}
-                    {Math.round(Number(food.kcal_100g || 0))} kcal / 100 {section.key === 'piti' ? 'ml' : 'g'}
-                  </small>
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {isSearching ? <div className="form-hint">Hledám...</div> : null}
-        </div>
-
-        <div className="meal-input-grid">
-          <div className="form-group">
-            <label className="label">Množství</label>
+      {showEntryTools ? (
+        <InnerSection
+          title={`Skládání ${section.title.toLowerCase()}`}
+          subtitle={selectedFood ? selectedFood.name_cs : section.key === 'piti' ? 'Přidat nápoj' : 'Přidat surovinu'}
+          isOpen={Boolean(openParts.builder)}
+          onToggle={() => togglePart('builder')}
+        >
+          <div className="form-group food-search-wrap">
+            <label className="label">{section.key === 'piti' ? 'Nápoj' : 'Potravina'}</label>
             <input
               className="input"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder={section.key === 'piti' ? '250' : '150'}
+              value={query}
+              onChange={(e) => {
+                setSelectedFood(null)
+                setQuery(e.target.value)
+              }}
+              placeholder={section.key === 'piti' ? 'Např. voda, káva, džus...' : 'Např. banán, rýže, jogurt...'}
+            />
+            {results.length > 0 ? (
+              <div className="food-search-results">
+                {results.map((food) => (
+                  <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
+                    <span>{food.name_cs}</span>
+                    <small>
+                      <FoodKindBadge food={food} />
+                      <SighiBadge item={food} />
+                      {hasServingSize(food.default_unit, food.serving_grams) ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) • ` : ' '}
+                      {Math.round(Number(food.kcal_100g || 0))} kcal / 100 {section.key === 'piti' ? 'ml' : 'g'}
+                    </small>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {isSearching ? <div className="form-hint">Hledám...</div> : null}
+          </div>
+
+          <div className="meal-input-grid">
+            <div className="form-group">
+              <label className="label">Množství</label>
+              <input
+                className="input"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder={section.key === 'piti' ? '250' : '150'}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="label">Jednotka</label>
+              <select className="input" value={unit} onChange={(e) => setUnit(e.target.value)}>
+                <option value="g">g</option>
+                <option value="ml">ml</option>
+                <option value="ks">ks</option>
+                <option value="plátek">plátek</option>
+                <option value="porce">porce</option>
+                <option value="lžička">lžička</option>
+                <option value="lžíce">lžíce</option>
+              </select>
+              {hasServingSize(unit, selectedFood?.serving_grams) ? (
+                <div className="form-hint">1 {unit} ({Math.round(Number(selectedFood.serving_grams))} g)</div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="label">Poznámka k položce</label>
+            <input
+              className="input"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={section.key === 'piti' ? 'Např. bez cukru, po tréninku, s ledem' : 'Např. vařená rýže, bez cukru, po tréninku'}
             />
           </div>
 
-          <div className="form-group">
-            <label className="label">Jednotka</label>
-            <select className="input" value={unit} onChange={(e) => setUnit(e.target.value)}>
-              <option value="g">g</option>
-              <option value="ml">ml</option>
-              <option value="ks">ks</option>
-              <option value="plátek">plátek</option>
-              <option value="porce">porce</option>
-              <option value="lžička">lžička</option>
-              <option value="lžíce">lžíce</option>
-            </select>
-            {hasServingSize(unit, selectedFood?.serving_grams) ? (
-              <div className="form-hint">1 {unit} ({Math.round(Number(selectedFood.serving_grams))} g)</div>
-            ) : null}
-          </div>
-        </div>
+          {error ? <div className="inline-error">{error}</div> : null}
 
-        <div className="form-group">
-          <label className="label">Poznámka k položce</label>
-          <input
-            className="input"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder={section.key === 'piti' ? 'Např. bez cukru, po tréninku, s ledem' : 'Např. vařená rýže, bez cukru, po tréninku'}
-          />
-        </div>
+          <button className="button button-full" onClick={handleAddItem} disabled={isSaving}>
+            {isSaving ? 'Ukládám...' : 'Přidat'}
+          </button>
+        </InnerSection>
+      ) : null}
 
-        {error ? <div className="inline-error">{error}</div> : null}
-
-        <button className="button button-full" onClick={handleAddItem} disabled={isSaving}>
-          {isSaving ? 'Ukládám...' : 'Přidat'}
-        </button>
-      </InnerSection>
-
-      {!isDrinkSection ? (
+      {showEntryTools && !isDrinkSection ? (
         <InnerSection
           title="Vybrat uložené jídlo"
           subtitle={isRecipesLoading ? 'Načítám...' : `${recipes.length} jídel`}
@@ -4960,6 +5265,13 @@ export default function App() {
             <div className="accordion-stack">
               {isMealsLoading ? <div className="empty-box">Načítám dnešní jídla...</div> : null}
 
+              <MealQuickAdd
+                mealsByType={mealsByType}
+                recipesByType={recipesByType}
+                isRecipesLoading={isRecipesLoading}
+                onSaveMeal={saveMeal}
+              />
+
               {FOOD_MEAL_SECTIONS.map((section) => (
                 <MealSection
                   key={section.key}
@@ -4967,6 +5279,7 @@ export default function App() {
                   savedMeals={mealsByType[section.key] || []}
                   recipes={recipesByType[section.key] || []}
                   isRecipesLoading={isRecipesLoading}
+                  hideEntry
                   isOpen={openMeal === section.key}
                   onToggle={() => setOpenMeal(openMeal === section.key ? null : section.key)}
                   onSaveMeal={saveMeal}
