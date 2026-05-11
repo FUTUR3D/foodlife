@@ -2984,7 +2984,7 @@ h4,
 
 .time-picker-panel {
   display: grid;
-  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
   gap: 10px;
   align-items: end;
   border: 1px solid #e6eaf0;
@@ -2994,9 +2994,10 @@ h4,
 
 .time-chip-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
   padding-bottom: 1px;
+  overflow-x: auto;
 }
 
 .time-chip {
@@ -3006,6 +3007,8 @@ h4,
   padding: 9px 11px;
   cursor: pointer;
   font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .time-chip.active {

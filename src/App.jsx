@@ -28,8 +28,8 @@ const DEFAULT_MEAL_TIMES = {
   snidane: '07:00',
   svacina1: '10:00',
   obed: '12:00',
-  svacina2: '15:30',
-  vecere: '18:30',
+  svacina2: '15:00',
+  vecere: '18:00',
   ostatni: '20:00',
   piti: '08:00',
 }
@@ -3064,12 +3064,7 @@ function MealQuickAdd({
   const savedMeals = mealsByType[section.key] || []
   const recipes = recipesByType[section.key] || []
   const selectedRecipe = recipes.find((recipe) => String(recipe.id) === String(selectedRecipeId))
-  const timePresets = [
-    getDefaultMealTime(section.key),
-    '08:30',
-    '12:30',
-    '18:30',
-  ].filter((time, index, values) => values.indexOf(time) === index)
+  const timePresets = ['07:00', '10:00', '12:00', '15:00', '18:00']
 
   useEffect(() => {
     const q = query.trim()
