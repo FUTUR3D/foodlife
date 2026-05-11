@@ -4849,6 +4849,11 @@ export default function App() {
     if (mealKey) setOpenMeal(mealKey)
   }
 
+  const headerKcal = Math.round(dayTotals.kcal)
+  const headerTarget = energyPlan?.target || null
+  const headerRemaining = headerTarget ? Math.round(headerTarget - headerKcal) : null
+  const headerRemainingLabel = headerRemaining !== null && headerRemaining < 0 ? 'Nad cílem' : 'Zbývá'
+
   if (!isHydrated) {
     return <div className="loading-screen">Načítám…</div>
   }
@@ -4906,6 +4911,21 @@ export default function App() {
                 />
               </div>
               <div className="topbar-text">Záznamy: {totalItemsToday}</div>
+            </div>
+          </div>
+
+          <div className="topbar-metrics" aria-label="Denní kalorie">
+            <div>
+              <span>Kalorie</span>
+              <strong>{headerKcal} kcal</strong>
+            </div>
+            <div>
+              <span>Cíl</span>
+              <strong>{headerTarget ? `${Math.round(headerTarget)} kcal` : '-'}</strong>
+            </div>
+            <div>
+              <span>{headerRemainingLabel}</span>
+              <strong>{headerRemaining === null ? '-' : `${Math.abs(headerRemaining)} kcal`}</strong>
             </div>
           </div>
 
