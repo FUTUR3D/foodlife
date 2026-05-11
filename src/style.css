@@ -2982,6 +2982,53 @@ h4,
   font-weight: 560;
 }
 
+.recipe-list-search {
+  margin-bottom: 8px;
+}
+
+.recipe-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 230px;
+  overflow-y: auto;
+}
+
+.recipe-select-item {
+  width: 100%;
+  border: 1px solid #e6eaf0;
+  background: #ffffff;
+  color: #101828;
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recipe-select-item span,
+.recipe-select-item small {
+  display: block;
+}
+
+.recipe-select-item span {
+  font-weight: 560;
+}
+
+.recipe-select-item small {
+  margin-top: 3px;
+  color: #667085;
+  font-size: 12px;
+}
+
+.recipe-select-item:hover,
+.recipe-select-item.active {
+  border-color: #0f172a;
+  background: #f8fafc;
+}
+
+.recipe-list-action {
+  margin-top: 8px;
+}
+
 .time-picker-panel {
   display: grid;
   grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);

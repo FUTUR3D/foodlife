@@ -3430,37 +3430,40 @@ function MealQuickAdd({
               </div>
             ) : (
               <>
-                <div className="form-group">
-                  <label className="label">Hledat uložené jídlo</label>
-                  <input
-                    className="input"
-                    value={recipeQuery}
-                    onChange={(e) => {
-                      setRecipeQuery(e.target.value)
-                      setSelectedRecipeId('')
-                      setMessage('')
-                    }}
-                    placeholder="Např. vajíčka, jogurt, kuře..."
-                  />
+                <input
+                  className="input recipe-list-search"
+                  value={recipeQuery}
+                  onChange={(e) => {
+                    setRecipeQuery(e.target.value)
+                    setSelectedRecipeId('')
+                    setMessage('')
+                  }}
+                  placeholder="Hledat v receptech..."
+                  aria-label="Hledat v uložených jídlech"
+                />
+                <div className="recipe-select-list">
+                  {filteredRecipes.map((recipe) => {
+                    const totals = getMealTotals(recipe.items || [])
+                    const isSelected = String(recipe.id) === String(selectedRecipeId)
+                    return (
+                      <button
+                        key={recipe.id}
+                        type="button"
+                        className={isSelected ? 'recipe-select-item active' : 'recipe-select-item'}
+                        onClick={() => {
+                          setSelectedRecipeId(String(recipe.id))
+                          setMessage('')
+                        }}
+                      >
+                        <span>{recipe.title}</span>
+                        <small>{recipe.items.length} surovin • {Math.round(totals.kcal)} kcal</small>
+                      </button>
+                    )
+                  })}
                 </div>
-                <div className="recipe-picker-row">
-                  <select
-                    className="input"
-                    value={selectedRecipeId}
-                    onChange={(e) => {
-                      setSelectedRecipeId(e.target.value)
-                      setMessage('')
-                    }}
-                  >
-                    <option value="">Vyber uložené jídlo</option>
-                    {filteredRecipes.map((recipe) => (
-                      <option key={recipe.id} value={recipe.id}>
-                        {recipe.title} ({recipe.items.length} surovin)
-                      </option>
-                    ))}
-                  </select>
-                  <button className="button" onClick={handleInsertRecipe} disabled={!selectedRecipeId || isSaving}>
-                    Vložit
+                <div className="recipe-list-action">
+                  <button className="button button-full" onClick={handleInsertRecipe} disabled={!selectedRecipeId || isSaving}>
+                    {isSaving ? 'Vkládám...' : 'Vložit vybrané jídlo'}
                   </button>
                 </div>
                 {recipeNotFound ? (
