@@ -3043,7 +3043,7 @@ function MealSection({
   const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
-  const [openParts, setOpenParts] = useState({ hydration: true })
+  const [openParts, setOpenParts] = useState({ hydration: true, builder: true, overview: true })
   const isDrinkSection = section.key === 'piti'
 
   function togglePart(part) {
@@ -3102,7 +3102,40 @@ function MealSection({
     setResults([])
   }
 
-  function handleAddItem() {
+  function getAutosaveMeal() {
+    return savedMeals[0] || null
+  }
+
+  function resetBuilderForm() {
+    setQuery('')
+    setSelectedFood(null)
+    setResults([])
+    setAmount('')
+    setNote('')
+  }
+
+  function buildSelectedMealItem(parsedAmount, name) {
+    const grams = gramsFromAmount(parsedAmount, unit, selectedFood?.serving_grams)
+    return {
+      id: createId(),
+      food_id: selectedFood?.id || null,
+      name,
+      custom_name: selectedFood ? null : name,
+      amount: parsedAmount,
+      unit,
+      grams,
+      serving_grams: selectedFood?.serving_grams ?? null,
+      note: note.trim(),
+      kcal_100g: selectedFood?.kcal_100g ?? null,
+      protein_100g: selectedFood?.protein_100g ?? null,
+      carbs_100g: selectedFood?.carbs_100g ?? null,
+      fat_100g: selectedFood?.fat_100g ?? null,
+      fiber_100g: selectedFood?.fiber_100g ?? null,
+      ...sighiFieldsFromFood(selectedFood),
+    }
+  }
+
+  async function handleAddItem() {
     const parsedAmount = parseAmount(amount)
     const name = selectedFood?.name_cs || query.trim()
 
@@ -3112,38 +3145,33 @@ function MealSection({
       return
     }
 
-    const grams = gramsFromAmount(parsedAmount, unit, selectedFood?.serving_grams)
-    setDraftItems((prev) => [
-      ...prev,
-      {
-        id: createId(),
-        food_id: selectedFood?.id || null,
-        name,
-        custom_name: selectedFood ? null : name,
-        amount: parsedAmount,
-        unit,
-        grams,
-        serving_grams: selectedFood?.serving_grams ?? null,
-        note: note.trim(),
-        kcal_100g: selectedFood?.kcal_100g ?? null,
-        protein_100g: selectedFood?.protein_100g ?? null,
-        carbs_100g: selectedFood?.carbs_100g ?? null,
-        fat_100g: selectedFood?.fat_100g ?? null,
-        fiber_100g: selectedFood?.fiber_100g ?? null,
-        ...sighiFieldsFromFood(selectedFood),
-      },
-    ])
+    const nextItem = buildSelectedMealItem(parsedAmount, name)
 
-    setQuery('')
-    setSelectedFood(null)
-    setResults([])
-    setAmount('')
-    setNote('')
+    if (editingMealId) {
+      setDraftItems((prev) => [...prev, nextItem])
+      resetBuilderForm()
+      setError('')
+      openPart('draft')
+      return
+    }
+
+    const targetMeal = getAutosaveMeal()
+    const nextItems = [...(targetMeal?.items || []), nextItem]
+
+    setIsSaving(true)
     setError('')
-    openPart('draft')
+    try {
+      await onSaveMeal(section, nextItems, targetMeal?.note || '', targetMeal?.id || null)
+      resetBuilderForm()
+      openPart('overview')
+    } catch {
+      setError('Položku se nepodařilo uložit.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  function handleInsertRecipe() {
+  async function handleInsertRecipe() {
     const recipe = recipes.find((item) => String(item.id) === String(selectedRecipeId))
     if (!recipe) {
       setError('Vyber uložené jídlo.')
@@ -3151,14 +3179,31 @@ function MealSection({
       return
     }
 
-    setDraftItems((prev) => [
-      ...prev,
-      ...draftItemsFromRecipe(recipe),
-    ])
-    setMealNote((prev) => prev || recipe.title)
-    setSelectedRecipeId('')
+    const recipeItems = draftItemsFromRecipe(recipe)
+
+    if (editingMealId) {
+      setDraftItems((prev) => [...prev, ...recipeItems])
+      setMealNote((prev) => prev || recipe.title)
+      setSelectedRecipeId('')
+      setError('')
+      openPart('draft')
+      return
+    }
+
+    const targetMeal = getAutosaveMeal()
+    const nextItems = [...(targetMeal?.items || []), ...recipeItems]
+
+    setIsSaving(true)
     setError('')
-    openPart('draft')
+    try {
+      await onSaveMeal(section, nextItems, targetMeal?.note || recipe.title, targetMeal?.id || null)
+      setSelectedRecipeId('')
+      openPart('overview')
+    } catch {
+      setError('Uložené jídlo se nepodařilo vložit.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   function updateDraftItem(itemId, patch) {
@@ -3227,6 +3272,25 @@ function MealSection({
       setExpandedDraftItems({})
     } catch {
       setError('Jídlo se nepodařilo uložit.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleDeleteSavedItem(meal, itemId) {
+    if (isSaving) return
+
+    const nextItems = (meal.items || []).filter((item) => item.id !== itemId)
+    setIsSaving(true)
+    setError('')
+    try {
+      if (nextItems.length === 0) {
+        await onDeleteMeal(meal.id)
+      } else {
+        await onSaveMeal(section, nextItems, meal.note || '', meal.id)
+      }
+    } catch {
+      setError('Položku se nepodařilo smazat.')
     } finally {
       setIsSaving(false)
     }
@@ -3340,45 +3404,7 @@ function MealSection({
             {quickDrinkSaving ? <div className="form-hint">Ukládám {quickDrinkSaving.toLowerCase()}...</div> : null}
           </div>
         </InnerSection>
-      ) : (
-        <InnerSection
-          title="Vybrat uložené jídlo"
-          subtitle={isRecipesLoading ? 'Načítám...' : `${recipes.length} jídel`}
-          isOpen={Boolean(openParts.recipePicker)}
-          onToggle={() => togglePart('recipePicker')}
-        >
-          {isRecipesLoading ? (
-            <div className="empty-box">Načítám uložená jídla...</div>
-          ) : recipes.length === 0 ? (
-            <div className="empty-box">Pro tuto část dne zatím nemáš žádné uložené jídlo.</div>
-          ) : (
-            <>
-              <div className="recipe-picker-row">
-                <select
-                  className="input"
-                  value={selectedRecipeId}
-                  onChange={(e) => setSelectedRecipeId(e.target.value)}
-                >
-                  <option value="">Vyber uložené jídlo</option>
-                  {recipes.map((recipe) => (
-                    <option key={recipe.id} value={recipe.id}>
-                      {recipe.title} ({recipe.items.length} surovin)
-                    </option>
-                  ))}
-                </select>
-                <button className="button" onClick={handleInsertRecipe} disabled={!selectedRecipeId}>
-                  Vložit
-                </button>
-              </div>
-              {selectedRecipe ? (
-                <div className="form-hint recipe-hint">
-                  {selectedRecipe.items.map((item) => item.name || item.custom_name).join(', ')}
-                </div>
-              ) : null}
-            </>
-          )}
-        </InnerSection>
-      )}
+      ) : null}
 
       <InnerSection
         title={`Skládání ${section.title.toLowerCase()}`}
@@ -3455,126 +3481,141 @@ function MealSection({
 
         {error ? <div className="inline-error">{error}</div> : null}
 
-        <button className="button button-full" onClick={handleAddItem}>
-          Přidat položku
+        <button className="button button-full" onClick={handleAddItem} disabled={isSaving}>
+          {isSaving ? 'Ukládám...' : 'Přidat'}
         </button>
       </InnerSection>
 
-      <InnerSection
-        title={editingMealId ? `Úprava ${section.title.toLowerCase()}` : 'Rozpracováno'}
-        subtitle={`${draftItems.length} položek`}
-        isOpen={Boolean(openParts.draft)}
-        onToggle={() => togglePart('draft')}
-      >
-        {editingMealId ? (
+      {!isDrinkSection ? (
+        <InnerSection
+          title="Vybrat uložené jídlo"
+          subtitle={isRecipesLoading ? 'Načítám...' : `${recipes.length} jídel`}
+          isOpen={Boolean(openParts.recipePicker)}
+          onToggle={() => togglePart('recipePicker')}
+        >
+          {isRecipesLoading ? (
+            <div className="empty-box">Načítám uložená jídla...</div>
+          ) : recipes.length === 0 ? (
+            <div className="empty-box">Pro tuto část dne zatím nemáš žádné uložené jídlo.</div>
+          ) : (
+            <>
+              <div className="recipe-picker-row">
+                <select
+                  className="input"
+                  value={selectedRecipeId}
+                  onChange={(e) => setSelectedRecipeId(e.target.value)}
+                >
+                  <option value="">Vyber uložené jídlo</option>
+                  {recipes.map((recipe) => (
+                    <option key={recipe.id} value={recipe.id}>
+                      {recipe.title} ({recipe.items.length} surovin)
+                    </option>
+                  ))}
+                </select>
+                <button className="button" onClick={handleInsertRecipe} disabled={!selectedRecipeId || isSaving}>
+                  {isSaving ? 'Ukládám...' : 'Vložit'}
+                </button>
+              </div>
+              {selectedRecipe ? (
+                <div className="form-hint recipe-hint">
+                  {selectedRecipe.items.map((item) => item.name || item.custom_name).join(', ')}
+                </div>
+              ) : null}
+            </>
+          )}
+        </InnerSection>
+      ) : null}
+
+      {editingMealId ? (
+        <InnerSection
+          title={`Úprava ${section.title.toLowerCase()}`}
+          subtitle={`${draftItems.length} položek`}
+          isOpen={Boolean(openParts.draft)}
+          onToggle={() => togglePart('draft')}
+        >
           <div className="inner-action-row">
             <button className="button button-light button-small" onClick={cancelEditMeal}>
               Zrušit úpravy
             </button>
           </div>
-        ) : null}
-        {draftItems.length === 0 ? (
-          <div className="empty-box">Přidej první položku a potom celé jídlo ulož.</div>
-        ) : (
-          <>
-            <div className="list">
-              {draftItems.map((item) => (
-                <div key={item.id} className="editable-meal-item">
-                  <button className="meal-item-toggle" onClick={() => toggleDraftItem(item.id)}>
-                    <div>
-                      <div className="list-title">{item.name}</div>
-                      <div className="list-subtitle">
-                        {formatItemAmount(item)}
-                        {item.note ? ` • ${item.note}` : ''}
-                        <SighiBadge item={item} />
+          {draftItems.length === 0 ? (
+            <div className="empty-box">Přidej první položku a potom úpravy ulož.</div>
+          ) : (
+            <>
+              <div className="list">
+                {draftItems.map((item) => (
+                  <div key={item.id} className="editable-meal-item">
+                    <button className="meal-item-toggle" onClick={() => toggleDraftItem(item.id)}>
+                      <div>
+                        <div className="list-title">{item.name}</div>
+                        <div className="list-subtitle">
+                          {formatItemAmount(item)}
+                          {item.note ? ` • ${item.note}` : ''}
+                          <SighiBadge item={item} />
+                        </div>
                       </div>
-                    </div>
-                  </button>
-
-                  {expandedDraftItems[item.id] ? <FoodValueDetails item={item} /> : null}
-
-                  <div className="draft-edit-grid">
-                    <input
-                      className="input"
-                      value={item.amount}
-                      onChange={(e) => updateDraftItem(item.id, { amount: e.target.value })}
-                      aria-label="Množství"
-                    />
-                    <select
-                      className="input"
-                      value={item.unit || 'g'}
-                      onChange={(e) => updateDraftItem(item.id, { unit: e.target.value })}
-                      aria-label="Jednotka"
-                    >
-                      <option value="g">g</option>
-                      <option value="ml">ml</option>
-                      <option value="ks">ks</option>
-                      <option value="plátek">plátek</option>
-                      <option value="porce">porce</option>
-                      <option value="lžička">lžička</option>
-                      <option value="lžíce">lžíce</option>
-                    </select>
-                    <input
-                      className="input"
-                      value={item.note || ''}
-                      onChange={(e) => updateDraftItem(item.id, { note: e.target.value })}
-                      placeholder="Poznámka"
-                      aria-label="Poznámka"
-                    />
-                    <button
-                      className="delete-button"
-                      onClick={() => setDraftItems((prev) => prev.filter((draft) => draft.id !== item.id))}
-                    >
-                      Smazat
                     </button>
+
+                    {expandedDraftItems[item.id] ? <FoodValueDetails item={item} /> : null}
+
+                    <div className="draft-edit-grid">
+                      <input
+                        className="input"
+                        value={item.amount}
+                        onChange={(e) => updateDraftItem(item.id, { amount: e.target.value })}
+                        aria-label="Množství"
+                      />
+                      <select
+                        className="input"
+                        value={item.unit || 'g'}
+                        onChange={(e) => updateDraftItem(item.id, { unit: e.target.value })}
+                        aria-label="Jednotka"
+                      >
+                        <option value="g">g</option>
+                        <option value="ml">ml</option>
+                        <option value="ks">ks</option>
+                        <option value="plátek">plátek</option>
+                        <option value="porce">porce</option>
+                        <option value="lžička">lžička</option>
+                        <option value="lžíce">lžíce</option>
+                      </select>
+                      <input
+                        className="input"
+                        value={item.note || ''}
+                        onChange={(e) => updateDraftItem(item.id, { note: e.target.value })}
+                        placeholder="Poznámka"
+                        aria-label="Poznámka"
+                      />
+                      <button
+                        className="delete-button"
+                        onClick={() => setDraftItems((prev) => prev.filter((draft) => draft.id !== item.id))}
+                      >
+                        Smazat
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-
-            <MealTotals items={draftItems} />
-
-            <div className="form-group">
-              <label className="label">Poznámka k celému jídlu</label>
-              <input
-                className="input"
-                value={mealNote}
-                onChange={(e) => setMealNote(e.target.value)}
-                placeholder="Např. rychlá snídaně, větší porce, po běhu"
-              />
-            </div>
-
-            {!editingMealId && !isDrinkSection ? (
-              <div className="recipe-save-box">
-                <div className="form-group">
-                  <label className="label">Uložit skladbu jako moje jídlo</label>
-                  <input
-                    className="input"
-                    value={recipeTitle}
-                    onChange={(e) => setRecipeTitle(e.target.value)}
-                    placeholder={`Např. ${section.title} - oblíbená kombinace`}
-                  />
-                </div>
-                <button
-                  className="button button-light button-full"
-                  onClick={handleSaveRecipe}
-                  disabled={isRecipeSaving}
-                >
-                  {isRecipeSaving ? 'Ukládám jídlo...' : 'Vytvořit uložené jídlo z těchto surovin'}
-                </button>
+                ))}
               </div>
-            ) : null}
 
-            <button className="button button-full" onClick={handleSaveMeal} disabled={isSaving}>
-              {isSaving
-                ? 'Ukládám...'
-                : editingMealId
-                  ? `Uložit úpravy ${section.title.toLowerCase()}`
-                  : `Ukončit a uložit ${section.title.toLowerCase()}`}
-            </button>
-          </>
-        )}
-      </InnerSection>
+              <MealTotals items={draftItems} />
+
+              <div className="form-group">
+                <label className="label">Poznámka k celému jídlu</label>
+                <input
+                  className="input"
+                  value={mealNote}
+                  onChange={(e) => setMealNote(e.target.value)}
+                  placeholder="Např. rychlá snídaně, větší porce, po běhu"
+                />
+              </div>
+
+              <button className="button button-full" onClick={handleSaveMeal} disabled={isSaving}>
+                {isSaving ? 'Ukládám...' : `Uložit úpravy ${section.title.toLowerCase()}`}
+              </button>
+            </>
+          )}
+        </InnerSection>
+      ) : null}
 
       <InnerSection
         title="Dnešní přehled"
@@ -3608,6 +3649,13 @@ function MealSection({
                       <button className="meal-item-toggle" onClick={() => toggleSavedItem(item.id)}>
                         <span>{item.name || item.custom_name}<SighiBadge item={item} /></span>
                         <span>{formatItemAmount(item)}</span>
+                      </button>
+                      <button
+                        className="delete-button button-small"
+                        onClick={() => handleDeleteSavedItem(meal, item.id)}
+                        disabled={isSaving}
+                      >
+                        Smazat položku
                       </button>
                       {expandedSavedItems[item.id] ? <FoodValueDetails item={item} /> : null}
                     </div>
