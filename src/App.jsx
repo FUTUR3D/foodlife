@@ -24,6 +24,15 @@ const MEAL_SECTIONS = [
 const FOOD_MEAL_SECTIONS = MEAL_SECTIONS.filter((section) => section.key !== 'piti')
 const DRINK_SECTION = MEAL_SECTIONS.find((section) => section.key === 'piti')
 const RECIPE_MEAL_TAGS = MEAL_SECTIONS.map(({ key, title }) => ({ key, title }))
+const DEFAULT_MEAL_TIMES = {
+  snidane: '07:00',
+  svacina1: '10:00',
+  obed: '12:00',
+  svacina2: '15:30',
+  vecere: '18:30',
+  ostatni: '20:00',
+  piti: '08:00',
+}
 
 const DEFAULT_FOODS = [
   { id: createId(), name: 'Ovesná kaše' },
@@ -390,6 +399,14 @@ function formatShortDate(dateValue) {
   const date = new Date(`${dateValue}T12:00:00`)
   if (Number.isNaN(date.getTime())) return dateValue
   return date.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })
+}
+
+function getDefaultMealTime(mealKey) {
+  return DEFAULT_MEAL_TIMES[mealKey] || '12:00'
+}
+
+function getMealTimeValue(meal) {
+  return meal?.meal_time?.slice(11, 16) || getDefaultMealTime(meal?.meal_type)
 }
 
 function getWeightNumber(log) {
@@ -3029,6 +3046,7 @@ function MealQuickAdd({
   onSaveMeal,
 }) {
   const [mealKey, setMealKey] = useState(getDefaultFoodMealKey)
+  const [mealTime, setMealTime] = useState(() => getDefaultMealTime(getDefaultFoodMealKey()))
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [selectedFood, setSelectedFood] = useState(null)
@@ -3046,6 +3064,12 @@ function MealQuickAdd({
   const savedMeals = mealsByType[section.key] || []
   const recipes = recipesByType[section.key] || []
   const selectedRecipe = recipes.find((recipe) => String(recipe.id) === String(selectedRecipeId))
+  const timePresets = [
+    getDefaultMealTime(section.key),
+    '08:30',
+    '12:30',
+    '18:30',
+  ].filter((time, index, values) => values.indexOf(time) === index)
 
   useEffect(() => {
     const q = query.trim()
@@ -3128,7 +3152,7 @@ function MealQuickAdd({
   async function saveItems(items, mealNote = '') {
     const targetMeal = savedMeals[0] || null
     const nextItems = [...(targetMeal?.items || []), ...items]
-    await onSaveMeal(section, nextItems, targetMeal?.note || mealNote, targetMeal?.id || null)
+    await onSaveMeal(section, nextItems, targetMeal?.note || mealNote, targetMeal?.id || null, mealTime)
     setMessage(`Přidáno do: ${section.title}`)
   }
 
@@ -3187,7 +3211,9 @@ function MealQuickAdd({
             className="input"
             value={mealKey}
             onChange={(e) => {
-              setMealKey(e.target.value)
+              const nextMealKey = e.target.value
+              setMealKey(nextMealKey)
+              setMealTime(getDefaultMealTime(nextMealKey))
               setSelectedRecipeId('')
               setMessage('')
             }}
@@ -3196,6 +3222,30 @@ function MealQuickAdd({
               <option key={item.key} value={item.key}>{item.title}</option>
             ))}
           </select>
+        </div>
+
+        <div className="time-picker-panel">
+          <div className="form-group">
+            <label className="label">Čas jídla</label>
+            <input
+              className="input"
+              type="time"
+              value={mealTime}
+              onChange={(e) => setMealTime(e.target.value)}
+            />
+          </div>
+          <div className="time-chip-row" aria-label="Rychlá volba času">
+            {timePresets.map((time) => (
+              <button
+                key={time}
+                type="button"
+                className={mealTime === time ? 'time-chip active' : 'time-chip'}
+                onClick={() => setMealTime(time)}
+              >
+                {time}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="quick-meal-columns">
@@ -3335,6 +3385,7 @@ function MealSection({
   const [note, setNote] = useState('')
   const [draftItems, setDraftItems] = useState([])
   const [mealNote, setMealNote] = useState('')
+  const [mealTime, setMealTime] = useState(() => getDefaultMealTime(section.key))
   const [editingMealId, setEditingMealId] = useState(null)
   const [expandedDraftItems, setExpandedDraftItems] = useState({})
   const [expandedSavedItems, setExpandedSavedItems] = useState({})
@@ -3463,7 +3514,13 @@ function MealSection({
     setIsSaving(true)
     setError('')
     try {
-      await onSaveMeal(section, nextItems, targetMeal?.note || '', targetMeal?.id || null)
+      await onSaveMeal(
+        section,
+        nextItems,
+        targetMeal?.note || '',
+        targetMeal?.id || null,
+        targetMeal ? getMealTimeValue(targetMeal) : getDefaultMealTime(section.key),
+      )
       resetBuilderForm()
       openPart('overview')
     } catch {
@@ -3498,7 +3555,13 @@ function MealSection({
     setIsSaving(true)
     setError('')
     try {
-      await onSaveMeal(section, nextItems, targetMeal?.note || recipe.title, targetMeal?.id || null)
+      await onSaveMeal(
+        section,
+        nextItems,
+        targetMeal?.note || recipe.title,
+        targetMeal?.id || null,
+        targetMeal ? getMealTimeValue(targetMeal) : getDefaultMealTime(section.key),
+      )
       setSelectedRecipeId('')
       openPart('overview')
     } catch {
@@ -3548,6 +3611,7 @@ function MealSection({
       ...sighiFieldsFromFood(item),
     })))
     setMealNote(meal.note || '')
+    setMealTime(getMealTimeValue(meal))
     setError('')
     setExpandedDraftItems({})
     openPart('draft')
@@ -3557,6 +3621,7 @@ function MealSection({
     setEditingMealId(null)
     setDraftItems([])
     setMealNote('')
+    setMealTime(getDefaultMealTime(section.key))
     setExpandedDraftItems({})
     setError('')
   }
@@ -3567,9 +3632,10 @@ function MealSection({
     setIsSaving(true)
     setError('')
     try {
-      await onSaveMeal(section, draftItems, mealNote, editingMealId)
+      await onSaveMeal(section, draftItems, mealNote, editingMealId, mealTime)
       setDraftItems([])
       setMealNote('')
+      setMealTime(getDefaultMealTime(section.key))
       setEditingMealId(null)
       setExpandedDraftItems({})
     } catch {
@@ -3589,7 +3655,7 @@ function MealSection({
       if (nextItems.length === 0) {
         await onDeleteMeal(meal.id)
       } else {
-        await onSaveMeal(section, nextItems, meal.note || '', meal.id)
+        await onSaveMeal(section, nextItems, meal.note || '', meal.id, getMealTimeValue(meal))
       }
     } catch {
       setError('Položku se nepodařilo smazat.')
@@ -3911,6 +3977,16 @@ function MealSection({
                   value={mealNote}
                   onChange={(e) => setMealNote(e.target.value)}
                   placeholder="Např. rychlá snídaně, větší porce, po běhu"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="label">Čas jídla</label>
+                <input
+                  className="input"
+                  type="time"
+                  value={mealTime}
+                  onChange={(e) => setMealTime(e.target.value)}
                 />
               </div>
 
@@ -4865,7 +4941,7 @@ export default function App() {
   async function useRecipeForMeal(recipe, mealType) {
     const section = MEAL_SECTIONS.find((item) => item.key === mealType)
     if (!section || !recipe.items?.length) throw new Error('recipe_not_usable')
-    await saveMeal(section, draftItemsFromRecipe(recipe), recipe.title)
+    await saveMeal(section, draftItemsFromRecipe(recipe), recipe.title, null, getDefaultMealTime(section.key))
   }
 
   function openRecipeEditor(recipe, options = {}) {
@@ -4874,7 +4950,7 @@ export default function App() {
     setRecipeEditRequest({ recipe, asCopy: Boolean(options.asCopy), token: Date.now() })
   }
 
-  async function saveMeal(section, items, note, mealId = null) {
+  async function saveMeal(section, items, note, mealId = null, time = null) {
     const response = await fetch('meal-save.php', {
       method: 'POST',
       credentials: 'same-origin',
@@ -4888,6 +4964,7 @@ export default function App() {
         meal_type: section.key,
         title: section.title,
         note,
+        time,
         items,
       }),
     })

@@ -2982,6 +2982,38 @@ h4,
   font-weight: 560;
 }
 
+.time-picker-panel {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+  border: 1px solid #e6eaf0;
+  background: #fbfcfe;
+  padding: 10px;
+}
+
+.time-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 1px;
+}
+
+.time-chip {
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+  color: #344054;
+  padding: 9px 11px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.time-chip.active {
+  border-color: #0f172a;
+  background: #0f172a;
+  color: #ffffff;
+}
+
 .save-message {
   border: 1px solid #bbf7d0;
   background: #f0fdf4;
@@ -2997,5 +3029,9 @@ h4,
 
   .quick-meal-card {
     padding: 10px;
+  }
+
+  .time-picker-panel {
+    grid-template-columns: 1fr;
   }
 }
