@@ -5190,12 +5190,64 @@ function DiaryPanel({ todayInfo, onTodayInfoChange, saveState }) {
     saveEditorContent()
   }
 
-  function insertTemplate(html) {
-    runEditorCommand('insertHTML', html)
+  function selectionIsInsideEditor(editor, selection) {
+    if (!selection || selection.rangeCount === 0) return false
+    const anchor = selection.anchorNode
+    return Boolean(anchor && editor.contains(anchor))
+  }
+
+  function placeCaretAtMarker(marker) {
+    const selection = window.getSelection()
+    if (!selection || !marker) return
+
+    const range = document.createRange()
+    range.setStart(marker, 0)
+    range.collapse(true)
+    selection.removeAllRanges()
+    selection.addRange(range)
+    marker.removeAttribute('data-diary-caret')
+  }
+
+  function placeCaretAtEditorEnd(editor) {
+    const selection = window.getSelection()
+    if (!selection) return
+
+    const range = document.createRange()
+    range.selectNodeContents(editor)
+    range.collapse(false)
+    selection.removeAllRanges()
+    selection.addRange(range)
+  }
+
+  function insertTemplate(html, options = {}) {
+    const editor = editorRef.current
+    if (!editor) return
+
+    editor.focus()
+    const selection = window.getSelection()
+    if (!selectionIsInsideEditor(editor, selection)) {
+      placeCaretAtEditorEnd(editor)
+    }
+
+    const template = document.createElement('template')
+    template.innerHTML = `${html}${options.addTrailingLine === false ? '' : '<p><span data-diary-caret="1"></span><br /></p>'}`
+    const marker = template.content.querySelector('[data-diary-caret]')
+    const fragment = template.content
+
+    const activeSelection = window.getSelection()
+    if (!activeSelection || activeSelection.rangeCount === 0) return
+
+    const range = activeSelection.getRangeAt(0)
+    range.deleteContents()
+    range.insertNode(fragment)
+    placeCaretAtMarker(marker)
+    saveEditorContent()
   }
 
   function insertTimeStamp() {
-    insertTemplate(`<p><strong>${getCurrentTimeValue()}</strong> - </p>`)
+    insertTemplate(`<p><strong>${getCurrentTimeValue()}</strong> - <span data-diary-caret="1"></span></p>`, {
+      addTrailingLine: false,
+    })
   }
 
   function handleImageSelect(e) {
@@ -5237,7 +5289,14 @@ function DiaryPanel({ todayInfo, onTodayInfoChange, saveState }) {
               {saveState ? ` ${saveState}` : ''}
             </p>
           </div>
-          <button className="soft-button" type="button" onClick={insertTimeStamp}>
+          <button
+            className="soft-button"
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              insertTimeStamp()
+            }}
+          >
             Vložit čas
           </button>
         </div>
@@ -5294,21 +5353,30 @@ function DiaryPanel({ todayInfo, onTodayInfoChange, saveState }) {
           <button
             className="time-chip"
             type="button"
-            onClick={() => insertTemplate('<h3>Ranní zápis</h3><ul><li>Spánek: </li><li>Energie: </li><li>Plán dne: </li></ul>')}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              insertTemplate('<h3>Ranní zápis</h3><ul><li>Spánek: </li><li>Energie: </li><li>Plán dne: </li></ul>')
+            }}
           >
             Ráno
           </button>
           <button
             className="time-chip"
             type="button"
-            onClick={() => insertTemplate('<h3>Tělo a trávení</h3><ul><li>Břicho: </li><li>Reakce: </li><li>Možný spouštěč: </li></ul>')}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              insertTemplate('<h3>Tělo a trávení</h3><ul><li>Břicho: </li><li>Reakce: </li><li>Možný spouštěč: </li></ul>')
+            }}
           >
             Tělo
           </button>
           <button
             className="time-chip"
             type="button"
-            onClick={() => insertTemplate('<h3>Večerní rekapitulace</h3><ul><li>Co pomohlo: </li><li>Co zhoršilo den: </li><li>Zítra zkusím: </li></ul>')}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              insertTemplate('<h3>Večerní rekapitulace</h3><ul><li>Co pomohlo: </li><li>Co zhoršilo den: </li><li>Zítra zkusím: </li></ul>')
+            }}
           >
             Večer
           </button>
