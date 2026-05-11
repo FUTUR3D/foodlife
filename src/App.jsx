@@ -3791,7 +3791,7 @@ function MealSection({
         </InnerSection>
       ) : null}
 
-      {showEntryTools && !isDrinkSection ? (
+      {showEntryTools && !hideEntry && !isDrinkSection ? (
         <InnerSection
           title="Vybrat uložené jídlo"
           subtitle={isRecipesLoading ? 'Načítám...' : `${recipes.length} jídel`}
