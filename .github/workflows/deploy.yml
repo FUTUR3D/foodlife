@@ -129,3 +129,71 @@ jobs:
           protocol: ftps
           local-dir: ./deploy/
           server-dir: /www/subdom/foodlife/
+
+      - name: Normalize deployed permissions
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_SERVER_DIR: /www/subdom/foodlife
+        run: |
+          python3 - <<'PY'
+          import os
+          import ssl
+          from ftplib import FTP_TLS, error_perm
+
+          server = os.environ['FTP_SERVER']
+          username = os.environ['FTP_USERNAME']
+          password = os.environ['FTP_PASSWORD']
+          server_dir = os.environ['FTP_SERVER_DIR'].rstrip('/')
+
+          ftp = FTP_TLS(context=ssl.create_default_context())
+          ftp.connect(server, 21, timeout=60)
+          ftp.login(username, password)
+          ftp.prot_p()
+
+          def chmod(mode, path):
+              try:
+                  ftp.sendcmd(f'SITE CHMOD {mode} {path}')
+              except error_perm as exc:
+                  print(f'::warning::Could not chmod {mode} {path}: {exc}')
+
+          def is_dir(path):
+              current = ftp.pwd()
+              try:
+                  ftp.cwd(path)
+                  ftp.cwd(current)
+                  return True
+              except error_perm:
+                  try:
+                      ftp.cwd(current)
+                  except error_perm:
+                      pass
+                  return False
+
+          def list_entries(path):
+              try:
+                  return [(name, facts.get('type', '')) for name, facts in ftp.mlsd(path) if name not in ('.', '..')]
+              except Exception:
+                  entries = []
+                  for full in ftp.nlst(path):
+                      name = full.rstrip('/').split('/')[-1]
+                      if name not in ('.', '..'):
+                          entries.append((name, ''))
+                  return entries
+
+          def join_path(base, name):
+              return f"{base.rstrip('/')}/{name}"
+
+          def walk(path):
+              chmod('775', path)
+              for name, entry_type in list_entries(path):
+                  full = join_path(path, name)
+                  if entry_type == 'dir' or (entry_type == '' and is_dir(full)):
+                      walk(full)
+                  else:
+                      chmod('664', full)
+
+          walk(server_dir)
+          ftp.quit()
+          PY
