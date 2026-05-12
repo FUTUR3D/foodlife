@@ -146,12 +146,15 @@ jobs:
           import os
           import ssl
           import sys
+          from pathlib import Path
+          from posixpath import join as remote_join
           from ftplib import FTP_TLS, error_perm
 
           server = os.environ['FTP_SERVER']
           username = os.environ['FTP_USERNAME']
           password = os.environ['FTP_PASSWORD']
           server_dir = os.environ['FTP_SERVER_DIR'].rstrip('/')
+          local_dir = Path('deploy')
 
           ftp = FTP_TLS(context=ssl._create_unverified_context())
 
@@ -161,47 +164,28 @@ jobs:
               except error_perm as exc:
                   print(f'::warning::Could not chmod {mode} {path}: {exc}')
 
-          def is_dir(path):
-              current = ftp.pwd()
-              try:
-                  ftp.cwd(path)
-                  ftp.cwd(current)
-                  return True
-              except error_perm:
-                  try:
-                      ftp.cwd(current)
-                  except error_perm:
-                      pass
-                  return False
+          def remote_path(local_path):
+              relative = local_path.relative_to(local_dir).as_posix()
+              return server_dir if relative == '.' else remote_join(server_dir, relative)
 
-          def list_entries(path):
-              try:
-                  return [(name, facts.get('type', '')) for name, facts in ftp.mlsd(path) if name not in ('.', '..')]
-              except Exception:
-                  entries = []
-                  for full in ftp.nlst(path):
-                      name = full.rstrip('/').split('/')[-1]
-                      if name not in ('.', '..'):
-                          entries.append((name, ''))
-                  return entries
+          def normalize_uploaded_permissions():
+              chmod('775', server_dir)
 
-          def join_path(base, name):
-              return f"{base.rstrip('/')}/{name}"
+              for root, dirs, files in os.walk(local_dir):
+                  root_path = Path(root)
+                  chmod('775', remote_path(root_path))
 
-          def walk(path):
-              chmod('775', path)
-              for name, entry_type in list_entries(path):
-                  full = join_path(path, name)
-                  if entry_type == 'dir' or (entry_type == '' and is_dir(full)):
-                      walk(full)
-                  else:
-                      chmod('664', full)
+                  for dirname in dirs:
+                      chmod('775', remote_path(root_path / dirname))
+
+                  for filename in files:
+                      chmod('664', remote_path(root_path / filename))
 
           try:
               ftp.connect(server, 21, timeout=60)
               ftp.login(username, password)
               ftp.prot_p()
-              walk(server_dir)
+              normalize_uploaded_permissions()
           except Exception as exc:
               print(f'::warning::Permission normalization skipped: {exc}')
               sys.exit(0)
