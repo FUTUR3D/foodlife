@@ -800,6 +800,13 @@ textarea {
   margin-bottom: 12px;
 }
 
+.inline-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 @keyframes accordion-enter {
   from {
     opacity: 0;
@@ -1022,6 +1029,38 @@ textarea {
 .form-hint {
   color: #64748b;
   font-size: 12px;
+}
+
+.search-result-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.search-result-copy > span,
+.search-result-copy small {
+  min-width: 0;
+}
+
+.result-type-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 7px;
+  margin-right: 5px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.result-type-badge.food {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.result-type-badge.recipe {
+  background: #fff7ed;
+  color: #c2410c;
 }
 
 .food-badge {
@@ -2980,7 +3019,7 @@ h4,
 
 .quick-meal-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 0.8fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   align-items: start;
 }

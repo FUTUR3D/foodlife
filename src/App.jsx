@@ -3190,8 +3190,6 @@ function MealQuickAdd({
   const [amount, setAmount] = useState('')
   const [unit, setUnit] = useState('g')
   const [note, setNote] = useState('')
-  const [selectedRecipeId, setSelectedRecipeId] = useState('')
-  const [recipeQuery, setRecipeQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
@@ -3202,19 +3200,24 @@ function MealQuickAdd({
   const section = FOOD_MEAL_SECTIONS.find((item) => item.key === mealKey) || FOOD_MEAL_SECTIONS[0]
   const savedMeals = mealsByType[section.key] || []
   const allRecipes = recipes || []
-  const recipeNeedle = recipeQuery.trim().toLowerCase()
-  const filteredRecipes = allRecipes.filter((recipe) => {
-    if (!recipeNeedle) return true
+  const searchNeedle = query.trim().toLowerCase()
+  const recipeResults = searchNeedle.length >= 2 && !selectedFood ? allRecipes.filter((recipe) => {
     const haystack = [
       recipe.title,
       recipe.description,
       recipe.note,
       ...(recipe.items || []).map((item) => item.name || item.custom_name),
     ].filter(Boolean).join(' ').toLowerCase()
-    return haystack.includes(recipeNeedle)
-  })
-  const selectedRecipe = allRecipes.find((recipe) => String(recipe.id) === String(selectedRecipeId))
-  const recipeNotFound = recipeQuery.trim().length >= 2 && !isRecipesLoading && filteredRecipes.length === 0
+    return haystack.includes(searchNeedle)
+  }) : []
+  const hasSearchNeedle = searchNeedle.length >= 2 && !selectedFood
+  const hasCombinedResults = hasSearchNeedle && (recipeResults.length > 0 || results.length > 0)
+  const searchNotFound = hasSearchNeedle
+    && !isSearching
+    && !isRecipesLoading
+    && lastFoodSearchQuery === query.trim()
+    && recipeResults.length === 0
+    && results.length === 0
   const timePresets = ['07:00', '10:00', '12:00', '15:00', '18:00']
 
   useEffect(() => {
@@ -3326,8 +3329,8 @@ function MealQuickAdd({
     }
   }
 
-  async function handleInsertRecipe() {
-    if (!selectedRecipe) {
+  async function handleInsertRecipe(recipe) {
+    if (!recipe) {
       setError('Vyber uložené jídlo.')
       return
     }
@@ -3336,8 +3339,8 @@ function MealQuickAdd({
     setError('')
     setMessage('')
     try {
-      await saveItems(draftItemsFromRecipe(selectedRecipe), selectedRecipe.title)
-      setSelectedRecipeId('')
+      await saveItems(draftItemsFromRecipe(recipe), recipe.title)
+      resetFoodForm()
     } catch {
       setError('Uložené jídlo se nepodařilo vložit.')
     } finally {
@@ -3352,7 +3355,7 @@ function MealQuickAdd({
 
   function handleCreateRecipe() {
     if (!onCreateRecipe) return
-    onCreateRecipe(recipeQuery.trim(), section.key)
+    onCreateRecipe(query.trim(), section.key)
   }
 
   return (
@@ -3372,8 +3375,9 @@ function MealQuickAdd({
               const nextMealKey = e.target.value
               setMealKey(nextMealKey)
               setMealTime(getDefaultMealTime(nextMealKey))
-              setSelectedRecipeId('')
-              setRecipeQuery('')
+              setQuery('')
+              setSelectedFood(null)
+              setResults([])
               setMessage('')
             }}
           >
@@ -3409,9 +3413,9 @@ function MealQuickAdd({
 
         <div className="quick-meal-columns">
           <div className="quick-meal-card">
-            <div className="quick-meal-card-title">Potravina nebo ruční položka</div>
+            <div className="quick-meal-card-title">Potravina nebo recept</div>
             <div className="form-group food-search-wrap">
-              <label className="label">Potravina</label>
+              <label className="label">Vyhledat</label>
               <input
                 className="input"
                 value={query}
@@ -3420,35 +3424,53 @@ function MealQuickAdd({
                   setQuery(e.target.value)
                   setMessage('')
                 }}
-                placeholder="Např. banán, rýže, jogurt..."
+                placeholder="Např. banán, rýže, jogurt nebo název receptu..."
               />
-              {results.length > 0 ? (
+              {hasCombinedResults ? (
                 <div className="food-search-results">
+                  {recipeResults.map((recipe) => {
+                    const totals = getMealTotals(recipe.items || [])
+                    return (
+                      <button type="button" key={`recipe-${recipe.id}`} onClick={() => handleInsertRecipe(recipe)} disabled={isSaving}>
+                        <span className="search-result-copy">
+                          <span>{recipe.title}</span>
+                          <small>
+                            <span className="result-type-badge recipe">Recept</span>
+                            {(recipe.items || []).length} surovin • {Math.round(totals.kcal)} kcal
+                          </small>
+                        </span>
+                      </button>
+                    )
+                  })}
                   {results.map((food) => (
-                    <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
-                      <span>{food.name_cs}</span>
-                      <small>
-                        <FoodKindBadge food={food} />
-                        <SighiBadge item={food} />
-                        {hasServingSize(food.default_unit, food.serving_grams) ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) • ` : ' '}
-                        {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
-                      </small>
+                    <button type="button" key={`food-${food.id}`} onClick={() => handleSelectFood(food)}>
+                      <span className="search-result-copy">
+                        <span>{food.name_cs}</span>
+                        <small>
+                          <span className="result-type-badge food">Potravina</span>
+                          <FoodKindBadge food={food} />
+                          <SighiBadge item={food} />
+                          {hasServingSize(food.default_unit, food.serving_grams) ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) • ` : ' '}
+                          {Math.round(Number(food.kcal_100g || 0))} kcal / 100 g
+                        </small>
+                      </span>
                     </button>
                   ))}
                 </div>
               ) : null}
               {isSearching ? <div className="form-hint">Hledám...</div> : null}
-              {query.trim().length >= 2
-                && !isSearching
-                && lastFoodSearchQuery === query.trim()
-                && results.length === 0
-                && !selectedFood ? (
+              {searchNotFound ? (
                 <div className="not-found-box">
-                  <strong>Potravina nenalezena.</strong>
-                  <span>Chceš vytvořit svoji potravinu?</span>
-                  <button type="button" className="button button-light button-small" onClick={handleCreateFood}>
-                    Vytvořit potravinu
-                  </button>
+                  <strong>Nic nenalezeno.</strong>
+                  <span>Můžeš založit vlastní potravinu nebo nový recept.</span>
+                  <div className="inline-action-row">
+                    <button type="button" className="button button-light button-small" onClick={handleCreateFood}>
+                      Vytvořit potravinu
+                    </button>
+                    <button type="button" className="button button-light button-small" onClick={handleCreateRecipe}>
+                      Vytvořit recept
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -3490,72 +3512,6 @@ function MealQuickAdd({
             </button>
           </div>
 
-          <div className="quick-meal-card">
-            <div className="quick-meal-card-title">Uložené jídlo</div>
-            {isRecipesLoading ? (
-              <div className="empty-box">Načítám uložená jídla...</div>
-            ) : recipes.length === 0 ? (
-              <div className="empty-box">
-                Pro {section.title.toLowerCase()} zatím nemáš uložené jídlo.
-                <button type="button" className="button button-light button-small" onClick={handleCreateRecipe}>
-                  Vytvořit recept
-                </button>
-              </div>
-            ) : (
-              <>
-                <input
-                  className="input recipe-list-search"
-                  value={recipeQuery}
-                  onChange={(e) => {
-                    setRecipeQuery(e.target.value)
-                    setSelectedRecipeId('')
-                    setMessage('')
-                  }}
-                  placeholder="Hledat v receptech..."
-                  aria-label="Hledat v uložených jídlech"
-                />
-                <div className="recipe-select-list">
-                  {filteredRecipes.map((recipe) => {
-                    const totals = getMealTotals(recipe.items || [])
-                    const isSelected = String(recipe.id) === String(selectedRecipeId)
-                    return (
-                      <button
-                        key={recipe.id}
-                        type="button"
-                        className={isSelected ? 'recipe-select-item active' : 'recipe-select-item'}
-                        onClick={() => {
-                          setSelectedRecipeId(String(recipe.id))
-                          setMessage('')
-                        }}
-                      >
-                        <span>{recipe.title}</span>
-                        <small>{recipe.items.length} surovin • {Math.round(totals.kcal)} kcal</small>
-                      </button>
-                    )
-                  })}
-                </div>
-                <div className="recipe-list-action">
-                  <button className="button button-full" onClick={handleInsertRecipe} disabled={!selectedRecipeId || isSaving}>
-                    {isSaving ? 'Vkládám...' : 'Vložit vybrané jídlo'}
-                  </button>
-                </div>
-                {recipeNotFound ? (
-                  <div className="not-found-box">
-                    <strong>Recept nenalezen.</strong>
-                    <span>Chceš ho vytvořit jako nový recept?</span>
-                    <button type="button" className="button button-light button-small" onClick={handleCreateRecipe}>
-                      Vytvořit recept
-                    </button>
-                  </div>
-                ) : null}
-                {selectedRecipe ? (
-                  <div className="form-hint recipe-hint">
-                    {selectedRecipe.items.map((item) => item.name || item.custom_name).join(', ')}
-                  </div>
-                ) : null}
-              </>
-            )}
-          </div>
         </div>
 
         {error ? <div className="inline-error">{error}</div> : null}
@@ -3591,7 +3547,6 @@ function MealSection({
   const [editingMealId, setEditingMealId] = useState(null)
   const [expandedDraftItems, setExpandedDraftItems] = useState({})
   const [expandedSavedItems, setExpandedSavedItems] = useState({})
-  const [selectedRecipeId, setSelectedRecipeId] = useState('')
   const [recipeTitle, setRecipeTitle] = useState('')
   const [isRecipeSaving, setIsRecipeSaving] = useState(false)
   const [quickDrinkSaving, setQuickDrinkSaving] = useState('')
@@ -3732,11 +3687,10 @@ function MealSection({
     }
   }
 
-  async function handleInsertRecipe() {
-    const recipe = recipes.find((item) => String(item.id) === String(selectedRecipeId))
+  async function handleInsertRecipe(recipe) {
     if (!recipe) {
       setError('Vyber uložené jídlo.')
-      openPart('recipePicker')
+      openPart('builder')
       return
     }
 
@@ -3745,7 +3699,7 @@ function MealSection({
     if (editingMealId) {
       setDraftItems((prev) => [...prev, ...recipeItems])
       setMealNote((prev) => prev || recipe.title)
-      setSelectedRecipeId('')
+      resetBuilderForm()
       setError('')
       openPart('draft')
       return
@@ -3764,7 +3718,7 @@ function MealSection({
         targetMeal?.id || null,
         targetMeal ? getMealTimeValue(targetMeal) : getDefaultMealTime(section.key),
       )
-      setSelectedRecipeId('')
+      resetBuilderForm()
       openPart('overview')
     } catch {
       setError('Uložené jídlo se nepodařilo vložit.')
@@ -3917,7 +3871,6 @@ function MealSection({
   }
 
   const savedCount = savedMeals.reduce((sum, meal) => sum + meal.items.length, 0)
-  const selectedRecipe = recipes.find((recipe) => String(recipe.id) === String(selectedRecipeId))
   const fluidTargetMl = getFluidTargetMl(profile)
   const drinkMealsForHydration = editingMealId
     ? savedMeals.filter((meal) => meal.id !== editingMealId)
@@ -3930,6 +3883,19 @@ function MealSection({
     ? `${formatFluidMl(fluidCurrentMl)} / ${formatFluidMl(fluidTargetMl)} • ${savedCount} položek`
     : `${savedMeals.length} uložených jídel • ${savedCount} položek`
   const showEntryTools = !hideEntry || editingMealId || isDrinkSection
+  const searchNeedle = query.trim().toLowerCase()
+  const canSearchRecipes = !isDrinkSection && !selectedFood
+  const recipeResults = canSearchRecipes && searchNeedle.length >= 2 ? (recipes || []).filter((recipe) => {
+    const haystack = [
+      recipe.title,
+      recipe.description,
+      recipe.note,
+      ...(recipe.items || []).map((item) => item.name || item.custom_name),
+    ].filter(Boolean).join(' ').toLowerCase()
+    return haystack.includes(searchNeedle)
+  }) : []
+  const hasSearchNeedle = searchNeedle.length >= 2 && !selectedFood
+  const hasCombinedResults = hasSearchNeedle && (recipeResults.length > 0 || results.length > 0)
 
   const sectionContent = (
     <>
@@ -3980,12 +3946,12 @@ function MealSection({
       {showEntryTools ? (
         <InnerSection
           title={`Skládání ${section.title.toLowerCase()}`}
-          subtitle={selectedFood ? selectedFood.name_cs : section.key === 'piti' ? 'Přidat nápoj' : 'Přidat surovinu'}
+          subtitle={selectedFood ? selectedFood.name_cs : section.key === 'piti' ? 'Přidat nápoj' : 'Potravina nebo recept'}
           isOpen={Boolean(openParts.builder)}
           onToggle={() => togglePart('builder')}
         >
           <div className="form-group food-search-wrap">
-            <label className="label">{section.key === 'piti' ? 'Nápoj' : 'Potravina'}</label>
+            <label className="label">{section.key === 'piti' ? 'Nápoj' : 'Potravina nebo recept'}</label>
             <input
               className="input"
               value={query}
@@ -3993,19 +3959,36 @@ function MealSection({
                 setSelectedFood(null)
                 setQuery(e.target.value)
               }}
-              placeholder={section.key === 'piti' ? 'Např. voda, káva, džus...' : 'Např. banán, rýže, jogurt...'}
+              placeholder={section.key === 'piti' ? 'Např. voda, káva, džus...' : 'Např. banán, rýže, jogurt nebo recept...'}
             />
-            {results.length > 0 ? (
+            {hasCombinedResults ? (
               <div className="food-search-results">
+                {recipeResults.map((recipe) => {
+                  const totals = getMealTotals(recipe.items || [])
+                  return (
+                    <button type="button" key={`recipe-${recipe.id}`} onClick={() => handleInsertRecipe(recipe)} disabled={isSaving}>
+                      <span className="search-result-copy">
+                        <span>{recipe.title}</span>
+                        <small>
+                          <span className="result-type-badge recipe">Recept</span>
+                          {(recipe.items || []).length} surovin • {Math.round(totals.kcal)} kcal
+                        </small>
+                      </span>
+                    </button>
+                  )
+                })}
                 {results.map((food) => (
-                  <button type="button" key={food.id} onClick={() => handleSelectFood(food)}>
-                    <span>{food.name_cs}</span>
-                    <small>
-                      <FoodKindBadge food={food} />
-                      <SighiBadge item={food} />
-                      {hasServingSize(food.default_unit, food.serving_grams) ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) • ` : ' '}
-                      {Math.round(Number(food.kcal_100g || 0))} kcal / 100 {section.key === 'piti' ? 'ml' : 'g'}
-                    </small>
+                  <button type="button" key={`food-${food.id}`} onClick={() => handleSelectFood(food)}>
+                    <span className="search-result-copy">
+                      <span>{food.name_cs}</span>
+                      <small>
+                        <span className="result-type-badge food">Potravina</span>
+                        <FoodKindBadge food={food} />
+                        <SighiBadge item={food} />
+                        {hasServingSize(food.default_unit, food.serving_grams) ? ` 1 ${food.default_unit} (${Math.round(Number(food.serving_grams))} g) • ` : ' '}
+                        {Math.round(Number(food.kcal_100g || 0))} kcal / 100 {section.key === 'piti' ? 'ml' : 'g'}
+                      </small>
+                    </span>
                   </button>
                 ))}
               </div>
@@ -4056,46 +4039,6 @@ function MealSection({
           <button className="button button-full" onClick={handleAddItem} disabled={isSaving}>
             {isSaving ? 'Ukládám...' : 'Přidat'}
           </button>
-        </InnerSection>
-      ) : null}
-
-      {showEntryTools && !hideEntry && !isDrinkSection ? (
-        <InnerSection
-          title="Vybrat uložené jídlo"
-          subtitle={isRecipesLoading ? 'Načítám...' : `${recipes.length} jídel`}
-          isOpen={Boolean(openParts.recipePicker)}
-          onToggle={() => togglePart('recipePicker')}
-        >
-          {isRecipesLoading ? (
-            <div className="empty-box">Načítám uložená jídla...</div>
-          ) : recipes.length === 0 ? (
-            <div className="empty-box">Pro tuto část dne zatím nemáš žádné uložené jídlo.</div>
-          ) : (
-            <>
-              <div className="recipe-picker-row">
-                <select
-                  className="input"
-                  value={selectedRecipeId}
-                  onChange={(e) => setSelectedRecipeId(e.target.value)}
-                >
-                  <option value="">Vyber uložené jídlo</option>
-                  {recipes.map((recipe) => (
-                    <option key={recipe.id} value={recipe.id}>
-                      {recipe.title} ({recipe.items.length} surovin)
-                    </option>
-                  ))}
-                </select>
-                <button className="button" onClick={handleInsertRecipe} disabled={!selectedRecipeId || isSaving}>
-                  {isSaving ? 'Ukládám...' : 'Vložit'}
-                </button>
-              </div>
-              {selectedRecipe ? (
-                <div className="form-hint recipe-hint">
-                  {selectedRecipe.items.map((item) => item.name || item.custom_name).join(', ')}
-                </div>
-              ) : null}
-            </>
-          )}
         </InnerSection>
       ) : null}
 
