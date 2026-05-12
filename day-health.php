@@ -10,6 +10,7 @@ function ensure_day_health_logs_table(PDO $pdo): void
             id int(11) NOT NULL AUTO_INCREMENT,
             user_id int(11) NOT NULL,
             log_date date NOT NULL,
+            exercise_entries mediumtext,
             toilet_entries mediumtext,
             mood_entries mediumtext,
             reactions mediumtext,
@@ -21,6 +22,8 @@ function ensure_day_health_logs_table(PDO $pdo): void
             CONSTRAINT day_health_logs_ibfk_1 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ');
+
+    $pdo->exec('ALTER TABLE day_health_logs ADD COLUMN IF NOT EXISTS exercise_entries mediumtext AFTER log_date');
 }
 
 function clean_json_array($value): array
@@ -59,6 +62,7 @@ function day_health_payload(?array $row, string $date): array
         return [
             'exists' => false,
             'date' => $date,
+            'exerciseEntries' => [],
             'toiletEntries' => [],
             'moodEntries' => [],
             'reactions' => [],
@@ -69,6 +73,7 @@ function day_health_payload(?array $row, string $date): array
     return [
         'exists' => true,
         'date' => $row['log_date'],
+        'exerciseEntries' => decode_json_array($row['exercise_entries'] ?? '[]'),
         'toiletEntries' => decode_json_array($row['toilet_entries'] ?? '[]'),
         'moodEntries' => decode_json_array($row['mood_entries'] ?? '[]'),
         'reactions' => decode_json_array($row['reactions'] ?? '[]'),
@@ -85,14 +90,16 @@ try {
         $date = valid_date_or_today($data['date'] ?? null);
         $requestDate = $date;
 
+        $exerciseEntries = clean_json_array($data['exerciseEntries'] ?? []);
         $toiletEntries = clean_json_array($data['toiletEntries'] ?? []);
         $moodEntries = clean_json_array($data['moodEntries'] ?? []);
         $reactions = clean_json_array($data['reactions'] ?? []);
 
         $stmt = $pdo->prepare('
-            INSERT INTO day_health_logs (user_id, log_date, toilet_entries, mood_entries, reactions)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO day_health_logs (user_id, log_date, exercise_entries, toilet_entries, mood_entries, reactions)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
+                exercise_entries = VALUES(exercise_entries),
                 toilet_entries = VALUES(toilet_entries),
                 mood_entries = VALUES(mood_entries),
                 reactions = VALUES(reactions),
@@ -101,6 +108,7 @@ try {
         $stmt->execute([
             $userId,
             $date,
+            json_array_text($exerciseEntries),
             json_array_text($toiletEntries),
             json_array_text($moodEntries),
             json_array_text($reactions),
@@ -109,7 +117,7 @@ try {
 
     $date = valid_date_or_today($requestDate);
     $stmt = $pdo->prepare('
-        SELECT log_date, toilet_entries, mood_entries, reactions, updated_at
+        SELECT log_date, exercise_entries, toilet_entries, mood_entries, reactions, updated_at
         FROM day_health_logs
         WHERE user_id = ? AND log_date = ?
         LIMIT 1

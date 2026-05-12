@@ -5277,6 +5277,9 @@ function ReportModal({
         const journal = journalData.journal || {}
         const info = {
           ...localInfo,
+          exerciseEntries: health.exists ? (health.exerciseEntries || []) : normalizeExerciseEntries(localInfo),
+          exerciseKcal: health.exists ? String(Math.round(getExerciseEntriesKcal(health.exerciseEntries || []))) : (localInfo.exerciseKcal || ''),
+          exercise: health.exists ? getExerciseEntriesSummary(health.exerciseEntries || []) : (localInfo.exercise || ''),
           toiletEntries: health.exists ? (health.toiletEntries || []) : normalizeToiletEntries(localInfo),
           moodEntries: health.exists ? (health.moodEntries || []) : normalizeMoodEntries(localInfo),
           dayJournalTitle: journal.title || localInfo.dayJournalTitle || '',
@@ -5962,6 +5965,7 @@ export default function App() {
   useEffect(() => {
     if (!isHydrated || !auth.loggedIn || healthLogLoadedDate !== today || isHealthLogLoading) return
 
+    const exerciseEntries = normalizeExerciseEntries(todayInfo)
     const toiletEntries = normalizeToiletEntries(todayInfo)
     const moodEntries = normalizeMoodEntries(todayInfo)
 
@@ -5970,7 +5974,7 @@ export default function App() {
 
     healthLogSaveTimerRef.current = window.setTimeout(async () => {
       try {
-        await saveDayHealth(today, toiletEntries, moodEntries, todayReactions)
+        await saveDayHealth(today, exerciseEntries, toiletEntries, moodEntries, todayReactions)
         setHealthLogSaveState('Uloženo')
       } catch {
         setHealthLogSaveState('Nepodařilo se uložit')
@@ -5984,6 +5988,9 @@ export default function App() {
     isHealthLogLoading,
     isHydrated,
     today,
+    todayInfo.exerciseEntries,
+    todayInfo.exercise,
+    todayInfo.exerciseKcal,
     todayInfo.toiletEntries,
     todayInfo.moodEntries,
     todayReactions,
@@ -6185,6 +6192,7 @@ export default function App() {
       const hasServerHealth = Boolean(health.exists)
 
       if (hasServerHealth) {
+        const exerciseEntries = Array.isArray(health.exerciseEntries) ? health.exerciseEntries : []
         const toiletEntries = Array.isArray(health.toiletEntries) ? health.toiletEntries : []
         const moodEntries = Array.isArray(health.moodEntries) ? health.moodEntries : []
         const healthReactions = Array.isArray(health.reactions) ? health.reactions : []
@@ -6195,6 +6203,9 @@ export default function App() {
             ...prev,
             [date]: {
               ...current,
+              exerciseEntries,
+              exercise: getExerciseEntriesSummary(exerciseEntries),
+              exerciseKcal: String(Math.round(getExerciseEntriesKcal(exerciseEntries))),
               toiletEntries,
               toiletCount: String(toiletEntries.length),
               toiletType: toiletEntries[0]?.consistency || current.toiletType || 'Normální',
@@ -6216,6 +6227,7 @@ export default function App() {
             ...prev,
             [date]: {
               ...current,
+              exerciseEntries: normalizeExerciseEntries(current),
               toiletEntries: normalizeToiletEntries(current),
               moodEntries: normalizeMoodEntries(current),
             },
@@ -6238,7 +6250,7 @@ export default function App() {
     }
   }
 
-  async function saveDayHealth(date, toiletEntries, moodEntries, dayReactions) {
+  async function saveDayHealth(date, exerciseEntries, toiletEntries, moodEntries, dayReactions) {
     const response = await fetch('day-health.php', {
       method: 'POST',
       credentials: 'same-origin',
@@ -6248,6 +6260,7 @@ export default function App() {
       },
       body: JSON.stringify({
         date,
+        exerciseEntries,
         toiletEntries,
         moodEntries,
         reactions: dayReactions,

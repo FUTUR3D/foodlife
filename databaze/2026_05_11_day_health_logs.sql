@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS day_health_logs (
     id int(11) NOT NULL AUTO_INCREMENT,
     user_id int(11) NOT NULL,
     log_date date NOT NULL,
+    exercise_entries mediumtext,
     toilet_entries mediumtext,
     mood_entries mediumtext,
     reactions mediumtext,
