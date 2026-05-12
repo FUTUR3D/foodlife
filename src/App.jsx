@@ -148,6 +148,8 @@ const HISTAMINE_MARKER_POINTS = {
   inhibitor_marker: 2,
 }
 
+const REPORT_MAX_DAYS = 31
+
 function createId() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
 }
@@ -268,6 +270,39 @@ function shiftDate(value, days) {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
+}
+
+function getDateRange(startValue, endValue, maxDays = REPORT_MAX_DAYS) {
+  if (!startValue || !endValue) return []
+  const start = startValue <= endValue ? startValue : endValue
+  const end = startValue <= endValue ? endValue : startValue
+  const days = []
+  let cursor = start
+
+  while (cursor <= end && days.length < maxDays) {
+    days.push(cursor)
+    cursor = shiftDate(cursor, 1)
+  }
+
+  return days
+}
+
+function getDateRangeLength(startValue, endValue) {
+  if (!startValue || !endValue) return 0
+  const start = new Date(`${startValue <= endValue ? startValue : endValue}T12:00:00`)
+  const end = new Date(`${startValue <= endValue ? endValue : startValue}T12:00:00`)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0
+  return Math.floor((end - start) / 86400000) + 1
+}
+
+function groupMealsByType(meals) {
+  return (meals || []).reduce((groups, meal) => {
+    const key = meal.meal_type || 'ostatni'
+    return {
+      ...groups,
+      [key]: [...(groups[key] || []), meal],
+    }
+  }, {})
 }
 
 function useTapToggle(onToggle) {
@@ -5163,6 +5198,304 @@ function textToDiaryHtml(text) {
     .join('')
 }
 
+function htmlToPlainText(html) {
+  const element = document.createElement('div')
+  element.innerHTML = html || ''
+  return element.textContent?.trim() || ''
+}
+
+function ReportModal({
+  open,
+  onClose,
+  selectedDate,
+  currentMeals,
+  currentInfo,
+  currentReactions,
+  dayInfo,
+  reactions,
+  profile,
+  goals,
+}) {
+  const [fromDate, setFromDate] = useState(selectedDate)
+  const [toDate, setToDate] = useState(selectedDate)
+  const [reportDays, setReportDays] = useState([])
+  const [reportWeights, setReportWeights] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    setFromDate(selectedDate)
+    setToDate(selectedDate)
+    setReportDays([])
+    setReportWeights([])
+    setError('')
+  }, [open, selectedDate])
+
+  if (!open) return null
+
+  async function fetchJson(url) {
+    const response = await fetch(url, {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    })
+    if (!response.ok) throw new Error(url)
+    return response.json()
+  }
+
+  async function loadReport() {
+    const totalDays = getDateRangeLength(fromDate, toDate)
+    if (totalDays > REPORT_MAX_DAYS) {
+      setError(`Report jde najednou vytvořit maximálně pro ${REPORT_MAX_DAYS} dnů.`)
+      return
+    }
+
+    const dates = getDateRange(fromDate, toDate)
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const start = dates[0]
+      const end = dates[dates.length - 1]
+      const weightPromise = fetchJson(`weight-logs.php?end_date=${encodeURIComponent(end)}&days=${Math.max(7, dates.length)}`)
+
+      const days = await Promise.all(dates.map(async (date) => {
+        const [mealsData, healthData, journalData] = date === selectedDate
+          ? [
+              { meals: currentMeals || [] },
+              { health: { exists: true, toiletEntries: normalizeToiletEntries(currentInfo), moodEntries: normalizeMoodEntries(currentInfo), reactions: currentReactions || [] } },
+              { journal: { title: currentInfo.dayJournalTitle || '', html: currentInfo.dayJournalHtml || '', text: currentInfo.dayNote || '' } },
+            ]
+          : await Promise.all([
+              fetchJson(`meals-day.php?date=${encodeURIComponent(date)}`),
+              fetchJson(`day-health.php?date=${encodeURIComponent(date)}`),
+              fetchJson(`day-journal.php?date=${encodeURIComponent(date)}`),
+            ])
+
+        const localInfo = dayInfo[date] || DEFAULT_DAY_INFO
+        const health = healthData.health || {}
+        const journal = journalData.journal || {}
+        const info = {
+          ...localInfo,
+          toiletEntries: health.exists ? (health.toiletEntries || []) : normalizeToiletEntries(localInfo),
+          moodEntries: health.exists ? (health.moodEntries || []) : normalizeMoodEntries(localInfo),
+          dayJournalTitle: journal.title || localInfo.dayJournalTitle || '',
+          dayJournalHtml: journal.html || localInfo.dayJournalHtml || '',
+          dayNote: journal.text || localInfo.dayNote || '',
+        }
+
+        return {
+          date,
+          meals: mealsData.meals || [],
+          info,
+          reactions: health.exists ? (health.reactions || []) : (reactions[date] || []),
+        }
+      }))
+
+      const weightData = await weightPromise
+      setReportDays(days)
+      setReportWeights((weightData.logs || []).filter((log) => log.date >= start && log.date <= end))
+    } catch {
+      setError('Report se nepodařilo načíst. Zkus to prosím znovu.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const allMeals = reportDays.flatMap((day) => day.meals)
+  const totalTotals = getMealTotals(allMeals.flatMap((meal) => meal.items || []))
+  const totalExercise = reportDays.reduce((sum, day) => sum + getExerciseEntriesKcal(normalizeExerciseEntries(day.info)), 0)
+  const allReactions = reportDays.flatMap((day) => day.reactions || [])
+  const allToiletEntries = reportDays.flatMap((day) => normalizeToiletEntries(day.info))
+  const allMoodEntries = reportDays.flatMap((day) => normalizeMoodEntries(day.info))
+  const firstWeight = getWeightNumber(reportWeights[0])
+  const lastWeight = getWeightNumber(reportWeights[reportWeights.length - 1])
+  const weightChange = Number.isFinite(firstWeight) && Number.isFinite(lastWeight)
+    ? Math.round((lastWeight - firstWeight) * 10) / 10
+    : null
+
+  return (
+    <div className="report-modal">
+      <div className="report-shell">
+        <div className="report-toolbar no-print">
+          <div>
+            <h2>Report FoodLife</h2>
+            <p>Souhrn jídel, pohybu, hmotnosti, pocitů, reakcí a deníku.</p>
+          </div>
+          <button className="side-menu-close" type="button" onClick={onClose} aria-label="Zavřít report">×</button>
+        </div>
+
+        <div className="report-controls no-print">
+          <label>
+            Od
+            <input className="input" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          </label>
+          <label>
+            Do
+            <input className="input" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          </label>
+          <button className="button" type="button" onClick={loadReport} disabled={isLoading}>
+            {isLoading ? 'Načítám...' : 'Vytvořit report'}
+          </button>
+          <button className="button button-light" type="button" onClick={() => window.print()} disabled={!reportDays.length}>
+            Export PDF
+          </button>
+        </div>
+
+        {error ? <div className="inline-error no-print">{error}</div> : null}
+
+        <div className="report-print-area">
+          {reportDays.length === 0 ? (
+            <div className="empty-box no-print">Vyber rozsah a klikni na Vytvořit report.</div>
+          ) : (
+            <>
+              <section className="report-page report-summary-page">
+                <div className="report-page-head">
+                  <div>
+                    <div className="side-eyebrow">FoodLife report</div>
+                    <h1>{formatShortDate(reportDays[0].date)} - {formatShortDate(reportDays[reportDays.length - 1].date)}</h1>
+                  </div>
+                  <div className="report-profile">
+                    <strong>{profile.name || 'Uživatel'}</strong>
+                    <span>{profile.weight ? `${profile.weight} kg` : ''}{profile.height ? ` • ${profile.height} cm` : ''}</span>
+                  </div>
+                </div>
+
+                <div className="report-metrics">
+                  <div><span>Průměr kcal / den</span><strong>{Math.round(totalTotals.kcal / reportDays.length)}</strong></div>
+                  <div><span>Bílkoviny celkem</span><strong>{formatMacro(totalTotals.protein)}</strong></div>
+                  <div><span>Cvičení celkem</span><strong>{Math.round(totalExercise)} kcal</strong></div>
+                  <div><span>Reakce těla</span><strong>{allReactions.length}</strong></div>
+                  <div><span>Toaleta</span><strong>{allToiletEntries.length}</strong></div>
+                  <div><span>Pocity</span><strong>{allMoodEntries.length}</strong></div>
+                </div>
+
+                <div className="report-section">
+                  <h2>Hmotnost v období</h2>
+                  <div className="report-weight-line">
+                    <span>Záznamů: {reportWeights.length}</span>
+                    <span>Změna: {weightChange === null ? '-' : `${weightChange > 0 ? '+' : ''}${weightChange} kg`}</span>
+                  </div>
+                  <WeightChart logs={reportWeights} />
+                </div>
+
+                <div className="report-section">
+                  <h2>Souhrn dní</h2>
+                  <div className="report-day-table">
+                    {reportDays.map((day) => {
+                      const totals = getMealTotals(day.meals.flatMap((meal) => meal.items || []))
+                      const plan = calculateEnergyPlan(profile, goals, day.info.exerciseKcal)
+                      const exerciseKcal = getExerciseEntriesKcal(normalizeExerciseEntries(day.info))
+                      return (
+                        <div key={day.date}>
+                          <span>{formatShortDate(day.date)}</span>
+                          <strong>{Math.round(totals.kcal)} kcal</strong>
+                          <span>{plan ? `cíl ${Math.round(plan.target)}` : 'cíl -'}</span>
+                          <span>pohyb {Math.round(exerciseKcal)} kcal</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </section>
+
+              {reportDays.map((day) => {
+                const mealsByTypeForDay = groupMealsByType(day.meals)
+                const totals = getMealTotals(day.meals.flatMap((meal) => meal.items || []))
+                const plan = calculateEnergyPlan(profile, goals, day.info.exerciseKcal)
+                const histamine = getHistamineSummary(day.meals)
+                const exerciseEntries = normalizeExerciseEntries(day.info)
+                const journalText = htmlToPlainText(day.info.dayJournalHtml) || day.info.dayNote || ''
+
+                return (
+                  <section key={day.date} className="report-page">
+                    <div className="report-page-head">
+                      <div>
+                        <div className="side-eyebrow">Denní report</div>
+                        <h1>{formatDisplayDate(day.date)}</h1>
+                      </div>
+                      <div className="report-kcal">
+                        <strong>{Math.round(totals.kcal)} kcal</strong>
+                        <span>{plan ? `cíl ${Math.round(plan.target)} kcal` : 'bez cíle'}</span>
+                      </div>
+                    </div>
+
+                    <div className="report-metrics">
+                      <div><span>Bílkoviny</span><strong>{formatMacro(totals.protein)}</strong></div>
+                      <div><span>Sacharidy</span><strong>{formatMacro(totals.carbs)}</strong></div>
+                      <div><span>Tuky</span><strong>{formatMacro(totals.fat)}</strong></div>
+                      <div><span>Vláknina</span><strong>{formatMacro(totals.fiber)}</strong></div>
+                      <div><span>Cvičení</span><strong>{Math.round(getExerciseEntriesKcal(exerciseEntries))} kcal</strong></div>
+                      <div><span>Histamin</span><strong>{histamine.score} b</strong></div>
+                    </div>
+
+                    <div className="report-grid">
+                      <div className="report-section">
+                        <h2>Jídlo a pití</h2>
+                        {MEAL_SECTIONS.map((section) => {
+                          const meals = mealsByTypeForDay[section.key] || []
+                          if (!meals.length) return null
+                          return (
+                            <div key={section.key} className="report-meal-block">
+                              <h3>{section.title}</h3>
+                              {meals.map((meal) => (
+                                <div key={meal.id} className="report-row">
+                                  <div>
+                                    <strong>{meal.title}</strong>
+                                    <span>{meal.items?.map((item) => `${item.name || item.custom_name} ${formatItemAmount(item)}`).join(', ')}</span>
+                                  </div>
+                                  <em>{Math.round(getMealTotals(meal.items || []).kcal)} kcal</em>
+                                </div>
+                              ))}
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      <div className="report-section">
+                        <h2>Tělo</h2>
+                        <div className="report-mini-list">
+                          <strong>Cvičení</strong>
+                          {exerciseEntries.length ? exerciseEntries.map((entry) => (
+                            <span key={entry.id}>{entry.name} {entry.amount || ''} {entry.unit || ''} • {entry.kcal || 0} kcal</span>
+                          )) : <span>Bez záznamu</span>}
+                        </div>
+                        <div className="report-mini-list">
+                          <strong>Jak se cítím</strong>
+                          {normalizeMoodEntries(day.info).length ? normalizeMoodEntries(day.info).map((entry) => (
+                            <span key={entry.id}>{entry.time || ''} {entry.mood} • energie {entry.energy ?? '-'}/10 {entry.note ? `• ${entry.note}` : ''}</span>
+                          )) : <span>Bez záznamu</span>}
+                        </div>
+                        <div className="report-mini-list">
+                          <strong>Reakce těla</strong>
+                          {day.reactions.length ? day.reactions.map((entry) => (
+                            <span key={entry.id}>{getReactionTimeValue(entry)} {entry.type} • {entry.intensity}/10 {entry.note ? `• ${entry.note}` : ''}</span>
+                          )) : <span>Bez záznamu</span>}
+                        </div>
+                        <div className="report-mini-list">
+                          <strong>Toaleta</strong>
+                          {normalizeToiletEntries(day.info).length ? normalizeToiletEntries(day.info).map((entry) => (
+                            <span key={entry.id}>{entry.time || ''} {entry.consistency} {entry.note ? `• ${entry.note}` : ''}</span>
+                          )) : <span>Bez záznamu</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="report-section">
+                      <h2>Deník</h2>
+                      <p>{journalText || 'Bez zápisu.'}</p>
+                    </div>
+                  </section>
+                )
+              })}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DiaryPanel({ todayInfo, onTodayInfoChange, saveState }) {
   const editorRef = useRef(null)
   const imageInputRef = useRef(null)
@@ -5441,6 +5774,7 @@ export default function App() {
   const [recipeCreateRequest, setRecipeCreateRequest] = useState(null)
   const [customFoodCreateRequest, setCustomFoodCreateRequest] = useState(null)
   const [openMenu, setOpenMenu] = useState(false)
+  const [openReport, setOpenReport] = useState(false)
   const [openCalendar, setOpenCalendar] = useState(false)
   const [selectedDate, setSelectedDate] = useState(formatToday())
   const calendarInputRef = useRef(null)
@@ -6333,6 +6667,10 @@ export default function App() {
             </div>
           </div>
 
+          <button className="report-button" type="button" onClick={() => setOpenReport(true)}>
+            Report
+          </button>
+
           <button className="menu-button" onClick={() => setOpenMenu((v) => !v)} aria-label="Otevřít menu">
             <span />
             <span />
@@ -6580,6 +6918,19 @@ export default function App() {
         selectedDate={selectedDate}
         isMealsLoading={isMealsLoading}
         onLogout={handleLogout}
+      />
+
+      <ReportModal
+        open={openReport}
+        onClose={() => setOpenReport(false)}
+        selectedDate={selectedDate}
+        currentMeals={dayMeals}
+        currentInfo={todayInfo}
+        currentReactions={todayReactions}
+        dayInfo={dayInfo}
+        reactions={reactions}
+        profile={profile}
+        goals={goals}
       />
 
       {/* Calendar modal */}
