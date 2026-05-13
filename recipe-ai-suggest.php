@@ -34,6 +34,35 @@ function text_has(string $text, array $needles): bool
     return false;
 }
 
+function prompt_terms(string $prompt): array
+{
+    $prompt = function_exists('mb_strtolower') ? mb_strtolower($prompt, 'UTF-8') : strtolower($prompt);
+    $parts = preg_split('/[^\p{L}\p{N}]+/u', $prompt) ?: [];
+    $stopWords = ['chci', 'recept', 'jidlo', 'jídlo', 'prosim', 'prosím', 'nejake', 'nějaké', 'teple', 'teplé', 'rychle', 'rychlé', 'bez', 'hodne', 'hodně'];
+    $terms = [];
+    foreach ($parts as $part) {
+        $part = trim($part);
+        if (strlen($part) < 4 || in_array($part, $stopWords, true)) continue;
+        $terms[] = $part;
+    }
+    return array_values(array_unique($terms));
+}
+
+function prompt_matching_foods(array $foods, string $prompt): array
+{
+    $terms = prompt_terms($prompt);
+    if (!$terms) return [];
+
+    $matches = [];
+    foreach ($foods as $food) {
+        $text = trim((string) ($food['name_cs'] ?? '') . ' ' . (string) ($food['name_en'] ?? '') . ' ' . (string) ($food['category'] ?? ''));
+        if ($text !== '' && text_has($text, $terms)) {
+            $matches[] = $food;
+        }
+    }
+    return $matches;
+}
+
 function food_role(array $food): string
 {
     $name = (string) ($food['name_cs'] ?? '');
@@ -127,7 +156,7 @@ function candidate_score(array $food, string $goalType, string $prompt): int
 
     $words = preg_split('/\s+/', clean_text($prompt, 160));
     foreach ($words ?: [] as $word) {
-        if (strlen($word) >= 4 && text_has($text, [$word])) $score += 10;
+        if (strlen($word) >= 4 && text_has($text, [$word])) $score += 80;
     }
 
     return $score;
@@ -163,6 +192,13 @@ function build_local_recipe(array $foods, string $mealType, string $goalType, in
 
     $items = [];
     $used = [];
+    $wantedFoods = array_slice(sort_food_candidates(prompt_matching_foods($foods, $prompt), $goalType, $prompt), 0, 2);
+    foreach ($wantedFoods as $food) {
+        $used[] = (int) $food['id'];
+        $grams = role_amount(food_role($food), $mealType);
+        $items[] = food_to_recipe_item($food, $grams);
+    }
+
     foreach ($roles as $role) {
         $food = pick_by_role($foods, $role, $used, $goalType, $prompt);
         if (!$food) continue;
@@ -283,7 +319,16 @@ function json_from_gemini_text(string $text): ?array
 
 function build_gemini_food_context(array $foods, string $goalType, string $prompt): array
 {
-    $sorted = array_slice(sort_food_candidates($foods, $goalType, $prompt), 0, 90);
+    $promptMatches = prompt_matching_foods($foods, $prompt);
+    $byId = [];
+    foreach ($promptMatches as $food) {
+        $byId[(int) $food['id']] = $food;
+    }
+    foreach (sort_food_candidates($foods, $goalType, $prompt) as $food) {
+        $byId[(int) $food['id']] = $food;
+        if (count($byId) >= 90) break;
+    }
+    $sorted = array_values($byId);
     return array_map(function ($food) {
         return [
             'id' => (int) $food['id'],
@@ -302,19 +347,25 @@ function call_gemini_recipe(array $foods, string $mealType, string $goalType, in
 {
     $apiKey = gemini_api_key();
     if ($apiKey === '' || !function_exists('curl_init')) {
+        $GLOBALS['recipe_generator_warning'] = $apiKey === '' ? 'gemini_key_missing' : 'curl_missing';
         return null;
     }
 
     $foodContext = build_gemini_food_context($foods, $goalType, $prompt);
     if (!$foodContext) {
+        $GLOBALS['recipe_generator_warning'] = 'no_food_context';
         return null;
     }
 
+    $wantedNames = array_map(fn($food) => $food['name_cs'], array_slice(prompt_matching_foods($foods, $prompt), 0, 8));
+
     $requestText = "Jsi asistent pro českou aplikaci FoodLife. Navrhni jeden praktický recept jen z povolených potravin níže. "
         . "Nesmíš použít žádnou potravinu mimo seznam a u položek vrať pouze food_id ze seznamu. "
+        . "Pokud jsou v zadání uživatele konkrétní potraviny a jsou v seznamu, musíš je použít. "
         . "Zohledni cíl, kcal, trávení a pokud je cíl low_histamine, preferuj potraviny se sighi_score 0 nebo null a vyhýbej se 2-3. "
         . "Vrať pouze validní JSON bez komentáře.\n\n"
         . "Typ jídla: {$mealType}\nCíl: {$goalType}\nCílové kcal: {$targetKcal}\nZadání uživatele: {$prompt}\n\n"
+        . "Potraviny nalezené přímo podle zadání: " . json_encode($wantedNames, JSON_UNESCAPED_UNICODE) . "\n\n"
         . "Povolené potraviny JSON:\n" . json_encode($foodContext, JSON_UNESCAPED_UNICODE) . "\n\n"
         . "Výstupní JSON tvar: {\"title\":\"...\",\"note\":\"...\",\"instructions\":\"1. ...\\n2. ...\",\"prep_minutes\":10,\"cook_minutes\":15,\"servings\":1,\"difficulty\":\"easy\",\"carb_level\":\"unknown\",\"items\":[{\"food_id\":123,\"grams\":150,\"note\":\"\"}]}";
 
@@ -348,6 +399,7 @@ function call_gemini_recipe(array $foods, string $mealType, string $goalType, in
 
     if ($raw === false || $status < 200 || $status >= 300) {
         log_error('Gemini recipe generation failed: HTTP ' . $status . ' ' . $curlError . ' ' . substr((string) $raw, 0, 500));
+        $GLOBALS['recipe_generator_warning'] = 'gemini_http_' . $status;
         return null;
     }
 
@@ -355,10 +407,15 @@ function call_gemini_recipe(array $foods, string $mealType, string $goalType, in
     $text = $response['candidates'][0]['content']['parts'][0]['text'] ?? '';
     $recipe = json_from_gemini_text((string) $text);
     if (!$recipe || empty($recipe['items']) || !is_array($recipe['items'])) {
+        $GLOBALS['recipe_generator_warning'] = 'gemini_invalid_json';
         return null;
     }
 
-    return normalize_gemini_recipe($recipe, $foods, $mealType, $goalType, $prompt);
+    $normalized = normalize_gemini_recipe($recipe, $foods, $mealType, $goalType, $prompt);
+    if (!$normalized) {
+        $GLOBALS['recipe_generator_warning'] = 'gemini_invalid_items';
+    }
+    return $normalized;
 }
 
 function normalize_gemini_recipe(array $recipe, array $foods, string $mealType, string $goalType, string $prompt): ?array
@@ -454,7 +511,12 @@ try {
     $result = call_gemini_recipe($foods, $mealType, $goalType, $targetKcal, $prompt);
     if (!$result) {
         $result = build_local_recipe($foods, $mealType, $goalType, $targetKcal, $prompt);
+        $result['warning'] = $GLOBALS['recipe_generator_warning'] ?? 'local_fallback';
     }
+    $result['matched_foods'] = array_map(fn($food) => [
+        'id' => (int) $food['id'],
+        'name' => $food['name_cs'],
+    ], array_slice(prompt_matching_foods($foods, $prompt), 0, 8));
     echo json_encode($result, JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     log_error('recipe-ai-suggest.php exception: ' . $e->getMessage());

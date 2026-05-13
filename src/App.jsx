@@ -2032,9 +2032,12 @@ function RecipeLibrary({
           id: item.id || createId(),
         })),
       })
+      const matchedNames = (data.matched_foods || []).map((food) => food.name).filter(Boolean).slice(0, 3)
+      const matchedText = matchedNames.length ? ` Nalezeno podle zadání: ${matchedNames.join(', ')}.` : ''
+      const warningText = data.warning ? ` Gemini fallback: ${data.warning}.` : ''
       setMessage(data.source === 'local'
-        ? 'Návrh je připravený z potravin v databázi. Dolaď ho a ulož jako recept.'
-        : 'Gemini návrh je připravený z potravin v databázi. Dolaď ho a ulož jako recept.')
+        ? `Návrh je připravený z potravin v databázi.${matchedText}${warningText} Dolaď ho a ulož jako recept.`
+        : `Gemini návrh je připravený z potravin v databázi.${matchedText} Dolaď ho a ulož jako recept.`)
       openPart('form')
     } catch {
       setMessage('Návrh receptu se nepodařilo vytvořit.')
