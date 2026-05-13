@@ -24,9 +24,9 @@ function clean_target_kcal($value): int
 
 function text_has(string $text, array $needles): bool
 {
-    $haystack = function_exists('mb_strtolower') ? mb_strtolower($text, 'UTF-8') : strtolower($text);
+    $haystack = normalize_match_text($text);
     foreach ($needles as $needle) {
-        $needle = function_exists('mb_strtolower') ? mb_strtolower($needle, 'UTF-8') : strtolower($needle);
+        $needle = normalize_match_text($needle);
         if ($needle !== '' && strpos($haystack, $needle) !== false) {
             return true;
         }
@@ -34,14 +34,82 @@ function text_has(string $text, array $needles): bool
     return false;
 }
 
+function normalize_match_text(string $text): string
+{
+    $text = trim($text);
+    if (function_exists('mb_strtolower')) {
+        $text = mb_strtolower($text, 'UTF-8');
+    } else {
+        $text = strtolower($text);
+    }
+
+    if (function_exists('iconv')) {
+        $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+        if ($converted !== false && $converted !== '') {
+            $text = strtolower($converted);
+        }
+    }
+
+    $text = str_replace(["'", "`", "´"], '', $text);
+    $text = strtr($text, [
+        'á' => 'a', 'č' => 'c', 'ď' => 'd', 'é' => 'e', 'ě' => 'e',
+        'í' => 'i', 'ň' => 'n', 'ó' => 'o', 'ř' => 'r', 'š' => 's',
+        'ť' => 't', 'ú' => 'u', 'ů' => 'u', 'ý' => 'y', 'ž' => 'z',
+    ]);
+    $text = preg_replace('/[^a-z0-9]+/', ' ', $text) ?? $text;
+    return trim(preg_replace('/\s+/', ' ', $text) ?? $text);
+}
+
+function prompt_term_variants(string $term): array
+{
+    $term = normalize_match_text($term);
+    if ($term === '') {
+        return [];
+    }
+
+    $variants = [$term];
+    $suffixes = ['oveho', 'ovemu', 'ovych', 'ovymi', 'emi', 'ami', 'ech', 'ich', 'ove', 'ova', 'ovy', 'ou', 'em', 'ho', 'mu', 'mi', 'ch', 'u', 'a', 'e', 'i', 'y'];
+    foreach ($suffixes as $suffix) {
+        if (strlen($term) > strlen($suffix) + 3 && substr($term, -strlen($suffix)) === $suffix) {
+            $variants[] = substr($term, 0, -strlen($suffix));
+        }
+    }
+
+    return array_values(array_unique(array_filter($variants, fn($variant) => strlen($variant) >= 4)));
+}
+
+function food_matches_prompt_term(array $food, string $term): bool
+{
+    $text = normalize_match_text(trim((string) ($food['name_cs'] ?? '') . ' ' . (string) ($food['name_en'] ?? '') . ' ' . (string) ($food['category'] ?? '')));
+    if ($text === '') {
+        return false;
+    }
+
+    foreach (prompt_term_variants($term) as $variant) {
+        if (strpos($text, $variant) !== false) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function prompt_terms(string $prompt): array
 {
-    $prompt = function_exists('mb_strtolower') ? mb_strtolower($prompt, 'UTF-8') : strtolower($prompt);
-    $parts = preg_split('/[^\p{L}\p{N}]+/u', $prompt) ?: [];
-    $stopWords = ['chci', 'recept', 'jidlo', 'jídlo', 'prosim', 'prosím', 'nejake', 'nějaké', 'teple', 'teplé', 'rychle', 'rychlé', 'bez', 'hodne', 'hodně'];
+    $parts = preg_split('/\s+/', normalize_match_text($prompt)) ?: [];
+    $stopWords = ['chci', 'recept', 'jidlo', 'prosim', 'nejake', 'teple', 'rychle', 'bez', 'hodne', 'pro', 'jako', 'nebo', 'plus', 'pridej', 'udelej', 'navrhni'];
+    $negationWords = ['bez', 'nechci'];
     $terms = [];
     foreach ($parts as $part) {
         $part = trim($part);
+        if (in_array($part, $negationWords, true)) {
+            $skipNext = true;
+            continue;
+        }
+        if (!empty($skipNext)) {
+            $skipNext = false;
+            continue;
+        }
         if (strlen($part) < 4 || in_array($part, $stopWords, true)) continue;
         $terms[] = $part;
     }
@@ -55,12 +123,46 @@ function prompt_matching_foods(array $foods, string $prompt): array
 
     $matches = [];
     foreach ($foods as $food) {
-        $text = trim((string) ($food['name_cs'] ?? '') . ' ' . (string) ($food['name_en'] ?? '') . ' ' . (string) ($food['category'] ?? ''));
-        if ($text !== '' && text_has($text, $terms)) {
+        foreach ($terms as $term) {
+            if (!food_matches_prompt_term($food, $term)) {
+                continue;
+            }
             $matches[] = $food;
+            break;
         }
     }
     return $matches;
+}
+
+function prompt_required_foods(array $foods, string $prompt, string $goalType, int $limit = 5): array
+{
+    $required = [];
+    $usedIds = [];
+
+    foreach (prompt_terms($prompt) as $term) {
+        $matches = array_values(array_filter($foods, fn($food) => food_matches_prompt_term($food, $term)));
+        if (!$matches) {
+            continue;
+        }
+
+        $best = sort_food_candidates($matches, $goalType, $prompt)[0] ?? null;
+        if (!$best) {
+            continue;
+        }
+
+        $id = (int) $best['id'];
+        if (in_array($id, $usedIds, true)) {
+            continue;
+        }
+
+        $required[] = $best;
+        $usedIds[] = $id;
+        if (count($required) >= $limit) {
+            break;
+        }
+    }
+
+    return $required;
 }
 
 function food_role(array $food): string
@@ -154,9 +256,8 @@ function candidate_score(array $food, string $goalType, string $prompt): int
     if ($goalType === 'gain_weight' && $kcal >= 180) $score += 6;
     if ($goalType === 'digestive_comfort' && text_has($text, ['smažen', 'uzen', 'alkohol'])) $score -= 10;
 
-    $words = preg_split('/\s+/', clean_text($prompt, 160));
-    foreach ($words ?: [] as $word) {
-        if (strlen($word) >= 4 && text_has($text, [$word])) $score += 80;
+    foreach (prompt_terms(clean_text($prompt, 160)) as $word) {
+        if (food_matches_prompt_term($food, $word)) $score += 80;
     }
 
     return $score;
@@ -192,7 +293,7 @@ function build_local_recipe(array $foods, string $mealType, string $goalType, in
 
     $items = [];
     $used = [];
-    $wantedFoods = array_slice(sort_food_candidates(prompt_matching_foods($foods, $prompt), $goalType, $prompt), 0, 2);
+    $wantedFoods = prompt_required_foods($foods, $prompt, $goalType, 4);
     foreach ($wantedFoods as $food) {
         $used[] = (int) $food['id'];
         $grams = role_amount(food_role($food), $mealType);
@@ -317,10 +418,13 @@ function json_from_gemini_text(string $text): ?array
     return null;
 }
 
-function build_gemini_food_context(array $foods, string $goalType, string $prompt): array
+function build_gemini_food_context(array $foods, string $goalType, string $prompt, array $requiredFoods = []): array
 {
     $promptMatches = prompt_matching_foods($foods, $prompt);
     $byId = [];
+    foreach ($requiredFoods as $food) {
+        $byId[(int) $food['id']] = $food;
+    }
     foreach ($promptMatches as $food) {
         $byId[(int) $food['id']] = $food;
     }
@@ -351,21 +455,30 @@ function call_gemini_recipe(array $foods, string $mealType, string $goalType, in
         return null;
     }
 
-    $foodContext = build_gemini_food_context($foods, $goalType, $prompt);
+    $requiredFoods = prompt_required_foods($foods, $prompt, $goalType);
+    $foodContext = build_gemini_food_context($foods, $goalType, $prompt, $requiredFoods);
     if (!$foodContext) {
         $GLOBALS['recipe_generator_warning'] = 'no_food_context';
         return null;
     }
 
-    $wantedNames = array_map(fn($food) => $food['name_cs'], array_slice(prompt_matching_foods($foods, $prompt), 0, 8));
+    $wantedNames = array_map(fn($food) => $food['name_cs'], $requiredFoods);
+    $requiredFoodIds = array_map(fn($food) => (int) $food['id'], $requiredFoods);
+    $requiredFoodContext = array_map(fn($food) => [
+        'id' => (int) $food['id'],
+        'name' => $food['name_cs'],
+        'sighi_score' => $food['sighi_score'] === null ? null : (int) $food['sighi_score'],
+    ], $requiredFoods);
 
     $requestText = "Jsi asistent pro českou aplikaci FoodLife. Navrhni jeden praktický recept jen z povolených potravin níže. "
         . "Nesmíš použít žádnou potravinu mimo seznam a u položek vrať pouze food_id ze seznamu. "
-        . "Pokud jsou v zadání uživatele konkrétní potraviny a jsou v seznamu, musíš je použít. "
-        . "Zohledni cíl, kcal, trávení a pokud je cíl low_histamine, preferuj potraviny se sighi_score 0 nebo null a vyhýbej se 2-3. "
+        . "Pokud jsou v poli povinné potraviny nějaké položky, musíš do items zahrnout každé jejich food_id. "
+        . "Zohledni cíl, kcal, trávení a pokud je cíl low_histamine, preferuj potraviny se sighi_score 0 nebo null a vyhýbej se 2-3, kromě povinných potravin výslovně chtěných uživatelem. "
         . "Vrať pouze validní JSON bez komentáře.\n\n"
         . "Typ jídla: {$mealType}\nCíl: {$goalType}\nCílové kcal: {$targetKcal}\nZadání uživatele: {$prompt}\n\n"
         . "Potraviny nalezené přímo podle zadání: " . json_encode($wantedNames, JSON_UNESCAPED_UNICODE) . "\n\n"
+        . "Povinné potraviny JSON: " . json_encode($requiredFoodContext, JSON_UNESCAPED_UNICODE) . "\n"
+        . "Povinné food_id: " . json_encode($requiredFoodIds, JSON_UNESCAPED_UNICODE) . "\n\n"
         . "Povolené potraviny JSON:\n" . json_encode($foodContext, JSON_UNESCAPED_UNICODE) . "\n\n"
         . "Výstupní JSON tvar: {\"title\":\"...\",\"note\":\"...\",\"instructions\":\"1. ...\\n2. ...\",\"prep_minutes\":10,\"cook_minutes\":15,\"servings\":1,\"difficulty\":\"easy\",\"carb_level\":\"unknown\",\"items\":[{\"food_id\":123,\"grams\":150,\"note\":\"\"}]}";
 
@@ -411,14 +524,14 @@ function call_gemini_recipe(array $foods, string $mealType, string $goalType, in
         return null;
     }
 
-    $normalized = normalize_gemini_recipe($recipe, $foods, $mealType, $goalType, $prompt);
+    $normalized = normalize_gemini_recipe($recipe, $foods, $mealType, $goalType, $prompt, $requiredFoods);
     if (!$normalized) {
         $GLOBALS['recipe_generator_warning'] = 'gemini_invalid_items';
     }
     return $normalized;
 }
 
-function normalize_gemini_recipe(array $recipe, array $foods, string $mealType, string $goalType, string $prompt): ?array
+function normalize_gemini_recipe(array $recipe, array $foods, string $mealType, string $goalType, string $prompt, array $requiredFoods = []): ?array
 {
     $foodsById = [];
     foreach ($foods as $food) {
@@ -437,15 +550,35 @@ function normalize_gemini_recipe(array $recipe, array $foods, string $mealType, 
         $items[] = $recipeItem;
     }
 
+    $usedIds = array_map(fn($item) => (int) ($item['food_id'] ?? 0), $items);
+    $requiredAdded = [];
+    foreach ($requiredFoods as $food) {
+        $foodId = (int) ($food['id'] ?? 0);
+        if (!$foodId || in_array($foodId, $usedIds, true)) {
+            continue;
+        }
+
+        $recipeItem = food_to_recipe_item($food, role_amount(food_role($food), $mealType));
+        $recipeItem['note'] = 'doplněno podle zadání';
+        $items[] = $recipeItem;
+        $usedIds[] = $foodId;
+        $requiredAdded[] = $food['name_cs'];
+    }
+
     if (!$items) {
         return null;
+    }
+
+    $note = clean_text($recipe['note'] ?? 'Návrh vytvořený přes Gemini z potravin v databázi FoodLife.', 500);
+    if ($requiredAdded) {
+        $note = clean_text($note . ' Doplněno podle zadání: ' . implode(', ', $requiredAdded) . '.', 500);
     }
 
     return [
         'source' => 'gemini',
         'recipe' => [
             'title' => clean_text($recipe['title'] ?? 'Gemini návrh receptu', 120),
-            'note' => clean_text($recipe['note'] ?? 'Návrh vytvořený přes Gemini z potravin v databázi FoodLife.', 500),
+            'note' => $note,
             'instructions' => clean_text($recipe['instructions'] ?? '', 1800),
             'prep_minutes' => max(0, (int) ($recipe['prep_minutes'] ?? 10)),
             'cook_minutes' => max(0, (int) ($recipe['cook_minutes'] ?? 0)),
@@ -513,10 +646,14 @@ try {
         $result = build_local_recipe($foods, $mealType, $goalType, $targetKcal, $prompt);
         $result['warning'] = $GLOBALS['recipe_generator_warning'] ?? 'local_fallback';
     }
+    $matchedFoods = prompt_required_foods($foods, $prompt, $goalType);
+    if (!$matchedFoods) {
+        $matchedFoods = array_slice(prompt_matching_foods($foods, $prompt), 0, 8);
+    }
     $result['matched_foods'] = array_map(fn($food) => [
         'id' => (int) $food['id'],
         'name' => $food['name_cs'],
-    ], array_slice(prompt_matching_foods($foods, $prompt), 0, 8));
+    ], $matchedFoods);
     echo json_encode($result, JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     log_error('recipe-ai-suggest.php exception: ' . $e->getMessage());
