@@ -1701,6 +1701,9 @@ function RecipeLibrary({
   const [goalFilter, setGoalFilter] = useState('all')
   const [query, setQuery] = useState('')
   const [smartPrompt, setSmartPrompt] = useState('')
+  const [smartMealType, setSmartMealType] = useState('obed')
+  const [smartGoalType, setSmartGoalType] = useState('low_histamine')
+  const [smartTargetKcal, setSmartTargetKcal] = useState('550')
   const [expandedRecipeId, setExpandedRecipeId] = useState(null)
   const [editChoiceRecipeId, setEditChoiceRecipeId] = useState(null)
   const [usingRecipeId, setUsingRecipeId] = useState(null)
@@ -1713,6 +1716,7 @@ function RecipeLibrary({
   const [recipeUnit, setRecipeUnit] = useState('g')
   const [recipeItemNote, setRecipeItemNote] = useState('')
   const [isRecipeSearching, setIsRecipeSearching] = useState(false)
+  const [isGeneratingRecipe, setIsGeneratingRecipe] = useState(false)
   const [isRecipeSaving, setIsRecipeSaving] = useState(false)
   const [recipeError, setRecipeError] = useState('')
   const [openParts, setOpenParts] = useState({ form: false, list: true, ai: false })
@@ -1979,6 +1983,66 @@ function RecipeLibrary({
     openPart('form')
   }
 
+  async function handleGenerateRecipe() {
+    if (isGeneratingRecipe) return
+
+    setIsGeneratingRecipe(true)
+    setRecipeError('')
+    setMessage('')
+    try {
+      const response = await fetch('recipe-ai-suggest.php', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: smartPrompt,
+          meal_type: smartMealType,
+          meal_types: [smartMealType],
+          goal_type: smartGoalType,
+          target_kcal: smartTargetKcal,
+        }),
+      })
+      if (!response.ok) throw new Error('recipe_ai_failed')
+      const data = await response.json()
+      const generated = data.recipe || {}
+      const generatedItems = Array.isArray(generated.items) ? generated.items : []
+
+      if (!generated.title || generatedItems.length === 0) {
+        throw new Error('recipe_ai_empty')
+      }
+
+      setRecipeForm({
+        ...EMPTY_RECIPE_FORM,
+        ...generated,
+        id: null,
+        note: generated.note || generated.description || '',
+        servings: generated.servings ?? '1',
+        prep_minutes: generated.prep_minutes ?? '',
+        cook_minutes: generated.cook_minutes ?? '',
+        difficulty: generated.difficulty || 'easy',
+        goal_type: generated.goal_type || smartGoalType,
+        carb_level: generated.carb_level || 'unknown',
+        ai_prompt: smartPrompt,
+        meal_types: generated.meal_types?.length ? generated.meal_types : [smartMealType],
+        items: generatedItems.map((item) => ({
+          ...item,
+          id: item.id || createId(),
+        })),
+      })
+      setMessage(data.source === 'local'
+        ? 'Návrh je připravený z potravin v databázi. Dolaď ho a ulož jako recept.'
+        : 'AI návrh je připravený. Dolaď ho a ulož jako recept.')
+      openPart('form')
+    } catch {
+      setMessage('Návrh receptu se nepodařilo vytvořit.')
+    } finally {
+      setIsGeneratingRecipe(false)
+    }
+  }
+
   function handleEditRequest(recipe) {
     if (recipe.source !== 'user') {
       editRecipe(recipe, { asCopy: true })
@@ -2000,23 +2064,57 @@ function RecipeLibrary({
         <div className="recipe-smart-box">
           <div>
             <div className="side-eyebrow">Chytré recepty</div>
-            <h3>Vyber hotový recept nebo si připrav zadání pro AI</h3>
+            <h3>Vygenerovat recept z databáze</h3>
             <p>
-              Recepty jsou postavené na potravinách z databáze. Další krok bude generování podle chuti,
-              cíle, denního příjmu a potravin, které uživateli vadí.
+              FoodLife vybere vhodné potraviny z databáze a složí z nich návrh. Návrh vždy přepočítáme
+              podle uložených surovin, takže ho můžeš před uložením upravit.
             </p>
           </div>
-          <div className="form-group">
-            <label className="label">Na co máš chuť</label>
-            <input
-              className="input"
-              value={smartPrompt}
-              onChange={(e) => setSmartPrompt(e.target.value)}
-              placeholder="Např. teplá večeře bez nadýmání, chci hubnout"
-            />
-            <div className="form-hint">
-              Zatím slouží jako příprava zadání. AI napojení přidáme až nad ověřenou receptovou databází.
+          <div className="recipe-ai-controls">
+            <div className="form-group">
+              <label className="label">Část dne</label>
+              <select className="input" value={smartMealType} onChange={(e) => setSmartMealType(e.target.value)}>
+                {FOOD_MEAL_SECTIONS.map((section) => (
+                  <option key={section.key} value={section.key}>{section.title}</option>
+                ))}
+              </select>
             </div>
+            <div className="form-group">
+              <label className="label">Cíl</label>
+              <select className="input" value={smartGoalType} onChange={(e) => setSmartGoalType(e.target.value)}>
+                <option value="none">Bez cíle</option>
+                <option value="lose_weight">Hubnutí</option>
+                <option value="maintain_weight">Udržení</option>
+                <option value="gain_weight">Nabírání</option>
+                <option value="digestive_comfort">Šetřit trávení</option>
+                <option value="low_fodmap">Low FODMAP</option>
+                <option value="low_histamine">Low histamin</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="label">Cíl kcal</label>
+              <input
+                className="input"
+                type="number"
+                min="150"
+                max="1400"
+                step="50"
+                value={smartTargetKcal}
+                onChange={(e) => setSmartTargetKcal(e.target.value)}
+              />
+            </div>
+            <div className="form-group recipe-ai-prompt">
+              <label className="label">Zadání</label>
+              <input
+                className="input"
+                value={smartPrompt}
+                onChange={(e) => setSmartPrompt(e.target.value)}
+                placeholder="Např. teplá večeře bez nadýmání, jednoduché, hodně bílkovin"
+              />
+            </div>
+            <button className="button button-full" type="button" onClick={handleGenerateRecipe} disabled={isGeneratingRecipe}>
+              {isGeneratingRecipe ? 'Generuji...' : 'Vygenerovat recept'}
+            </button>
           </div>
         </div>
 

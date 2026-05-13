@@ -1620,6 +1620,17 @@ textarea {
   font-size: 14px;
 }
 
+.recipe-ai-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 130px) minmax(0, 160px) minmax(0, 110px);
+  gap: 10px;
+  align-items: end;
+}
+
+.recipe-ai-prompt {
+  grid-column: 1 / -1;
+}
+
 .recipe-filter-grid {
   display: grid;
   grid-template-columns: minmax(0, 170px) minmax(0, 180px) minmax(0, 1fr);
@@ -2007,6 +2018,7 @@ textarea {
   .custom-food-grid,
   .profile-grid,
   .recipe-smart-box,
+  .recipe-ai-controls,
   .recipe-form-grid,
   .recipe-filter-grid,
   .recipe-card-grid,

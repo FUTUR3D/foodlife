@@ -50,6 +50,7 @@ jobs:
           cp meal-delete.php deploy/
           cp meal-save.php deploy/
           cp meals-day.php deploy/
+          cp recipe-ai-suggest.php deploy/
           cp recipe-delete.php deploy/
           cp recipe-helpers.php deploy/
           cp recipe-save.php deploy/
