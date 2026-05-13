@@ -1255,7 +1255,7 @@ function WeightTracker({
           />
           {error ? <div className="inline-error">{error}</div> : null}
           <button className="button button-full" type="submit" disabled={isSaving}>
-            {isSaving ? 'Ukládám...' : todayLog ? 'Uložit změnu' : 'Zapsat hmotnost'}
+            {isSaving ? 'Ukládám...' : todayLog ? 'Uložit' : 'Přidat'}
           </button>
         </form>
 
@@ -4480,7 +4480,7 @@ function ExercisePanel({ todayInfo, onTodayInfoChange, profile }) {
         {error ? <div className="inline-error">{error}</div> : null}
 
         <button className="button button-full" onClick={addExerciseToDay}>
-          Přidat do dnešního cvičení
+          Přidat
         </button>
       </InnerSection>
 
@@ -4537,7 +4537,7 @@ function ExercisePanel({ todayInfo, onTodayInfoChange, profile }) {
         {manualError ? <div className="inline-error">{manualError}</div> : null}
 
         <button className="button button-full" onClick={addManualExercise}>
-          Přidat ruční záznam
+          Přidat
         </button>
       </InnerSection>
 
@@ -4695,7 +4695,7 @@ function ToiletPanel({ todayInfo, onTodayInfoChange }) {
         </div>
 
         <button className="button button-full" type="button" onClick={handleAdd}>
-          Přidat záznam
+          Přidat
         </button>
       </div>
 
@@ -4936,7 +4936,7 @@ function ReactionsPanel({ reactions, histamineSummary, onAddReaction, onUpdateRe
         </div>
 
         <button className="button button-full" type="submit">
-          Uložit reakci
+          Přidat
         </button>
       </form>
 
@@ -5108,7 +5108,7 @@ function MoodPanel({ todayInfo, onTodayInfoChange }) {
         </div>
 
         <button className="button button-full" type="button" onClick={handleAdd}>
-          Přidat záznam
+          Přidat
         </button>
       </div>
 
@@ -5240,11 +5240,17 @@ function SleepPanel({ todayInfo, onTodayInfoChange }) {
           />
         </div>
 
-        {sleepEntry ? (
-          <button className="button button-light button-small" type="button" onClick={clearSleep}>
-            Vymazat spánek
-          </button>
-        ) : null}
+        <div className="inline-action-row">
+          {!sleepEntry ? (
+            <button className="button button-full" type="button" onClick={() => saveSleep({})}>
+              Přidat
+            </button>
+          ) : (
+            <button className="button button-light button-small" type="button" onClick={clearSleep}>
+              Vymazat
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -6627,6 +6633,34 @@ export default function App() {
     return calculateEnergyPlan(profile, goals, todayInfo.exerciseKcal)
   }, [profile, goals, todayInfo.exerciseKcal])
 
+  const foodEntryCount = FOOD_MEAL_SECTIONS.reduce((sum, section) => {
+    return sum + (mealsByType[section.key] || []).reduce((mealSum, meal) => mealSum + (meal.items || []).length, 0)
+  }, 0)
+  const drinkEntryCount = getDrinkMealsMl(mealsByType[DRINK_SECTION?.key] || [])
+  const exerciseEntryCount = normalizeExerciseEntries(todayInfo).length
+  const toiletEntryCount = normalizeToiletEntries(todayInfo).length
+  const sleepEntryCount = normalizeSleepEntries(todayInfo).length
+  const moodEntryCount = normalizeMoodEntries(todayInfo).length
+  const hasWeightLogToday = weightLogs.some((log) => log.date === today)
+  const hasJournalContent = Boolean(
+    todayInfo.dayJournalTitle?.trim()
+    || todayInfo.dayNote?.trim()
+    || htmlToPlainText(todayInfo.dayJournalHtml),
+  )
+  const sectionStatus = {
+    food: foodEntryCount > 0,
+    drinks: drinkEntryCount > 0,
+    weight: hasWeightLogToday,
+    exercise: exerciseEntryCount > 0,
+    histamine: histamineSummary.knownItems > 0 || histamineSummary.unknownItems > 0,
+    toilet: toiletEntryCount > 0,
+    reactions: todayReactions.length > 0,
+    mood: moodEntryCount > 0,
+    sleep: sleepEntryCount > 0,
+    notes: hasJournalContent,
+  }
+  const getSectionStatusClass = (sectionKey) => (sectionStatus[sectionKey] ? 'meal-complete' : 'meal-missing')
+
   function parseNumber(v) {
     const n = parseFloat(String(v).replace(',', '.'))
     return Number.isFinite(n) ? n : null
@@ -6800,6 +6834,7 @@ export default function App() {
             title="Jídlo"
             subtitle="Snídaně, svačiny, oběd a večeře"
             colorClass="panel-teal"
+            statusClass={getSectionStatusClass('food')}
             isOpen={openMain === 'food'}
             onToggle={() => setOpenMain(openMain === 'food' ? null : 'food')}
           >
@@ -6867,6 +6902,7 @@ export default function App() {
             title="Pití"
             subtitle="Voda, káva, čaj, džus, limonády a alkohol"
             colorClass="panel-cyan"
+            statusClass={getSectionStatusClass('drinks')}
             isOpen={openMain === 'drinks'}
             onToggle={() => setOpenMain(openMain === 'drinks' ? null : 'drinks')}
           >
@@ -6891,6 +6927,7 @@ export default function App() {
             title="Hmotnost"
             subtitle="Vážení, trend a vývoj v čase"
             colorClass="panel-sky"
+            statusClass={getSectionStatusClass('weight')}
             isOpen={openMain === 'weight'}
             onToggle={() => setOpenMain(openMain === 'weight' ? null : 'weight')}
           >
@@ -6907,6 +6944,7 @@ export default function App() {
             title="Cvičení"
             subtitle="Trénink, pohyb a aktivita"
             colorClass="panel-sky"
+            statusClass={getSectionStatusClass('exercise')}
             isOpen={openMain === 'exercise'}
             onToggle={() => setOpenMain(openMain === 'exercise' ? null : 'exercise')}
           >
@@ -6921,6 +6959,7 @@ export default function App() {
             title="Histamin"
             subtitle={`${histamineSummary.level.label} • ${histamineSummary.score} bodů`}
             colorClass="panel-indigo"
+            statusClass={getSectionStatusClass('histamine')}
             isOpen={openMain === 'histamine'}
             onToggle={() => setOpenMain(openMain === 'histamine' ? null : 'histamine')}
           >
@@ -6932,8 +6971,9 @@ export default function App() {
 
           <AccordionSection
             title="Toaleta"
-            subtitle={`${normalizeToiletEntries(todayInfo).length} záznamů`}
+            subtitle={`${toiletEntryCount} záznamů`}
             colorClass="panel-blue"
+            statusClass={getSectionStatusClass('toilet')}
             isOpen={openMain === 'toilet'}
             onToggle={() => setOpenMain(openMain === 'toilet' ? null : 'toilet')}
           >
@@ -6947,6 +6987,7 @@ export default function App() {
             title="Reakce těla"
             subtitle={`${todayReactions.length} záznamů`}
             colorClass="panel-indigo"
+            statusClass={getSectionStatusClass('reactions')}
             isOpen={openMain === 'reactions'}
             onToggle={() => setOpenMain(openMain === 'reactions' ? null : 'reactions')}
           >
@@ -6961,8 +7002,9 @@ export default function App() {
 
           <AccordionSection
             title="Jak se cítím"
-            subtitle={`${normalizeMoodEntries(todayInfo).length} záznamů`}
+            subtitle={`${moodEntryCount} záznamů`}
             colorClass="panel-indigo"
+            statusClass={getSectionStatusClass('mood')}
             isOpen={openMain === 'mood'}
             onToggle={() => setOpenMain(openMain === 'mood' ? null : 'mood')}
           >
@@ -6976,6 +7018,7 @@ export default function App() {
             title="Jaký byl spánek"
             subtitle={normalizeSleepEntries(todayInfo)[0] ? `${normalizeSleepEntries(todayInfo)[0].durationHours ?? 8} h • ${normalizeSleepEntries(todayInfo)[0].quality || 'V kuse'}` : 'Délka, kvalita a popis'}
             colorClass="panel-blue"
+            statusClass={getSectionStatusClass('sleep')}
             isOpen={openMain === 'sleep'}
             onToggle={() => setOpenMain(openMain === 'sleep' ? null : 'sleep')}
           >
@@ -6989,6 +7032,7 @@ export default function App() {
             title="Popis dne"
             subtitle={todayInfo.dayJournalTitle || 'Deník, fotky a poznámky'}
             colorClass="panel-violet"
+            statusClass={getSectionStatusClass('notes')}
             isOpen={openMain === 'notes'}
             onToggle={() => setOpenMain(openMain === 'notes' ? null : 'notes')}
           >
