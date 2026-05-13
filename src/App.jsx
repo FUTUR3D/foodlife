@@ -5176,6 +5176,7 @@ function MoodPanel({ todayInfo, onTodayInfoChange }) {
 function SleepPanel({ todayInfo, onTodayInfoChange }) {
   const entries = useMemo(() => normalizeSleepEntries(todayInfo), [todayInfo])
   const sleepEntry = entries[0] || null
+  const fellAsleepAt = sleepEntry?.fellAsleepAt || '22:00'
   const durationHours = Number(sleepEntry?.durationHours ?? 8)
   const quality = sleepEntry?.quality || 'V kuse'
   const note = sleepEntry?.note || ''
@@ -5183,6 +5184,7 @@ function SleepPanel({ todayInfo, onTodayInfoChange }) {
   function saveSleep(patch) {
     const nextEntry = {
       id: sleepEntry?.id || createId(),
+      fellAsleepAt,
       durationHours,
       quality,
       note,
@@ -5208,6 +5210,16 @@ function SleepPanel({ todayInfo, onTodayInfoChange }) {
         <h3 className="card-title">Spánek</h3>
 
         <div className="sleep-grid">
+          <div className="form-group">
+            <label className="label">Usnul jsem v</label>
+            <input
+              className="input"
+              type="time"
+              value={fellAsleepAt}
+              onChange={(e) => saveSleep({ fellAsleepAt: e.target.value })}
+            />
+          </div>
+
           <div className="form-group">
             <label className="label">Délka spánku</label>
             <div className="sleep-stepper">
@@ -5539,7 +5551,7 @@ function ReportModal({
                         <div className="report-mini-list">
                           <strong>Spánek</strong>
                           {sleepEntries.length ? sleepEntries.map((entry) => (
-                            <span key={entry.id}>{entry.durationHours ?? 8} h • {entry.quality || 'V kuse'}{entry.note ? ` • ${entry.note}` : ''}</span>
+                            <span key={entry.id}>{entry.fellAsleepAt ? `${entry.fellAsleepAt} • ` : ''}{entry.durationHours ?? 8} h • {entry.quality || 'V kuse'}{entry.note ? ` • ${entry.note}` : ''}</span>
                           )) : <span>Bez záznamu</span>}
                         </div>
                         <div className="report-mini-list">
@@ -7016,7 +7028,7 @@ export default function App() {
 
           <AccordionSection
             title="Jaký byl spánek"
-            subtitle={normalizeSleepEntries(todayInfo)[0] ? `${normalizeSleepEntries(todayInfo)[0].durationHours ?? 8} h • ${normalizeSleepEntries(todayInfo)[0].quality || 'V kuse'}` : 'Délka, kvalita a popis'}
+            subtitle={normalizeSleepEntries(todayInfo)[0] ? `${normalizeSleepEntries(todayInfo)[0].fellAsleepAt || '22:00'} • ${normalizeSleepEntries(todayInfo)[0].durationHours ?? 8} h • ${normalizeSleepEntries(todayInfo)[0].quality || 'V kuse'}` : 'Čas usnutí, délka a kvalita'}
             colorClass="panel-blue"
             statusClass={getSectionStatusClass('sleep')}
             isOpen={openMain === 'sleep'}

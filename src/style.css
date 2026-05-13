@@ -3263,7 +3263,7 @@ h4,
 
 .sleep-grid {
   display: grid;
-  grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1fr);
+  grid-template-columns: minmax(140px, 0.7fr) minmax(180px, 0.8fr) minmax(220px, 1fr);
   gap: 10px;
   align-items: end;
 }
