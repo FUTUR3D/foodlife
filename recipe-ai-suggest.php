@@ -242,6 +242,168 @@ function food_to_recipe_item(array $food, int $grams): array
     ];
 }
 
+function gemini_api_key(): string
+{
+    global $GEMINI_API_KEY;
+
+    $key = trim((string) ($GEMINI_API_KEY ?? ''));
+    if ($key !== '') {
+        return $key;
+    }
+
+    return trim((string) getenv('GEMINI_API_KEY'));
+}
+
+function json_from_gemini_text(string $text): ?array
+{
+    $text = trim($text);
+    $decoded = json_decode($text, true);
+    if (is_array($decoded)) {
+        return $decoded;
+    }
+
+    if (preg_match('/```(?:json)?\s*(.*?)```/is', $text, $match)) {
+        $decoded = json_decode(trim($match[1]), true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+    }
+
+    $start = strpos($text, '{');
+    $end = strrpos($text, '}');
+    if ($start !== false && $end !== false && $end > $start) {
+        $decoded = json_decode(substr($text, $start, $end - $start + 1), true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+    }
+
+    return null;
+}
+
+function build_gemini_food_context(array $foods, string $goalType, string $prompt): array
+{
+    $sorted = array_slice(sort_food_candidates($foods, $goalType, $prompt), 0, 90);
+    return array_map(function ($food) {
+        return [
+            'id' => (int) $food['id'],
+            'name' => $food['name_cs'],
+            'category' => $food['category'],
+            'kcal_100g' => $food['kcal_100g'] === null ? null : round((float) $food['kcal_100g'], 1),
+            'protein_100g' => $food['protein_100g'] === null ? null : round((float) $food['protein_100g'], 1),
+            'carbs_100g' => $food['carbs_100g'] === null ? null : round((float) $food['carbs_100g'], 1),
+            'fat_100g' => $food['fat_100g'] === null ? null : round((float) $food['fat_100g'], 1),
+            'sighi_score' => $food['sighi_score'] === null ? null : (int) $food['sighi_score'],
+        ];
+    }, $sorted);
+}
+
+function call_gemini_recipe(array $foods, string $mealType, string $goalType, int $targetKcal, string $prompt): ?array
+{
+    $apiKey = gemini_api_key();
+    if ($apiKey === '' || !function_exists('curl_init')) {
+        return null;
+    }
+
+    $foodContext = build_gemini_food_context($foods, $goalType, $prompt);
+    if (!$foodContext) {
+        return null;
+    }
+
+    $requestText = "Jsi asistent pro českou aplikaci FoodLife. Navrhni jeden praktický recept jen z povolených potravin níže. "
+        . "Nesmíš použít žádnou potravinu mimo seznam a u položek vrať pouze food_id ze seznamu. "
+        . "Zohledni cíl, kcal, trávení a pokud je cíl low_histamine, preferuj potraviny se sighi_score 0 nebo null a vyhýbej se 2-3. "
+        . "Vrať pouze validní JSON bez komentáře.\n\n"
+        . "Typ jídla: {$mealType}\nCíl: {$goalType}\nCílové kcal: {$targetKcal}\nZadání uživatele: {$prompt}\n\n"
+        . "Povolené potraviny JSON:\n" . json_encode($foodContext, JSON_UNESCAPED_UNICODE) . "\n\n"
+        . "Výstupní JSON tvar: {\"title\":\"...\",\"note\":\"...\",\"instructions\":\"1. ...\\n2. ...\",\"prep_minutes\":10,\"cook_minutes\":15,\"servings\":1,\"difficulty\":\"easy\",\"carb_level\":\"unknown\",\"items\":[{\"food_id\":123,\"grams\":150,\"note\":\"\"}]}";
+
+    $payload = [
+        'contents' => [[
+            'role' => 'user',
+            'parts' => [['text' => $requestText]],
+        ]],
+        'generationConfig' => [
+            'temperature' => 0.35,
+            'responseMimeType' => 'application/json',
+        ],
+    ];
+
+    $ch = curl_init('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'x-goog-api-key: ' . $apiKey,
+        ],
+        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+        CURLOPT_TIMEOUT => 18,
+    ]);
+
+    $raw = curl_exec($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($raw === false || $status < 200 || $status >= 300) {
+        log_error('Gemini recipe generation failed: HTTP ' . $status . ' ' . $curlError . ' ' . substr((string) $raw, 0, 500));
+        return null;
+    }
+
+    $response = json_decode($raw, true);
+    $text = $response['candidates'][0]['content']['parts'][0]['text'] ?? '';
+    $recipe = json_from_gemini_text((string) $text);
+    if (!$recipe || empty($recipe['items']) || !is_array($recipe['items'])) {
+        return null;
+    }
+
+    return normalize_gemini_recipe($recipe, $foods, $mealType, $goalType, $prompt);
+}
+
+function normalize_gemini_recipe(array $recipe, array $foods, string $mealType, string $goalType, string $prompt): ?array
+{
+    $foodsById = [];
+    foreach ($foods as $food) {
+        $foodsById[(int) $food['id']] = $food;
+    }
+
+    $items = [];
+    foreach ($recipe['items'] as $item) {
+        $foodId = (int) ($item['food_id'] ?? 0);
+        if (!$foodId || !isset($foodsById[$foodId])) {
+            continue;
+        }
+        $grams = max(5, min(800, (int) ($item['grams'] ?? $item['amount'] ?? role_amount(food_role($foodsById[$foodId]), $mealType))));
+        $recipeItem = food_to_recipe_item($foodsById[$foodId], $grams);
+        $recipeItem['note'] = clean_text($item['note'] ?? '', 120);
+        $items[] = $recipeItem;
+    }
+
+    if (!$items) {
+        return null;
+    }
+
+    return [
+        'source' => 'gemini',
+        'recipe' => [
+            'title' => clean_text($recipe['title'] ?? 'Gemini návrh receptu', 120),
+            'note' => clean_text($recipe['note'] ?? 'Návrh vytvořený přes Gemini z potravin v databázi FoodLife.', 500),
+            'instructions' => clean_text($recipe['instructions'] ?? '', 1800),
+            'prep_minutes' => max(0, (int) ($recipe['prep_minutes'] ?? 10)),
+            'cook_minutes' => max(0, (int) ($recipe['cook_minutes'] ?? 0)),
+            'servings' => max(0.5, (float) ($recipe['servings'] ?? 1)),
+            'difficulty' => in_array(($recipe['difficulty'] ?? 'easy'), ['easy', 'medium', 'hard'], true) ? $recipe['difficulty'] : 'easy',
+            'goal_type' => $goalType,
+            'carb_level' => in_array(($recipe['carb_level'] ?? 'unknown'), ['unknown', 'low', 'medium', 'high'], true) ? $recipe['carb_level'] : 'unknown',
+            'ai_prompt' => $prompt,
+            'meal_types' => [$mealType],
+            'items' => $items,
+            'totals' => recipe_totals($items),
+        ],
+    ];
+}
+
 try {
     ensure_recipe_tables($pdo);
 
@@ -284,12 +446,15 @@ try {
         ORDER BY
             CASE WHEN foods.kcal_100g IS NULL THEN 1 ELSE 0 END,
             foods.name_cs ASC
-        LIMIT 220
+        LIMIT 1000
     ");
     $stmt->execute([$userId]);
     $foods = $stmt->fetchAll();
 
-    $result = build_local_recipe($foods, $mealType, $goalType, $targetKcal, $prompt);
+    $result = call_gemini_recipe($foods, $mealType, $goalType, $targetKcal, $prompt);
+    if (!$result) {
+        $result = build_local_recipe($foods, $mealType, $goalType, $targetKcal, $prompt);
+    }
     echo json_encode($result, JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     log_error('recipe-ai-suggest.php exception: ' . $e->getMessage());

@@ -2034,7 +2034,7 @@ function RecipeLibrary({
       })
       setMessage(data.source === 'local'
         ? 'Návrh je připravený z potravin v databázi. Dolaď ho a ulož jako recept.'
-        : 'AI návrh je připravený. Dolaď ho a ulož jako recept.')
+        : 'Gemini návrh je připravený z potravin v databázi. Dolaď ho a ulož jako recept.')
       openPart('form')
     } catch {
       setMessage('Návrh receptu se nepodařilo vytvořit.')

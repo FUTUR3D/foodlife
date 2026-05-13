@@ -30,6 +30,7 @@ jobs:
       - name: Prepare deploy package
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           mkdir deploy
           cp -R dist/. deploy/
@@ -69,6 +70,7 @@ jobs:
           node - <<'NODE'
           const fs = require('fs')
           const dbPassword = JSON.stringify(process.env.DB_PASSWORD || '')
+          const geminiApiKey = JSON.stringify(process.env.GEMINI_API_KEY || '')
           fs.writeFileSync('deploy/config.php', `<?php
           // FoodLife database connection and shared helpers.
 
@@ -76,6 +78,7 @@ jobs:
           $DB_NAME = 'd374970_food';
           $DB_USER = 'a374970_food';
           $DB_PASS = ${dbPassword};
+          $GEMINI_API_KEY = ${geminiApiKey};
 
           try {
               $pdo = new PDO(
