@@ -696,6 +696,17 @@ textarea {
   width: 100%;
   border: 0;
   color: #0f172a;
+  text-align: left;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.accordion-toggle {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
   padding: 16px 18px;
   text-align: left;
   cursor: pointer;
@@ -703,6 +714,30 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 14px;
+}
+
+.accordion-header-actions {
+  display: flex;
+  align-items: center;
+  padding: 0 12px 0 0;
+}
+
+.accordion-action-button {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #172033;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.accordion-action-button:hover {
+  border-color: #0f766e;
+  background: #f0fdfa;
 }
 
 .accordion-title {
@@ -2351,7 +2386,7 @@ h4,
 
 .accordion-header {
   background: #ffffff;
-  padding: 15px 18px;
+  padding: 0;
 }
 
 .inner-section-header {
@@ -2374,6 +2409,26 @@ h4,
 .meal-strip button:hover,
 .quick-action:hover {
   background: #f9fafb;
+}
+
+.accordion.meal-complete {
+  border-color: #a7f3d0;
+}
+
+.accordion.meal-complete .accordion-header {
+  background: #ecfdf3;
+}
+
+.accordion.meal-complete .accordion-subtitle {
+  color: #166534;
+}
+
+.accordion.meal-complete .accordion-action-button {
+  border-color: #86efac;
+}
+
+.accordion.meal-missing .accordion-header {
+  background: #ffffff;
 }
 
 .accordion-title {

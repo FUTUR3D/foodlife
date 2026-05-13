@@ -325,6 +325,8 @@ function AccordionSection({
   title,
   subtitle,
   colorClass,
+  statusClass = '',
+  headerAction = null,
   isOpen,
   onToggle,
   children,
@@ -346,14 +348,17 @@ function AccordionSection({
   }, [isOpen])
 
   return (
-    <div className={`accordion ${isOpen ? 'accordion-open' : ''}`} ref={sectionRef}>
-      <button type="button" className={`accordion-header ${colorClass}`} {...tapHandlers}>
-        <div>
-          <div className="accordion-title">{title}</div>
-          {subtitle ? <div className="accordion-subtitle">{subtitle}</div> : null}
-        </div>
-        <div className={`accordion-arrow ${isOpen ? 'open' : ''}`}>⌄</div>
-      </button>
+    <div className={`accordion ${isOpen ? 'accordion-open' : ''} ${statusClass}`} ref={sectionRef}>
+      <div className={`accordion-header ${colorClass}`}>
+        <button type="button" className="accordion-toggle" {...tapHandlers}>
+          <div>
+            <div className="accordion-title">{title}</div>
+            {subtitle ? <div className="accordion-subtitle">{subtitle}</div> : null}
+          </div>
+          <div className={`accordion-arrow ${isOpen ? 'open' : ''}`}>⌄</div>
+        </button>
+        {headerAction ? <div className="accordion-header-actions">{headerAction}</div> : null}
+      </div>
 
       {isOpen ? <div className="accordion-body">{children}</div> : null}
     </div>
@@ -3178,10 +3183,12 @@ function MealQuickAdd({
   mealsByType,
   recipes,
   isRecipesLoading,
+  quickAddRequest,
   onSaveMeal,
   onCreateFood,
   onCreateRecipe,
 }) {
+  const quickAddRef = useRef(null)
   const [mealKey, setMealKey] = useState(getDefaultFoodMealKey)
   const [mealTime, setMealTime] = useState(() => getDefaultMealTime(getDefaultFoodMealKey()))
   const [query, setQuery] = useState('')
@@ -3219,6 +3226,25 @@ function MealQuickAdd({
     && recipeResults.length === 0
     && results.length === 0
   const timePresets = ['07:00', '10:00', '12:00', '15:00', '18:00']
+
+  useEffect(() => {
+    if (!quickAddRequest?.mealKey) return
+
+    setMealKey(quickAddRequest.mealKey)
+    setMealTime(getDefaultMealTime(quickAddRequest.mealKey))
+    setIsOpen(true)
+    setMessage('')
+    setError('')
+
+    const timeout = window.setTimeout(() => {
+      quickAddRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }, 80)
+
+    return () => window.clearTimeout(timeout)
+  }, [quickAddRequest?.token])
 
   useEffect(() => {
     const q = query.trim()
@@ -3359,12 +3385,13 @@ function MealQuickAdd({
   }
 
   return (
-    <InnerSection
-      title="Přidat jídlo"
-      subtitle={`${section.title} • jedna akce pro celý den`}
-      isOpen={isOpen}
-      onToggle={() => setIsOpen((value) => !value)}
-    >
+    <div ref={quickAddRef} className="quick-add-anchor">
+      <InnerSection
+        title="Přidat jídlo"
+        subtitle={`${section.title} • jedna akce pro celý den`}
+        isOpen={isOpen}
+        onToggle={() => setIsOpen((value) => !value)}
+      >
       <div className="quick-meal-entry">
         <div className="form-group">
           <label className="label">Co to je za jídlo</label>
@@ -3517,7 +3544,8 @@ function MealQuickAdd({
         {error ? <div className="inline-error">{error}</div> : null}
         {message ? <div className="save-message">{message}</div> : null}
       </div>
-    </InnerSection>
+      </InnerSection>
+    </div>
   )
 }
 
@@ -3531,6 +3559,7 @@ function MealSection({
   hideEntry = false,
   isOpen,
   onToggle,
+  onQuickAdd,
   onSaveMeal,
   onDeleteMeal,
   onSaveRecipe,
@@ -3882,6 +3911,7 @@ function MealSection({
   const sectionSubtitle = isDrinkSection
     ? `${formatFluidMl(fluidCurrentMl)} / ${formatFluidMl(fluidTargetMl)} • ${savedCount} položek`
     : `${savedMeals.length} uložených jídel • ${savedCount} položek`
+  const hasSavedItems = savedCount > 0
   const showEntryTools = !hideEntry || editingMealId || isDrinkSection
   const searchNeedle = query.trim().toLowerCase()
   const canSearchRecipes = !isDrinkSection && !selectedFood
@@ -4203,6 +4233,16 @@ function MealSection({
       title={section.title}
       subtitle={sectionSubtitle}
       colorClass={section.colorClass}
+      statusClass={hasSavedItems ? 'meal-complete' : 'meal-missing'}
+      headerAction={onQuickAdd ? (
+        <button
+          type="button"
+          className="accordion-action-button"
+          onClick={onQuickAdd}
+        >
+          Přidat
+        </button>
+      ) : null}
       isOpen={isOpen}
       onToggle={onToggle}
     >
@@ -5716,6 +5756,7 @@ export default function App() {
   const [reactions, setReactions] = useState({})
   const [openMain, setOpenMain] = useState(null)
   const [openMeal, setOpenMeal] = useState(null)
+  const [quickAddRequest, setQuickAddRequest] = useState(null)
   const [recipeEditRequest, setRecipeEditRequest] = useState(null)
   const [recipeCreateRequest, setRecipeCreateRequest] = useState(null)
   const [customFoodCreateRequest, setCustomFoodCreateRequest] = useState(null)
@@ -6543,6 +6584,11 @@ export default function App() {
     if (mealKey) setOpenMeal(mealKey)
   }
 
+  function openQuickMealAdd(mealKey) {
+    setOpenMain('food')
+    setQuickAddRequest({ mealKey, token: Date.now() })
+  }
+
   const headerKcal = Math.round(dayTotals.kcal)
   const headerTarget = energyPlan?.target || null
   const headerRemaining = headerTarget ? Math.round(headerTarget - headerKcal) : null
@@ -6662,6 +6708,7 @@ export default function App() {
                 mealsByType={mealsByType}
                 recipes={recipes}
                 isRecipesLoading={isRecipesLoading}
+                quickAddRequest={quickAddRequest}
                 onSaveMeal={saveMeal}
                 onCreateFood={openCustomFoodCreator}
                 onCreateRecipe={openRecipeCreator}
@@ -6677,6 +6724,7 @@ export default function App() {
                   hideEntry
                   isOpen={openMeal === section.key}
                   onToggle={() => setOpenMeal(openMeal === section.key ? null : section.key)}
+                  onQuickAdd={() => openQuickMealAdd(section.key)}
                   onSaveMeal={saveMeal}
                   onDeleteMeal={deleteSavedMeal}
                   onSaveRecipe={saveRecipe}
