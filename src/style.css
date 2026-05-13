@@ -3249,6 +3249,52 @@ h4,
   gap: 10px;
 }
 
+.sleep-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sleep-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sleep-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.sleep-stepper {
+  display: grid;
+  grid-template-columns: 44px minmax(90px, 1fr) 44px;
+  min-height: 44px;
+  border: 1px solid #d0d5dd;
+  background: #ffffff;
+}
+
+.sleep-stepper button {
+  border: 0;
+  background: #f8fafc;
+  color: #172033;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.sleep-stepper strong {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid #d0d5dd;
+  border-right: 1px solid #d0d5dd;
+  font-size: 18px;
+  font-weight: 650;
+}
+
 .event-form-grid {
   display: grid;
   grid-template-columns: minmax(120px, 0.5fr) minmax(170px, 1fr) minmax(170px, 1fr);
@@ -3682,6 +3728,7 @@ h4,
 
   .toilet-form-grid,
   .toilet-entry-grid,
+  .sleep-grid,
   .event-form-grid,
   .event-entry-grid,
   .mood-entry-grid {

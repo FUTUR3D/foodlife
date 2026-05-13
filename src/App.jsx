@@ -82,6 +82,7 @@ const DEFAULT_DAY_INFO = {
   exercise: '',
   exerciseEntries: [],
   exerciseKcal: '',
+  sleepEntries: [],
   toiletEntries: [],
   moodEntries: [],
   toiletCount: '',
@@ -478,6 +479,11 @@ function normalizeToiletEntries(todayInfo) {
 
 function normalizeMoodEntries(todayInfo) {
   if (Array.isArray(todayInfo.moodEntries)) return todayInfo.moodEntries
+  return []
+}
+
+function normalizeSleepEntries(todayInfo) {
+  if (Array.isArray(todayInfo.sleepEntries)) return todayInfo.sleepEntries
   return []
 }
 
@@ -5167,6 +5173,83 @@ function MoodPanel({ todayInfo, onTodayInfoChange }) {
   )
 }
 
+function SleepPanel({ todayInfo, onTodayInfoChange }) {
+  const entries = useMemo(() => normalizeSleepEntries(todayInfo), [todayInfo])
+  const sleepEntry = entries[0] || null
+  const durationHours = Number(sleepEntry?.durationHours ?? 8)
+  const quality = sleepEntry?.quality || 'V kuse'
+  const note = sleepEntry?.note || ''
+
+  function saveSleep(patch) {
+    const nextEntry = {
+      id: sleepEntry?.id || createId(),
+      durationHours,
+      quality,
+      note,
+      createdAt: sleepEntry?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...patch,
+    }
+    onTodayInfoChange('sleepEntries', [nextEntry])
+  }
+
+  function adjustDuration(delta) {
+    const nextValue = Math.max(0, Math.min(16, durationHours + delta))
+    saveSleep({ durationHours: nextValue })
+  }
+
+  function clearSleep() {
+    onTodayInfoChange('sleepEntries', [])
+  }
+
+  return (
+    <div className="sleep-panel">
+      <div className="card sleep-card">
+        <h3 className="card-title">Spánek</h3>
+
+        <div className="sleep-grid">
+          <div className="form-group">
+            <label className="label">Délka spánku</label>
+            <div className="sleep-stepper">
+              <button type="button" onClick={() => adjustDuration(-1)} aria-label="Ubrat hodinu">-</button>
+              <strong>{durationHours} h</strong>
+              <button type="button" onClick={() => adjustDuration(1)} aria-label="Přidat hodinu">+</button>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="label">Kvalita spánku</label>
+            <select className="input" value={quality} onChange={(e) => saveSleep({ quality: e.target.value })}>
+              <option>V kuse</option>
+              <option>Probouzel jsem se</option>
+              <option>Lehký spánek</option>
+              <option>Neklidný spánek</option>
+              <option>Špatný spánek</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="label">Popis</label>
+          <textarea
+            className="input"
+            rows="3"
+            value={note}
+            onChange={(e) => saveSleep({ note: e.target.value })}
+            placeholder="Např. usínání, noční buzení, sny, ráno energie..."
+          />
+        </div>
+
+        {sleepEntry ? (
+          <button className="button button-light button-small" type="button" onClick={clearSleep}>
+            Vymazat spánek
+          </button>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
 function textToDiaryHtml(text) {
   const escaped = String(text || '')
     .replace(/&/g, '&amp;')
@@ -5246,7 +5329,7 @@ function ReportModal({
         const [mealsData, healthData, journalData] = date === selectedDate
           ? [
               { meals: currentMeals || [] },
-              { health: { exists: true, toiletEntries: normalizeToiletEntries(currentInfo), moodEntries: normalizeMoodEntries(currentInfo), reactions: currentReactions || [] } },
+              { health: { exists: true, exerciseEntries: normalizeExerciseEntries(currentInfo), sleepEntries: normalizeSleepEntries(currentInfo), toiletEntries: normalizeToiletEntries(currentInfo), moodEntries: normalizeMoodEntries(currentInfo), reactions: currentReactions || [] } },
               { journal: { title: currentInfo.dayJournalTitle || '', html: currentInfo.dayJournalHtml || '', text: currentInfo.dayNote || '' } },
             ]
           : await Promise.all([
@@ -5263,6 +5346,7 @@ function ReportModal({
           exerciseEntries: health.exists ? (health.exerciseEntries || []) : normalizeExerciseEntries(localInfo),
           exerciseKcal: health.exists ? String(Math.round(getExerciseEntriesKcal(health.exerciseEntries || []))) : (localInfo.exerciseKcal || ''),
           exercise: health.exists ? getExerciseEntriesSummary(health.exerciseEntries || []) : (localInfo.exercise || ''),
+          sleepEntries: health.exists ? (health.sleepEntries || []) : normalizeSleepEntries(localInfo),
           toiletEntries: health.exists ? (health.toiletEntries || []) : normalizeToiletEntries(localInfo),
           moodEntries: health.exists ? (health.moodEntries || []) : normalizeMoodEntries(localInfo),
           dayJournalTitle: journal.title || localInfo.dayJournalTitle || '',
@@ -5292,8 +5376,12 @@ function ReportModal({
   const totalTotals = getMealTotals(allMeals.flatMap((meal) => meal.items || []))
   const totalExercise = reportDays.reduce((sum, day) => sum + getExerciseEntriesKcal(normalizeExerciseEntries(day.info)), 0)
   const allReactions = reportDays.flatMap((day) => day.reactions || [])
+  const allSleepEntries = reportDays.flatMap((day) => normalizeSleepEntries(day.info))
   const allToiletEntries = reportDays.flatMap((day) => normalizeToiletEntries(day.info))
   const allMoodEntries = reportDays.flatMap((day) => normalizeMoodEntries(day.info))
+  const sleepAverage = allSleepEntries.length
+    ? allSleepEntries.reduce((sum, entry) => sum + (Number(entry.durationHours) || 0), 0) / allSleepEntries.length
+    : null
   const firstWeight = getWeightNumber(reportWeights[0])
   const lastWeight = getWeightNumber(reportWeights[reportWeights.length - 1])
   const weightChange = Number.isFinite(firstWeight) && Number.isFinite(lastWeight)
@@ -5351,6 +5439,7 @@ function ReportModal({
                   <div><span>Průměr kcal / den</span><strong>{Math.round(totalTotals.kcal / reportDays.length)}</strong></div>
                   <div><span>Bílkoviny celkem</span><strong>{formatMacro(totalTotals.protein)}</strong></div>
                   <div><span>Cvičení celkem</span><strong>{Math.round(totalExercise)} kcal</strong></div>
+                  <div><span>Spánek průměr</span><strong>{sleepAverage === null ? '-' : `${Math.round(sleepAverage * 10) / 10} h`}</strong></div>
                   <div><span>Reakce těla</span><strong>{allReactions.length}</strong></div>
                   <div><span>Toaleta</span><strong>{allToiletEntries.length}</strong></div>
                   <div><span>Pocity</span><strong>{allMoodEntries.length}</strong></div>
@@ -5391,6 +5480,7 @@ function ReportModal({
                 const plan = calculateEnergyPlan(profile, goals, day.info.exerciseKcal)
                 const histamine = getHistamineSummary(day.meals)
                 const exerciseEntries = normalizeExerciseEntries(day.info)
+                const sleepEntries = normalizeSleepEntries(day.info)
                 const journalText = htmlToPlainText(day.info.dayJournalHtml) || day.info.dayNote || ''
 
                 return (
@@ -5440,6 +5530,12 @@ function ReportModal({
 
                       <div className="report-section">
                         <h2>Tělo</h2>
+                        <div className="report-mini-list">
+                          <strong>Spánek</strong>
+                          {sleepEntries.length ? sleepEntries.map((entry) => (
+                            <span key={entry.id}>{entry.durationHours ?? 8} h • {entry.quality || 'V kuse'}{entry.note ? ` • ${entry.note}` : ''}</span>
+                          )) : <span>Bez záznamu</span>}
+                        </div>
                         <div className="report-mini-list">
                           <strong>Cvičení</strong>
                           {exerciseEntries.length ? exerciseEntries.map((entry) => (
@@ -5950,6 +6046,7 @@ export default function App() {
     if (!isHydrated || !auth.loggedIn || healthLogLoadedDate !== today || isHealthLogLoading) return
 
     const exerciseEntries = normalizeExerciseEntries(todayInfo)
+    const sleepEntries = normalizeSleepEntries(todayInfo)
     const toiletEntries = normalizeToiletEntries(todayInfo)
     const moodEntries = normalizeMoodEntries(todayInfo)
 
@@ -5958,7 +6055,7 @@ export default function App() {
 
     healthLogSaveTimerRef.current = window.setTimeout(async () => {
       try {
-        await saveDayHealth(today, exerciseEntries, toiletEntries, moodEntries, todayReactions)
+        await saveDayHealth(today, exerciseEntries, sleepEntries, toiletEntries, moodEntries, todayReactions)
         setHealthLogSaveState('Uloženo')
       } catch {
         setHealthLogSaveState('Nepodařilo se uložit')
@@ -5975,6 +6072,7 @@ export default function App() {
     todayInfo.exerciseEntries,
     todayInfo.exercise,
     todayInfo.exerciseKcal,
+    todayInfo.sleepEntries,
     todayInfo.toiletEntries,
     todayInfo.moodEntries,
     todayReactions,
@@ -6175,10 +6273,11 @@ export default function App() {
       const health = data.health || {}
       const hasServerHealth = Boolean(health.exists)
 
-      if (hasServerHealth) {
-        const exerciseEntries = Array.isArray(health.exerciseEntries) ? health.exerciseEntries : []
-        const toiletEntries = Array.isArray(health.toiletEntries) ? health.toiletEntries : []
-        const moodEntries = Array.isArray(health.moodEntries) ? health.moodEntries : []
+        if (hasServerHealth) {
+          const exerciseEntries = Array.isArray(health.exerciseEntries) ? health.exerciseEntries : []
+          const sleepEntries = Array.isArray(health.sleepEntries) ? health.sleepEntries : []
+          const toiletEntries = Array.isArray(health.toiletEntries) ? health.toiletEntries : []
+          const moodEntries = Array.isArray(health.moodEntries) ? health.moodEntries : []
         const healthReactions = Array.isArray(health.reactions) ? health.reactions : []
 
         setDayInfo((prev) => {
@@ -6190,6 +6289,7 @@ export default function App() {
               exerciseEntries,
               exercise: getExerciseEntriesSummary(exerciseEntries),
               exerciseKcal: String(Math.round(getExerciseEntriesKcal(exerciseEntries))),
+              sleepEntries,
               toiletEntries,
               toiletCount: String(toiletEntries.length),
               toiletType: toiletEntries[0]?.consistency || current.toiletType || 'Normální',
@@ -6212,6 +6312,7 @@ export default function App() {
             [date]: {
               ...current,
               exerciseEntries: normalizeExerciseEntries(current),
+              sleepEntries: normalizeSleepEntries(current),
               toiletEntries: normalizeToiletEntries(current),
               moodEntries: normalizeMoodEntries(current),
             },
@@ -6234,7 +6335,7 @@ export default function App() {
     }
   }
 
-  async function saveDayHealth(date, exerciseEntries, toiletEntries, moodEntries, dayReactions) {
+  async function saveDayHealth(date, exerciseEntries, sleepEntries, toiletEntries, moodEntries, dayReactions) {
     const response = await fetch('day-health.php', {
       method: 'POST',
       credentials: 'same-origin',
@@ -6245,6 +6346,7 @@ export default function App() {
       body: JSON.stringify({
         date,
         exerciseEntries,
+        sleepEntries,
         toiletEntries,
         moodEntries,
         reactions: dayReactions,
@@ -6865,6 +6967,19 @@ export default function App() {
             onToggle={() => setOpenMain(openMain === 'mood' ? null : 'mood')}
           >
             <MoodPanel
+              todayInfo={todayInfo}
+              onTodayInfoChange={updateTodayInfo}
+            />
+          </AccordionSection>
+
+          <AccordionSection
+            title="Jaký byl spánek"
+            subtitle={normalizeSleepEntries(todayInfo)[0] ? `${normalizeSleepEntries(todayInfo)[0].durationHours ?? 8} h • ${normalizeSleepEntries(todayInfo)[0].quality || 'V kuse'}` : 'Délka, kvalita a popis'}
+            colorClass="panel-blue"
+            isOpen={openMain === 'sleep'}
+            onToggle={() => setOpenMain(openMain === 'sleep' ? null : 'sleep')}
+          >
+            <SleepPanel
               todayInfo={todayInfo}
               onTodayInfoChange={updateTodayInfo}
             />
