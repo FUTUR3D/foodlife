@@ -4,7 +4,7 @@ require 'recipe-helpers.php';
 $userId = require_json_user();
 $data = read_json_body();
 
-const RECIPE_GENERATOR_VERSION = '2026-05-13-required-foods-v2';
+const RECIPE_GENERATOR_VERSION = '2026-05-13-required-foods-v3';
 
 function clean_text($value, int $maxLength = 500): string
 {
@@ -187,6 +187,89 @@ function text_mentions_food(string $text, array $food): bool
     }
 
     return strpos($haystack, $name) !== false;
+}
+
+function merge_food_rows(array ...$foodGroups): array
+{
+    $foodsById = [];
+    foreach ($foodGroups as $foods) {
+        foreach ($foods as $food) {
+            $foodsById[(int) $food['id']] = $food;
+        }
+    }
+
+    return array_values($foodsById);
+}
+
+function prompt_sql_variants(string $prompt): array
+{
+    $variants = [];
+    foreach (prompt_terms($prompt) as $term) {
+        foreach (prompt_term_variants($term) as $variant) {
+            $variants[] = $variant;
+        }
+    }
+
+    return array_values(array_unique(array_filter($variants, fn($variant) => strlen($variant) >= 4)));
+}
+
+function build_food_select_sql(string $sighiSelect, string $sighiJoin, string $extraWhere = '', string $orderBy = 'foods.name_cs ASC', int $limit = 1000): string
+{
+    return "
+        SELECT
+            foods.id,
+            foods.name_cs,
+            foods.name_en,
+            foods.category,
+            foods.default_unit,
+            foods.serving_grams,
+            foods.kcal_100g,
+            foods.protein_100g,
+            foods.carbs_100g,
+            foods.fat_100g,
+            foods.fiber_100g
+            {$sighiSelect}
+        FROM foods
+        {$sighiJoin}
+        WHERE
+            (foods.user_id IS NULL OR foods.user_id = ?)
+            AND foods.name_cs IS NOT NULL
+            AND foods.name_cs <> ''
+            AND NOT (
+                COALESCE(foods.external_source, '') = 'all_drinks_nutrition_database_cz'
+                OR COALESCE(foods.category, '') LIKE 'Nápoj%'
+            )
+            {$extraWhere}
+        ORDER BY {$orderBy}
+        LIMIT {$limit}
+    ";
+}
+
+function load_prompt_food_candidates(PDO $pdo, int $userId, string $prompt, string $sighiSelect, string $sighiJoin): array
+{
+    $variants = prompt_sql_variants($prompt);
+    if (!$variants) {
+        return [];
+    }
+
+    $clauses = [];
+    $params = [$userId];
+    foreach (array_slice($variants, 0, 12) as $variant) {
+        $like = '%' . $variant . '%';
+        $clauses[] = '(foods.name_cs LIKE ? OR foods.name_en LIKE ? OR foods.category LIKE ?)';
+        array_push($params, $like, $like, $like);
+    }
+
+    $stmt = $pdo->prepare(build_food_select_sql(
+        $sighiSelect,
+        $sighiJoin,
+        'AND (' . implode(' OR ', $clauses) . ')',
+        'foods.name_cs ASC',
+        120
+    ));
+    $stmt->execute($params);
+
+    return $stmt->fetchAll();
 }
 
 function food_role(array $food): string
@@ -647,37 +730,16 @@ try {
     $sighiSelect = $sighiEnabled ? sighi_select_sql('foods') : sighi_empty_select_sql();
     $sighiJoin = $sighiEnabled ? sighi_join_sql('foods') : '';
 
-    $stmt = $pdo->prepare("
-        SELECT
-            foods.id,
-            foods.name_cs,
-            foods.name_en,
-            foods.category,
-            foods.default_unit,
-            foods.serving_grams,
-            foods.kcal_100g,
-            foods.protein_100g,
-            foods.carbs_100g,
-            foods.fat_100g,
-            foods.fiber_100g
-            {$sighiSelect}
-        FROM foods
-        {$sighiJoin}
-        WHERE
-            (foods.user_id IS NULL OR foods.user_id = ?)
-            AND foods.name_cs IS NOT NULL
-            AND foods.name_cs <> ''
-            AND NOT (
-                COALESCE(foods.external_source, '') = 'all_drinks_nutrition_database_cz'
-                OR COALESCE(foods.category, '') LIKE 'Nápoj%'
-            )
-        ORDER BY
-            CASE WHEN foods.kcal_100g IS NULL THEN 1 ELSE 0 END,
-            foods.name_cs ASC
-        LIMIT 1000
-    ");
+    $promptFoods = load_prompt_food_candidates($pdo, $userId, $prompt, $sighiSelect, $sighiJoin);
+    $stmt = $pdo->prepare(build_food_select_sql(
+        $sighiSelect,
+        $sighiJoin,
+        '',
+        'CASE WHEN foods.kcal_100g IS NULL THEN 1 ELSE 0 END, foods.name_cs ASC',
+        3000
+    ));
     $stmt->execute([$userId]);
-    $foods = $stmt->fetchAll();
+    $foods = merge_food_rows($promptFoods, $stmt->fetchAll());
 
     $result = call_gemini_recipe($foods, $mealType, $goalType, $targetKcal, $prompt);
     if (!$result) {
@@ -698,6 +760,8 @@ try {
         'sighi_score' => $food['sighi_score'] === null ? null : (int) $food['sighi_score'],
     ], prompt_required_foods($foods, $prompt, $goalType));
     $result['generator_version'] = RECIPE_GENERATOR_VERSION;
+    $result['debug_prompt_terms'] = prompt_sql_variants($prompt);
+    $result['debug_prompt_candidate_count'] = count($promptFoods);
     echo json_encode($result, JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     log_error('recipe-ai-suggest.php exception: ' . $e->getMessage());
