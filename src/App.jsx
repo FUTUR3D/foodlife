@@ -308,16 +308,48 @@ function groupMealsByType(meals) {
 
 function useTapToggle(onToggle) {
   const lastTouchRef = useRef(0)
+  const touchStartRef = useRef(null)
+  const touchMovedRef = useRef(false)
 
   return {
     onClick: () => {
       if (Date.now() - lastTouchRef.current < 500) return
       onToggle()
     },
+    onTouchStart: (event) => {
+      const touch = event.touches?.[0]
+      if (!touch) return
+
+      touchMovedRef.current = false
+      touchStartRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+      }
+    },
+    onTouchMove: (event) => {
+      const touch = event.touches?.[0]
+      const start = touchStartRef.current
+      if (!touch || !start) return
+
+      const deltaX = Math.abs(touch.clientX - start.x)
+      const deltaY = Math.abs(touch.clientY - start.y)
+      if (deltaX > 8 || deltaY > 8) {
+        touchMovedRef.current = true
+      }
+    },
     onTouchEnd: (event) => {
       lastTouchRef.current = Date.now()
-      event.preventDefault()
-      onToggle()
+      if (!touchMovedRef.current) {
+        event.preventDefault()
+        onToggle()
+      }
+      touchStartRef.current = null
+      touchMovedRef.current = false
+    },
+    onTouchCancel: () => {
+      lastTouchRef.current = Date.now()
+      touchStartRef.current = null
+      touchMovedRef.current = false
     },
   }
 }
