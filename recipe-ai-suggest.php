@@ -4,6 +4,8 @@ require 'recipe-helpers.php';
 $userId = require_json_user();
 $data = read_json_body();
 
+const RECIPE_GENERATOR_VERSION = '2026-05-13-required-foods-v2';
+
 function clean_text($value, int $maxLength = 500): string
 {
     $text = trim((string) $value);
@@ -163,6 +165,28 @@ function prompt_required_foods(array $foods, string $prompt, string $goalType, i
     }
 
     return $required;
+}
+
+function recipe_food_names(array $foods): array
+{
+    return array_values(array_filter(array_map(fn($food) => trim((string) ($food['name_cs'] ?? '')), $foods)));
+}
+
+function text_mentions_food(string $text, array $food): bool
+{
+    $name = normalize_match_text((string) ($food['name_cs'] ?? ''));
+    if ($name === '') {
+        return false;
+    }
+
+    $haystack = normalize_match_text($text);
+    foreach (preg_split('/\s+/', $name) ?: [] as $part) {
+        if (strlen($part) >= 4 && strpos($haystack, $part) !== false) {
+            return true;
+        }
+    }
+
+    return strpos($haystack, $name) !== false;
 }
 
 function food_role(array $food): string
@@ -569,17 +593,31 @@ function normalize_gemini_recipe(array $recipe, array $foods, string $mealType, 
         return null;
     }
 
+    $title = clean_text($recipe['title'] ?? 'Gemini návrh receptu', 120);
     $note = clean_text($recipe['note'] ?? 'Návrh vytvořený přes Gemini z potravin v databázi FoodLife.', 500);
+    $instructions = clean_text($recipe['instructions'] ?? '', 1800);
     if ($requiredAdded) {
         $note = clean_text($note . ' Doplněno podle zadání: ' . implode(', ', $requiredAdded) . '.', 500);
+    }
+
+    $requiredNames = recipe_food_names($requiredFoods);
+    $requiredMentionText = $title . "\n" . $instructions;
+    $unmentionedRequired = array_values(array_filter($requiredFoods, fn($food) => !text_mentions_food($requiredMentionText, $food)));
+    if ($unmentionedRequired) {
+        $instructionPrefix = $instructions === '' ? '' : rtrim($instructions) . "\n";
+        $instructions = clean_text($instructionPrefix . 'Povinné suroviny ze zadání zapracuj přímo do jídla: ' . implode(', ', recipe_food_names($unmentionedRequired)) . '.', 1800);
+    }
+
+    if ($requiredNames && !text_has($title, $requiredNames)) {
+        $title = clean_text($title . ' (' . implode(' + ', array_slice($requiredNames, 0, 3)) . ')', 120);
     }
 
     return [
         'source' => 'gemini',
         'recipe' => [
-            'title' => clean_text($recipe['title'] ?? 'Gemini návrh receptu', 120),
+            'title' => $title,
             'note' => $note,
-            'instructions' => clean_text($recipe['instructions'] ?? '', 1800),
+            'instructions' => $instructions,
             'prep_minutes' => max(0, (int) ($recipe['prep_minutes'] ?? 10)),
             'cook_minutes' => max(0, (int) ($recipe['cook_minutes'] ?? 0)),
             'servings' => max(0.5, (float) ($recipe['servings'] ?? 1)),
@@ -654,6 +692,12 @@ try {
         'id' => (int) $food['id'],
         'name' => $food['name_cs'],
     ], $matchedFoods);
+    $result['required_foods'] = array_map(fn($food) => [
+        'id' => (int) $food['id'],
+        'name' => $food['name_cs'],
+        'sighi_score' => $food['sighi_score'] === null ? null : (int) $food['sighi_score'],
+    ], prompt_required_foods($foods, $prompt, $goalType));
+    $result['generator_version'] = RECIPE_GENERATOR_VERSION;
     echo json_encode($result, JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {
     log_error('recipe-ai-suggest.php exception: ' . $e->getMessage());
