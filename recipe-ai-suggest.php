@@ -4,7 +4,7 @@ require 'recipe-helpers.php';
 $userId = require_json_user();
 $data = read_json_body();
 
-const RECIPE_GENERATOR_VERSION = '2026-05-13-required-foods-v3';
+const RECIPE_GENERATOR_VERSION = '2026-05-13-chef-recipes-v4';
 
 function clean_text($value, int $maxLength = 500): string
 {
@@ -189,6 +189,47 @@ function text_mentions_food(string $text, array $food): bool
     return strpos($haystack, $name) !== false;
 }
 
+function food_name_key(array $food): string
+{
+    $name = normalize_match_text((string) ($food['name_cs'] ?? $food['name'] ?? $food['custom_name'] ?? ''));
+    $parts = preg_split('/\s+/', $name) ?: [];
+    return implode(' ', array_slice(array_filter($parts, fn($part) => strlen($part) >= 4), 0, 2));
+}
+
+function recipe_item_key(array $item): string
+{
+    $nameKey = food_name_key($item);
+    if ($nameKey !== '') {
+        return 'name:' . $nameKey;
+    }
+
+    if (!empty($item['food_id'])) {
+        return 'food:' . (int) $item['food_id'];
+    }
+
+    $name = normalize_match_text((string) ($item['custom_name'] ?? $item['name'] ?? ''));
+    return $name === '' ? uniqid('item:', true) : 'custom:' . $name;
+}
+
+function dedupe_recipe_items(array $items): array
+{
+    $byKey = [];
+    foreach ($items as $item) {
+        $key = recipe_item_key($item);
+        if (!isset($byKey[$key])) {
+            $byKey[$key] = $item;
+            continue;
+        }
+
+        $byKey[$key]['amount'] = max((float) ($byKey[$key]['amount'] ?? 0), (float) ($item['amount'] ?? 0));
+        $byKey[$key]['grams'] = max((float) ($byKey[$key]['grams'] ?? 0), (float) ($item['grams'] ?? 0));
+        $notes = array_filter([$byKey[$key]['note'] ?? '', $item['note'] ?? '']);
+        $byKey[$key]['note'] = $notes ? clean_text(implode('; ', array_unique($notes)), 120) : '';
+    }
+
+    return array_values($byKey);
+}
+
 function merge_food_rows(array ...$foodGroups): array
 {
     $foodsById = [];
@@ -211,6 +252,54 @@ function prompt_sql_variants(string $prompt): array
     }
 
     return array_values(array_unique(array_filter($variants, fn($variant) => strlen($variant) >= 4)));
+}
+
+function complementary_terms_for_recipe(string $prompt): array
+{
+    $terms = [
+        'brambor', 'ryze', 'testovin', 'noky', 'gnocchi', 'kuskus', 'bulgur', 'quinoa', 'pohanka',
+        'cibule', 'cesnek', 'olej', 'maslo', 'smetana', 'jogurt', 'citron', 'limeta',
+        'cuketa', 'mrkev', 'paprika', 'brokolice', 'salat', 'petrzel', 'kopr', 'bazalka', 'tymian', 'rozmaryn',
+    ];
+
+    if (text_has($prompt, ['losos', 'ryba'])) {
+        array_unshift($terms, 'citron', 'kopr', 'brambor', 'noky', 'smetana');
+    }
+    if (text_has($prompt, ['spenat', 'špenát'])) {
+        array_unshift($terms, 'cibule', 'cesnek', 'smetana', 'noky', 'brambor');
+    }
+
+    return array_values(array_unique($terms));
+}
+
+function complementary_foods(array $foods, string $goalType, string $prompt, int $limit = 35): array
+{
+    $selected = [];
+    $usedKeys = [];
+    foreach (complementary_terms_for_recipe($prompt) as $term) {
+        $matches = array_values(array_filter($foods, fn($food) => food_matches_prompt_term($food, $term) || text_has((string) ($food['name_cs'] ?? '') . ' ' . (string) ($food['category'] ?? ''), [$term])));
+        if (!$matches) {
+            continue;
+        }
+
+        $best = sort_food_candidates($matches, $goalType, $prompt)[0] ?? null;
+        if (!$best) {
+            continue;
+        }
+
+        $key = food_name_key($best);
+        if ($key === '' || isset($usedKeys[$key])) {
+            continue;
+        }
+
+        $selected[] = $best;
+        $usedKeys[$key] = true;
+        if (count($selected) >= $limit) {
+            break;
+        }
+    }
+
+    return $selected;
 }
 
 function build_food_select_sql(string $sighiSelect, string $sighiJoin, string $extraWhere = '', string $orderBy = 'foods.name_cs ASC', int $limit = 1000): string
@@ -415,6 +504,23 @@ function build_local_recipe(array $foods, string $mealType, string $goalType, in
         $items[] = food_to_recipe_item($food, $grams);
     }
 
+    foreach (complementary_foods($foods, $goalType, $prompt, 8) as $food) {
+        if (count($items) >= 7) {
+            break;
+        }
+        if (in_array((int) $food['id'], $used, true)) {
+            continue;
+        }
+        $role = food_role($food);
+        if (!in_array($role, ['carb', 'veg', 'fat', 'extra'], true)) {
+            continue;
+        }
+        $used[] = (int) $food['id'];
+        $items[] = food_to_recipe_item($food, role_amount($role, $mealType));
+    }
+
+    $items = dedupe_recipe_items($items);
+
     if (!$items) {
         json_error('no_food_candidates', 422);
     }
@@ -429,15 +535,18 @@ function build_local_recipe(array $foods, string $mealType, string $goalType, in
     }
     unset($item);
 
-    $names = array_slice(array_map(fn($item) => $item['name'], $items), 0, 2);
-    $title = 'Návrh: ' . ucfirst($mealLabels[$mealType] ?? 'jídlo') . ' - ' . implode(' + ', $names);
+    $names = array_slice(array_map(fn($item) => $item['name'], $items), 0, 4);
+    $title = 'Návrh: ' . ucfirst($mealLabels[$mealType] ?? 'jídlo') . ' - ' . implode(' + ', array_slice($names, 0, 3));
+    $instructions = "1. Připrav suroviny: " . implode(', ', $names) . ".\n"
+        . "2. Hlavní bílkovinu tepelně uprav a zeleninu připrav krátce na pánvi nebo v troubě podle typu suroviny.\n"
+        . "3. Přidej přílohu nebo tuk, dochuť podle tolerance a spoj do hotového talíře.";
 
     return [
         'source' => 'local',
         'recipe' => [
             'title' => $title,
-            'note' => 'Návrh složený z potravin v databázi FoodLife. Před uložením si prosím dolaď množství a postup podle reality.',
-            'instructions' => "1. Připrav a odvaž suroviny.\n2. Tepelně uprav suroviny, které to vyžadují.\n3. Spoj na talíři a dochuť podle tolerance.",
+            'note' => 'Lokální návrh složený z potravin v databázi FoodLife, protože AI služba nebyla dostupná. Ber ho jako hrubý kuchařský základ a dolaď postup podle reality.',
+            'instructions' => $instructions,
             'prep_minutes' => 10,
             'cook_minutes' => in_array($mealType, ['snidane', 'svacina1', 'svacina2'], true) ? 0 : 15,
             'servings' => 1,
@@ -486,6 +595,63 @@ function food_to_recipe_item(array $food, int $grams): array
     ];
 }
 
+function custom_to_recipe_item(string $name, int $grams, string $unit = 'g', string $note = ''): array
+{
+    $name = clean_text($name, 120);
+    $grams = max(1, min(800, $grams));
+    $unit = trim($unit) ?: 'g';
+
+    return [
+        'id' => 'ai_custom_' . uniqid(),
+        'food_id' => null,
+        'name' => $name,
+        'custom_name' => $name,
+        'amount' => $grams,
+        'unit' => $unit,
+        'grams' => in_array($unit, ['g', 'ml'], true) ? $grams : null,
+        'serving_grams' => null,
+        'note' => clean_text($note, 120),
+        'kcal_100g' => null,
+        'protein_100g' => null,
+        'carbs_100g' => null,
+        'fat_100g' => null,
+        'fiber_100g' => null,
+        'sighi_id' => null,
+        'sighi_food' => null,
+        'sighi_score_raw' => null,
+        'sighi_score' => null,
+        'histamine_marker' => null,
+        'other_amines_marker' => null,
+        'liberator_marker' => null,
+        'inhibitor_marker' => null,
+        'uncertain_marker' => null,
+        'other_marker' => null,
+        'sighi_notes' => null,
+        'sighi_approved' => null,
+        'sighi_confidence' => null,
+        'sighi_match_method' => null,
+    ];
+}
+
+function find_food_by_generated_name(array $foods, string $name, string $goalType, string $prompt): ?array
+{
+    $terms = prompt_terms($name);
+    if (!$terms) {
+        return null;
+    }
+
+    $matches = array_values(array_filter($foods, function ($food) use ($terms) {
+        foreach ($terms as $term) {
+            if (food_matches_prompt_term($food, $term)) {
+                return true;
+            }
+        }
+        return false;
+    }));
+
+    return $matches ? (sort_food_candidates($matches, $goalType, $prompt)[0] ?? null) : null;
+}
+
 function gemini_api_key(): string
 {
     global $GEMINI_API_KEY;
@@ -528,6 +694,7 @@ function json_from_gemini_text(string $text): ?array
 function build_gemini_food_context(array $foods, string $goalType, string $prompt, array $requiredFoods = []): array
 {
     $promptMatches = prompt_matching_foods($foods, $prompt);
+    $complementaryFoods = complementary_foods($foods, $goalType, $prompt);
     $byId = [];
     foreach ($requiredFoods as $food) {
         $byId[(int) $food['id']] = $food;
@@ -535,9 +702,12 @@ function build_gemini_food_context(array $foods, string $goalType, string $promp
     foreach ($promptMatches as $food) {
         $byId[(int) $food['id']] = $food;
     }
+    foreach ($complementaryFoods as $food) {
+        $byId[(int) $food['id']] = $food;
+    }
     foreach (sort_food_candidates($foods, $goalType, $prompt) as $food) {
         $byId[(int) $food['id']] = $food;
-        if (count($byId) >= 90) break;
+        if (count($byId) >= 140) break;
     }
     $sorted = array_values($byId);
     return array_map(function ($food) {
@@ -577,9 +747,11 @@ function call_gemini_recipe(array $foods, string $mealType, string $goalType, in
         'sighi_score' => $food['sighi_score'] === null ? null : (int) $food['sighi_score'],
     ], $requiredFoods);
 
-    $requestText = "Jsi asistent pro českou aplikaci FoodLife. Navrhni jeden praktický recept jen z povolených potravin níže. "
-        . "Nesmíš použít žádnou potravinu mimo seznam a u položek vrať pouze food_id ze seznamu. "
-        . "Pokud jsou v poli povinné potraviny nějaké položky, musíš do items zahrnout každé jejich food_id. "
+    $requestText = "Jsi kuchařský asistent pro českou aplikaci FoodLife. Navrhni jeden plnohodnotný, reálně uvařitelný recept, ne jen seznam zadaných surovin. "
+        . "Nejdřív vymysli smysluplné jídlo podle zadání, potom pro každou surovinu použij food_id z povoleného seznamu, pokud tam odpovídající potravina je. "
+        . "Pokud důležitá doplňková surovina v seznamu není, vrať ji jako custom_name místo food_id, aby ji uživatel mohl případně přidat do databáze. "
+        . "Pokud jsou v poli povinné potraviny nějaké položky, musíš do items zahrnout každé jejich food_id a zapracovat je do názvu i postupu. "
+        . "Nevracej duplicitní suroviny. Recept má mít obvykle 5 až 8 surovin včetně přílohy, tuku/aromatiky a dochucení, pokud to dává smysl. "
         . "Zohledni cíl, kcal, trávení a pokud je cíl low_histamine, preferuj potraviny se sighi_score 0 nebo null a vyhýbej se 2-3, kromě povinných potravin výslovně chtěných uživatelem. "
         . "Vrať pouze validní JSON bez komentáře.\n\n"
         . "Typ jídla: {$mealType}\nCíl: {$goalType}\nCílové kcal: {$targetKcal}\nZadání uživatele: {$prompt}\n\n"
@@ -587,7 +759,7 @@ function call_gemini_recipe(array $foods, string $mealType, string $goalType, in
         . "Povinné potraviny JSON: " . json_encode($requiredFoodContext, JSON_UNESCAPED_UNICODE) . "\n"
         . "Povinné food_id: " . json_encode($requiredFoodIds, JSON_UNESCAPED_UNICODE) . "\n\n"
         . "Povolené potraviny JSON:\n" . json_encode($foodContext, JSON_UNESCAPED_UNICODE) . "\n\n"
-        . "Výstupní JSON tvar: {\"title\":\"...\",\"note\":\"...\",\"instructions\":\"1. ...\\n2. ...\",\"prep_minutes\":10,\"cook_minutes\":15,\"servings\":1,\"difficulty\":\"easy\",\"carb_level\":\"unknown\",\"items\":[{\"food_id\":123,\"grams\":150,\"note\":\"\"}]}";
+        . "Výstupní JSON tvar: {\"title\":\"...\",\"note\":\"...\",\"instructions\":\"1. ...\\n2. ...\",\"prep_minutes\":10,\"cook_minutes\":15,\"servings\":1,\"difficulty\":\"easy\",\"carb_level\":\"unknown\",\"items\":[{\"food_id\":123,\"grams\":150,\"note\":\"\"},{\"custom_name\":\"surovina mimo databázi\",\"grams\":50,\"unit\":\"g\",\"note\":\"doplnit do databáze\"}]}";
 
     $payload = [
         'contents' => [[
@@ -595,27 +767,40 @@ function call_gemini_recipe(array $foods, string $mealType, string $goalType, in
             'parts' => [['text' => $requestText]],
         ]],
         'generationConfig' => [
-            'temperature' => 0.35,
+            'temperature' => 0.55,
             'responseMimeType' => 'application/json',
         ],
     ];
 
-    $ch = curl_init('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json',
-            'x-goog-api-key: ' . $apiKey,
-        ],
-        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
-        CURLOPT_TIMEOUT => 18,
-    ]);
+    $raw = false;
+    $status = 0;
+    $curlError = '';
+    for ($attempt = 1; $attempt <= 3; $attempt++) {
+        $ch = curl_init('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'x-goog-api-key: ' . $apiKey,
+            ],
+            CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            CURLOPT_TIMEOUT => 18,
+        ]);
 
-    $raw = curl_exec($ch);
-    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
-    curl_close($ch);
+        $raw = curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($raw !== false && $status >= 200 && $status < 300) {
+            break;
+        }
+        if (!in_array($status, [0, 429, 500, 502, 503, 504], true)) {
+            break;
+        }
+        usleep(250000 * $attempt);
+    }
 
     if ($raw === false || $status < 200 || $status >= 300) {
         log_error('Gemini recipe generation failed: HTTP ' . $status . ' ' . $curlError . ' ' . substr((string) $raw, 0, 500));
@@ -648,15 +833,32 @@ function normalize_gemini_recipe(array $recipe, array $foods, string $mealType, 
     $items = [];
     foreach ($recipe['items'] as $item) {
         $foodId = (int) ($item['food_id'] ?? 0);
-        if (!$foodId || !isset($foodsById[$foodId])) {
+        $customName = clean_text($item['custom_name'] ?? $item['name'] ?? '', 120);
+        $grams = max(5, min(800, (int) ($item['grams'] ?? $item['amount'] ?? 100)));
+        $unit = trim((string) ($item['unit'] ?? 'g')) ?: 'g';
+        $note = clean_text($item['note'] ?? '', 120);
+
+        if ($foodId && isset($foodsById[$foodId])) {
+            $grams = max(5, min(800, (int) ($item['grams'] ?? $item['amount'] ?? role_amount(food_role($foodsById[$foodId]), $mealType))));
+            $recipeItem = food_to_recipe_item($foodsById[$foodId], $grams);
+            $recipeItem['note'] = $note;
+            $items[] = $recipeItem;
             continue;
         }
-        $grams = max(5, min(800, (int) ($item['grams'] ?? $item['amount'] ?? role_amount(food_role($foodsById[$foodId]), $mealType))));
-        $recipeItem = food_to_recipe_item($foodsById[$foodId], $grams);
-        $recipeItem['note'] = clean_text($item['note'] ?? '', 120);
-        $items[] = $recipeItem;
+
+        if ($customName !== '') {
+            $matchedFood = find_food_by_generated_name($foods, $customName, $goalType, $prompt);
+            if ($matchedFood) {
+                $recipeItem = food_to_recipe_item($matchedFood, $grams);
+                $recipeItem['note'] = $note;
+                $items[] = $recipeItem;
+            } else {
+                $items[] = custom_to_recipe_item($customName, $grams, $unit, $note ?: 'nenalezeno v databázi');
+            }
+        }
     }
 
+    $items = dedupe_recipe_items($items);
     $usedIds = array_map(fn($item) => (int) ($item['food_id'] ?? 0), $items);
     $requiredAdded = [];
     foreach ($requiredFoods as $food) {
@@ -691,9 +893,13 @@ function normalize_gemini_recipe(array $recipe, array $foods, string $mealType, 
         $instructions = clean_text($instructionPrefix . 'Povinné suroviny ze zadání zapracuj přímo do jídla: ' . implode(', ', recipe_food_names($unmentionedRequired)) . '.', 1800);
     }
 
-    if ($requiredNames && !text_has($title, $requiredNames)) {
-        $title = clean_text($title . ' (' . implode(' + ', array_slice($requiredNames, 0, 3)) . ')', 120);
+    $missingTitleFoods = array_values(array_filter($requiredFoods, fn($food) => !text_mentions_food($title, $food)));
+    if ($missingTitleFoods) {
+        $title = clean_text($title . ' (' . implode(' + ', array_slice(recipe_food_names($missingTitleFoods), 0, 3)) . ')', 120);
     }
+
+    $difficulty = $recipe['difficulty'] ?? 'easy';
+    $carbLevel = $recipe['carb_level'] ?? 'unknown';
 
     return [
         'source' => 'gemini',
@@ -704,9 +910,9 @@ function normalize_gemini_recipe(array $recipe, array $foods, string $mealType, 
             'prep_minutes' => max(0, (int) ($recipe['prep_minutes'] ?? 10)),
             'cook_minutes' => max(0, (int) ($recipe['cook_minutes'] ?? 0)),
             'servings' => max(0.5, (float) ($recipe['servings'] ?? 1)),
-            'difficulty' => in_array(($recipe['difficulty'] ?? 'easy'), ['easy', 'medium', 'hard'], true) ? $recipe['difficulty'] : 'easy',
+            'difficulty' => in_array($difficulty, ['easy', 'medium', 'hard'], true) ? $difficulty : 'easy',
             'goal_type' => $goalType,
-            'carb_level' => in_array(($recipe['carb_level'] ?? 'unknown'), ['unknown', 'low', 'medium', 'high'], true) ? $recipe['carb_level'] : 'unknown',
+            'carb_level' => in_array($carbLevel, ['unknown', 'low', 'medium', 'high'], true) ? $carbLevel : 'unknown',
             'ai_prompt' => $prompt,
             'meal_types' => [$mealType],
             'items' => $items,
@@ -759,6 +965,10 @@ try {
         'name' => $food['name_cs'],
         'sighi_score' => $food['sighi_score'] === null ? null : (int) $food['sighi_score'],
     ], prompt_required_foods($foods, $prompt, $goalType));
+    $result['suggested_custom_foods'] = array_values(array_unique(array_filter(array_map(
+        fn($item) => empty($item['food_id']) ? ($item['custom_name'] ?? $item['name'] ?? '') : '',
+        $result['recipe']['items'] ?? []
+    ))));
     $result['generator_version'] = RECIPE_GENERATOR_VERSION;
     $result['debug_prompt_terms'] = prompt_sql_variants($prompt);
     $result['debug_prompt_candidate_count'] = count($promptFoods);
