@@ -1,9 +1,11 @@
 name: Build and Deploy FoodLife
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
+      - vyvoj-ocr-etikety
 
 jobs:
   build-and-deploy:

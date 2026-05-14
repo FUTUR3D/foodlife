@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createWorker } from 'tesseract.js'
 import { COUNTRIES } from './countries'
 
 const STORAGE_KEYS = {
@@ -184,6 +185,92 @@ function dayInfoStorageValue(infoByDate) {
 function readNumber(value) {
   const number = parseFloat(String(value ?? '').replace(',', '.'))
   return Number.isFinite(number) ? number : null
+}
+
+function normalizeOcrText(text) {
+  return String(text || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[|]/g, ' ')
+    .replace(/\r/g, '\n')
+}
+
+function normalizeOcrKey(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+function formatOcrNumber(value) {
+  if (!Number.isFinite(value)) return ''
+  const rounded = Math.round(value * 100) / 100
+  return String(rounded).replace('.', ',')
+}
+
+function readOcrNumber(value) {
+  const normalized = String(value || '')
+    .replace(/\s/g, '')
+    .replace(',', '.')
+    .replace(/[^\d.]/g, '')
+  const number = parseFloat(normalized)
+  return Number.isFinite(number) ? number : null
+}
+
+function extractFirstOcrNumber(line, unitPattern = '(?:g|mg)') {
+  const match = line.match(new RegExp(`(\\d+(?:[,.]\\d+)?)\\s*${unitPattern}\\b`, 'i'))
+  return match ? readOcrNumber(match[1]) : null
+}
+
+function findOcrLine(lines, labels) {
+  return lines.find((line) => {
+    const normalized = normalizeOcrKey(line)
+    return labels.some((label) => normalized.includes(label))
+  }) || ''
+}
+
+function extractNutritionFromOcrText(text) {
+  const normalizedText = normalizeOcrText(text)
+  const lines = normalizedText
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+
+  const energyLine = findOcrLine(lines, ['energie', 'energeticka', 'energy'])
+  const kcalMatch = energyLine.match(/(\d+(?:[,.]\d+)?)\s*kcal\b/i)
+  const fatLine = findOcrLine(lines, ['tuky', 'fat'])
+  const carbsLine = findOcrLine(lines, ['sacharidy', 'carbohydrate'])
+  const proteinLine = findOcrLine(lines, ['bilkoviny', 'bílkoviny', 'protein'])
+  const fiberLine = findOcrLine(lines, ['vlaknina', 'vláknina', 'fiber', 'fibre'])
+  const sugarLine = findOcrLine(lines, ['cukry', 'sugars'])
+  const sodiumLine = findOcrLine(lines, ['sodik', 'sodík', 'sodium'])
+  const saltLine = findOcrLine(lines, ['sul', 'sůl', 'salt'])
+  const sodiumMg = sodiumLine
+    ? extractFirstOcrNumber(sodiumLine, '(?:mg)')
+    : null
+  const saltGrams = !sodiumMg && saltLine ? extractFirstOcrNumber(saltLine, '(?:g)') : null
+
+  const productNameLine = lines.find((line) => {
+    const normalized = normalizeOcrKey(line)
+    if (line.length < 3 || line.length > 64) return false
+    if (!/[a-zA-ZÀ-ž]/.test(line)) return false
+    return ![
+      'vyzivove', 'vyziva', 'nutrition', 'energie', 'slozeni', 'ingredients',
+      'tuky', 'sacharidy', 'bilkoviny', 'vlaknina', 'cukry', 'sul',
+    ].some((word) => normalized.includes(word))
+  })
+
+  return {
+    name_cs: productNameLine || '',
+    default_unit: /100\s*ml/i.test(normalizedText) ? 'ml' : 'g',
+    kcal_100g: kcalMatch ? formatOcrNumber(readOcrNumber(kcalMatch[1])) : '',
+    protein_100g: formatOcrNumber(extractFirstOcrNumber(proteinLine)),
+    carbs_100g: formatOcrNumber(extractFirstOcrNumber(carbsLine)),
+    fat_100g: formatOcrNumber(extractFirstOcrNumber(fatLine)),
+    fiber_100g: formatOcrNumber(extractFirstOcrNumber(fiberLine)),
+    sugar_100g: formatOcrNumber(extractFirstOcrNumber(sugarLine)),
+    sodium_mg_100g: sodiumMg ? formatOcrNumber(sodiumMg) : formatOcrNumber(saltGrams ? saltGrams * 393.4 : null),
+    note: normalizedText.trim(),
+  }
 }
 
 function getProfileAge(birthDate) {
@@ -2605,9 +2692,13 @@ function CustomFoodsManager({
   const [isRecipeSearching, setIsRecipeSearching] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isRecipeSaving, setIsRecipeSaving] = useState(false)
+  const [isOcrReading, setIsOcrReading] = useState(false)
+  const [ocrStatus, setOcrStatus] = useState('')
+  const [ocrText, setOcrText] = useState('')
   const [error, setError] = useState('')
   const [recipeError, setRecipeError] = useState('')
   const [openParts, setOpenParts] = useState({})
+  const labelPhotoInputRef = useRef(null)
   const isRecipeFormOpen = recipeForm.id !== null || recipeForm.title.trim() !== '' || recipeForm.note.trim() !== '' || recipeForm.items.length > 0
 
   function togglePart(part) {
@@ -2738,6 +2829,71 @@ function CustomFoodsManager({
   function resetForm() {
     setForm(EMPTY_CUSTOM_FOOD)
     setError('')
+    setOcrStatus('')
+    setOcrText('')
+  }
+
+  async function handleLabelPhotoChange(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    setIsOcrReading(true)
+    setError('')
+    setOcrStatus('Načítám OCR...')
+    setOcrText('')
+
+    let worker = null
+    try {
+      worker = await createWorker(['ces', 'eng'], 1, {
+        logger: (message) => {
+          if (message.status === 'recognizing text') {
+            setOcrStatus(`Čtu etiketu ${Math.round((message.progress || 0) * 100)} %`)
+          } else if (message.status) {
+            setOcrStatus(message.status)
+          }
+        },
+      })
+
+      const result = await worker.recognize(file)
+      const text = result.data?.text || ''
+      const parsed = extractNutritionFromOcrText(text)
+      const nutritionFields = [
+        'kcal_100g',
+        'protein_100g',
+        'carbs_100g',
+        'fat_100g',
+        'fiber_100g',
+        'sugar_100g',
+        'sodium_mg_100g',
+      ]
+      const filledValues = nutritionFields.reduce((values, field) => {
+        if (parsed[field] !== '') values[field] = parsed[field]
+        return values
+      }, {})
+
+      setOcrText(text.trim())
+
+      if (Object.keys(filledValues).length === 0) {
+        setOcrStatus('')
+        setError('OCR text se načetl, ale nutriční hodnoty jsem v něm nenašel. Zkus ostřejší fotku tabulky.')
+        return
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        ...filledValues,
+        default_unit: parsed.default_unit,
+        name_cs: prev.name_cs || parsed.name_cs || prev.name_cs,
+      }))
+      setOcrStatus(`Vyplněno ${Object.keys(filledValues).length} hodnot z etikety.`)
+    } catch {
+      setOcrStatus('')
+      setError('Etiketu se nepodařilo přečíst přes Tesseract OCR.')
+    } finally {
+      if (worker) await worker.terminate()
+      setIsOcrReading(false)
+    }
   }
 
   function recipeFormFromRecipe(recipe, { asCopy = false } = {}) {
@@ -2978,6 +3134,36 @@ function CustomFoodsManager({
         ) : null}
 
         <form onSubmit={handleSubmit}>
+          <div className="label-ocr-panel">
+            <div>
+              <strong>OCR etikety</strong>
+              <span>Vyfoť nutriční tabulku a hodnoty na 100 g se doplní do formuláře.</span>
+            </div>
+            <input
+              ref={labelPhotoInputRef}
+              className="visually-hidden"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleLabelPhotoChange}
+            />
+            <button
+              className="button button-light"
+              type="button"
+              onClick={() => labelPhotoInputRef.current?.click()}
+              disabled={isOcrReading}
+            >
+              {isOcrReading ? 'Čtu etiketu...' : 'Vyfotit etiketu'}
+            </button>
+            {ocrStatus ? <div className="ocr-status">{ocrStatus}</div> : null}
+            {ocrText ? (
+              <details className="ocr-text-preview">
+                <summary>Rozpoznaný text</summary>
+                <textarea className="textarea" value={ocrText} readOnly />
+              </details>
+            ) : null}
+          </div>
+
           <div className="form-group">
             <label className="label">Název</label>
             <input

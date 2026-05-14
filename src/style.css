@@ -1446,6 +1446,52 @@ textarea {
   gap: 10px;
 }
 
+.label-ocr-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+  border: 1px solid #d9e7df;
+  background: #f6fbf8;
+  padding: 12px;
+}
+
+.label-ocr-panel strong,
+.label-ocr-panel span {
+  display: block;
+}
+
+.label-ocr-panel strong {
+  color: #101828;
+  font-size: 15px;
+  font-weight: 560;
+}
+
+.label-ocr-panel span,
+.ocr-status {
+  color: #475467;
+  font-size: 13px;
+}
+
+.ocr-status,
+.ocr-text-preview {
+  grid-column: 1 / -1;
+}
+
+.ocr-text-preview summary {
+  color: #14532d;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 560;
+}
+
+.ocr-text-preview .textarea {
+  min-height: 130px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
 .inline-error {
   margin-bottom: 12px;
   border: 1px solid #fecaca;
@@ -2026,6 +2072,14 @@ textarea {
   .recipe-picker-row,
   .meal-totals {
     grid-template-columns: 1fr;
+  }
+
+  .label-ocr-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .label-ocr-panel .button {
+    width: 100%;
   }
 
   .profile-setup-page {
